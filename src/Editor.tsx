@@ -16,6 +16,7 @@ import { default as amToPm } from "./amToPm"
 
 
 import { Text } from "@automerge/automerge"
+import AutomergeRepoDoc from "./AutomergeRepoDoc"
 
 export type EditorProps<T> = {
   handle: DocHandle<T>
@@ -50,15 +51,12 @@ export function Editor<T>({ handle, attribute }: EditorProps<T>) {
           "Mod-y": redo,
           "Mod-Shift-z": redo,
         }),
-        automergePlugin({
-          doChange: change => handle.change(d => change(d, "text")),
-          patches: handle
-        })
+        automergePlugin(new AutomergeRepoDoc(handle, "text")),
       ],
       // @ts-ignore
       doc: schema.node("doc", null, [
         // @ts-ignore
-        schema.node("paragraph", null, schema.text(handle.doc.text.toString()))
+        schema.node("paragraph", null, [])
       ])
     }      
 
