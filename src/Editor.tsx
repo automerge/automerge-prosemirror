@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 import { Command, EditorState, Transaction } from "prosemirror-state"
 import { keymap } from "prosemirror-keymap"
@@ -7,7 +7,13 @@ import { history, redo, undo } from "prosemirror-history"
 import { schema } from "prosemirror-schema-basic"
 import { MarkType } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
-import { DocHandle, DocHandlePatchPayload } from "automerge-repo"
+import { DocHandle, DocHandleChangePayload, DocHandlePatchPayload } from "automerge-repo"
+import "prosemirror-view/style/prosemirror.css"
+import { default as automergePlugin } from "./plugin"
+
+import { default as pmToAm } from "./pmToAm"
+import { default as amToPm } from "./amToPm"
+
 
 import { Text } from "@automerge/automerge"
 
@@ -28,10 +34,9 @@ function toggleMarkCommand(mark: MarkType): Command {
   }
 }
 
-export function Editor<T>({ attribute }: EditorProps<T>) {
+export function Editor<T>({ handle, attribute }: EditorProps<T>) {
   const editorRoot = useRef<HTMLDivElement>(null!)
 
-  
   useEffect(() => {
     let editorConfig = {
       schema,
@@ -45,23 +50,27 @@ export function Editor<T>({ attribute }: EditorProps<T>) {
           "Mod-y": redo,
           "Mod-Shift-z": redo,
         }),
+        automergePlugin({
+          doChange: change => handle.change(d => change(d, "text")),
+          patches: handle
+        })
       ],
-      doc: schema.node("doc", null, schema.node("paragraph", null))
+      // @ts-ignore
+      doc: schema.node("doc", null, [
+        // @ts-ignore
+        schema.node("paragraph", null, schema.text(handle.doc.text.toString()))
+      ])
     }      
 
     let state = EditorState.create(editorConfig)
-      const view = new EditorView(editorRoot.current, { 
-        state,
-        dispatchTransaction(transaction) {
-          console.log("Document size went from", transaction.before.content.size,
-            "to", transaction.doc.content.size)
-          let newState = view.state.apply(transaction)
-          view.updateState(newState)
-        }
-      })
-
+    const view = new EditorView(editorRoot.current, { 
+      state,
+    })
+    return () => {
+      view.destroy()
+    }
   }, [attribute])
   
-
   return <div ref={editorRoot}></div>
+
 }

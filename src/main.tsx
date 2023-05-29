@@ -6,6 +6,7 @@ import { Repo } from "automerge-repo"
 import { BroadcastChannelNetworkAdapter } from "automerge-repo-network-broadcastchannel"
 import { LocalForageStorageAdapter } from "automerge-repo-storage-localforage"
 import { RepoContext } from "automerge-repo-react-hooks"
+import * as automerge from "@automerge/automerge"
 
 const repo = new Repo({
   network: [new BroadcastChannelNetworkAdapter()],
@@ -15,6 +16,13 @@ const repo = new Repo({
 let rootDocId = localStorage.rootDocId
 if (!rootDocId) {
   const handle = repo.create()
+  handle.change((doc) => {
+    // @ts-ignore
+    if (!doc.text) {
+      // @ts-ignore
+      doc.text = new automerge.Text()
+    }
+  })
   localStorage.rootDocId = rootDocId = handle.documentId
 }
 
