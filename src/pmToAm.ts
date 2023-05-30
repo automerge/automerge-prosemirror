@@ -16,7 +16,7 @@ export default function(tx: Transaction, change: (_change: ChangeFn) => void) {
 }
 
 function replaceStep(step: ReplaceStep, doc: Extend<any>, field: string) {
-  const text = step.slice.content.textBetween(0, step.slice.size, "\n");
+  const text = step.slice.content.textBetween(0, step.slice.size, "\n\n");
   const toDelete = step.to - step.from
   automerge.splice(doc, field, step.from - 1, toDelete, text)
 }

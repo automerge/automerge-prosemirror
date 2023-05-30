@@ -6,7 +6,7 @@ import {EditorView} from "prosemirror-view";
 import { schema } from "prosemirror-schema-basic"
 
 // The name of the meta field that indicates that a transaction was generated
-// from logic withing the editor
+// from logic within the editor
 const TX_FROM_INSIDE: string = "fromInside"
 
 type EventReceiver = (args: {patches: Array<Patch>}) => void;
@@ -66,6 +66,6 @@ function resetContent(view: EditorView, doc: string) {
 function updateContent(view: EditorView, patches: Array<Patch>) {
   let tr = view.state.tr
   tr.setMeta(TX_FROM_INSIDE, true)
-  amToPm(patches, "text", tr)
+  amToPm(patches, ["text"], tr)
   view.dispatch(tr)
 }
