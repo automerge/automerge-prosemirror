@@ -31,7 +31,7 @@ export function App(props: { documentId: DocumentId }) {
       >
         count is: {doc?.count ?? 0}
       </button>
-      <Editor handle={handle} attribute={"text"}/>
+      <Editor handle={handle} path={["text"]}/>
     </>
     )
   }
