@@ -7,20 +7,15 @@ import { history, redo, undo } from "prosemirror-history"
 import { schema } from "prosemirror-schema-basic"
 import { MarkType } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
-import { DocHandle, DocHandleChangePayload, DocHandlePatchPayload } from "automerge-repo"
+import { DocHandle, DocHandlePatchPayload, } from "automerge-repo"
 import "prosemirror-view/style/prosemirror.css"
 import { default as automergePlugin } from "./plugin"
+import { updateAutomerge, updateProsemirror } from "./ampm"
+import {Patch, Prop} from "@automerge/automerge"
 
-import { default as pmToAm } from "./pmToAm"
-import { default as amToPm } from "./amToPm"
-
-
-import { Text } from "@automerge/automerge"
-import AutomergeRepoDoc from "./AutomergeRepoDoc"
-
-export type EditorProps<T> = {
-  handle: DocHandle<T>
-  attribute: keyof T
+export type EditorProps = {
+  handle: DocHandle<any>
+  path: Prop[]
 }
 
 const toggleBold = toggleMarkCommand(schema.marks.strong)
@@ -35,7 +30,7 @@ function toggleMarkCommand(mark: MarkType): Command {
   }
 }
 
-export function Editor<T>({ handle, attribute }: EditorProps<T>) {
+export function Editor({ handle, path }: EditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null!)
 
   useEffect(() => {
@@ -51,11 +46,9 @@ export function Editor<T>({ handle, attribute }: EditorProps<T>) {
           "Mod-y": redo,
           "Mod-Shift-z": redo,
         }),
-        automergePlugin(new AutomergeRepoDoc(handle, "text")),
+        automergePlugin(handle.doc),
       ],
-      // @ts-ignore
       doc: schema.node("doc", null, [
-        // @ts-ignore
         schema.node("paragraph", null, [])
       ])
     }      
@@ -63,12 +56,25 @@ export function Editor<T>({ handle, attribute }: EditorProps<T>) {
     let state = EditorState.create(editorConfig)
     const view = new EditorView(editorRoot.current, { 
       state,
+      dispatchTransaction: (tx: Transaction) => {
+        let newState = view.state.apply(tx)
+        handle.change(doc => {
+          updateAutomerge(doc, path, tx)
+        })
+        view.updateState(newState)
+      }
     })
+    const onPatch = (p: DocHandlePatchPayload<any>) => {
+      let newState = updateProsemirror(p.patches, view.state)
+      view.updateState(newState)
+    }
+    handle.on("patch", onPatch)
     return () => {
       view.destroy()
+      handle.off("patch", onPatch)
     }
-  }, [attribute])
-  
+  }, [handle, path])
+
   return <div ref={editorRoot}></div>
 
 }
