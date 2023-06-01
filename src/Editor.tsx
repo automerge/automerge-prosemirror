@@ -1,18 +1,19 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, {useEffect, useRef, useState} from "react"
 
-import { Command, EditorState, Transaction } from "prosemirror-state"
-import { keymap } from "prosemirror-keymap"
-import { baseKeymap, toggleMark } from "prosemirror-commands"
-import { history, redo, undo } from "prosemirror-history"
-import { schema } from "prosemirror-schema-basic"
-import { MarkType } from "prosemirror-model"
-import { EditorView } from "prosemirror-view"
-import { DocHandle, DocHandlePatchPayload, } from "automerge-repo"
+import {Command, EditorState, Transaction} from "prosemirror-state"
+import {keymap} from "prosemirror-keymap"
+import {baseKeymap, toggleMark} from "prosemirror-commands"
+import {history, redo, undo} from "prosemirror-history"
+import {schema} from "prosemirror-schema-basic"
+import {MarkType} from "prosemirror-model"
+import {EditorView} from "prosemirror-view"
+import {DocHandle, DocHandlePatchPayload, } from "automerge-repo"
 import "prosemirror-view/style/prosemirror.css"
-import { default as automergePlugin } from "./plugin"
-import { ChangeFn, reconcileProsemirror, reconcileAutomerge} from "./ampm"
+import {default as automergePlugin} from "./plugin"
+import {ChangeFn, reconcileProsemirror, reconcileAutomerge} from "./ampm"
 import {Extend, Heads, Patch, Prop} from "@automerge/automerge"
 import * as automerge from "@automerge/automerge"
+import { fromAm } from "./model"
 
 export type EditorProps = {
   handle: DocHandle<any>
@@ -31,7 +32,7 @@ function toggleMarkCommand(mark: MarkType): Command {
   }
 }
 
-export function Editor({ handle, path }: EditorProps) {
+export function Editor({handle, path}: EditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null!)
 
   useEffect(() => {
@@ -49,10 +50,8 @@ export function Editor({ handle, path }: EditorProps) {
         }),
         automergePlugin(handle.doc, path),
       ],
-      doc: schema.node("doc", null, [
-        schema.node("paragraph", null, [])
-      ])
-    }      
+      doc: fromAm(handle.doc.text.toString())
+    }
 
     function doChange(handle: DocHandle<any>): ((changeFn: ChangeFn) => Heads) {
       return ((changeFn: ChangeFn) => {
@@ -61,7 +60,7 @@ export function Editor({ handle, path }: EditorProps) {
       })
     }
     let state = EditorState.create(editorConfig)
-    const view = new EditorView(editorRoot.current, { 
+    const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
         let newState = view.state.apply(tx)
@@ -79,7 +78,7 @@ export function Editor({ handle, path }: EditorProps) {
       view.destroy()
       handle.off("patch", onPatch)
     }
-  }, [handle, path])
+  }, [])
 
   return <div ref={editorRoot}></div>
 
