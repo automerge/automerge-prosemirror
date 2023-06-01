@@ -1,11 +1,14 @@
 import { EditorState, Plugin, PluginKey, Transaction } from "prosemirror-state";
+import { Step, Transform } from "prosemirror-transform"
 import * as automerge  from "@automerge/automerge";
 import {Doc, Heads, Prop} from "@automerge/automerge";
+import Invertible from "./invertible"
 
 // The name of the meta field that holds the last heads we reconciled with
 const AM_PLUGIN: string = "automergePlugin"
 const NEW_HEADS: string = "am_newHeads"
-const RESET_UNRECONCILED: string = "am_resetUnreconciledTxns"
+const RESET_UNRECONCILED: string = "am_resetUnreconciledSteps"
+const IS_RECONCILIATION: string = "am_isReconciliation"
 
 const pluginKey: PluginKey<State> = new PluginKey(AM_PLUGIN)
 
@@ -13,7 +16,7 @@ const pluginKey: PluginKey<State> = new PluginKey(AM_PLUGIN)
 type State = {
   lastHeads: Heads
   path: Prop[]
-  unreconciledTxns: Transaction[]
+  unreconciledSteps: Invertible[]
 }
 
 export default function(doc: Doc<any>, path: Prop[]): Plugin {
@@ -23,9 +26,12 @@ export default function(doc: Doc<any>, path: Prop[]): Plugin {
       init: () => ({ 
         lastHeads: automerge.getHeads(doc) ,
         path,
-        unreconciledTxns: [],
+        unreconciledSteps: [],
       }),
       apply: (tr: Transaction, prev: State): State => {
+        if (isReconciliation(tr)) {
+          return prev
+        }
         let newHeads: Heads = tr.getMeta(NEW_HEADS)
         if (newHeads) {
           return {
@@ -35,17 +41,26 @@ export default function(doc: Doc<any>, path: Prop[]): Plugin {
         } else if (tr.getMeta(RESET_UNRECONCILED)) {
           return {
             ...prev,
-            unreconciledTxns: [],
+            unreconciledSteps: [],
           }
         } else {
           return {
             ...prev,
-            unreconciledTxns: prev.unreconciledTxns.concat(tr),
+            unreconciledSteps: prev.unreconciledSteps.concat(unreconciledFrom(tr)),
           }
         }
       }
     }
   })
+}
+
+function unreconciledFrom(transform: Transform): Invertible[] {
+  let result = []
+  for (let i = 0; i < transform.steps.length; i++)
+    result.push(new Invertible(transform.steps[i],
+                               transform.steps[i].invert(transform.docs[i]),
+                               transform.docs[i]))
+  return result
 }
 
 export function getPath(state: EditorState): Prop[] {
@@ -60,8 +75,16 @@ export function updateHeads(tr: Transaction, heads: Heads): Transaction {
   return tr.setMeta(NEW_HEADS, heads)
 }
 
-export function takeUnreconciledTxns(state: EditorState): [EditorState, Transaction[]] {
-  let txns = pluginKey.getState(state)!.unreconciledTxns
+export function markAsReconciliation(tr: Transaction): Transaction {
+  return tr.setMeta(IS_RECONCILIATION, true)
+}
+
+function isReconciliation(tr: Transaction): boolean {
+  return !!tr.getMeta(IS_RECONCILIATION)
+}
+
+export function takeUnreconciledSteps(state: EditorState): [EditorState, Invertible[]] {
+  let txns = pluginKey.getState(state)!.unreconciledSteps
   let tr = state.tr.setMeta(RESET_UNRECONCILED, true)
   return [state.apply(tr), txns]
 }

@@ -10,7 +10,7 @@ import {EditorView} from "prosemirror-view"
 import {DocHandle, DocHandlePatchPayload, } from "automerge-repo"
 import "prosemirror-view/style/prosemirror.css"
 import {default as automergePlugin} from "./plugin"
-import {ChangeFn, reconcileProsemirror, reconcileAutomerge} from "./ampm"
+import {ChangeFn, reconcile} from "./reconcile"
 import {Extend, Heads, Patch, Prop} from "@automerge/automerge"
 import * as automerge from "@automerge/automerge"
 import { fromAm } from "./model"
@@ -50,27 +50,20 @@ export function Editor({handle, path}: EditorProps) {
         }),
         automergePlugin(handle.doc, path),
       ],
-      doc: fromAm(handle.doc.text.toString())
+      doc: fromAm(handle.doc, path)
     }
 
-    function doChange(handle: DocHandle<any>): ((changeFn: ChangeFn) => Heads) {
-      return ((changeFn: ChangeFn) => {
-        handle.change(changeFn)
-        return automerge.getHeads(handle.doc)
-      })
-    }
     let state = EditorState.create(editorConfig)
     const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
         let newState = view.state.apply(tx)
-        newState = reconcileAutomerge(newState, doChange(handle))
+        newState = reconcile(newState, handle.change.bind(handle))
         view.updateState(newState)
       }
     })
-    const onPatch = (p: DocHandlePatchPayload<any>) => {
-      let headsAfter = automerge.getHeads(handle.doc)
-      let newState = reconcileProsemirror(view.state, p.patches, headsAfter)
+    const onPatch = (_p: DocHandlePatchPayload<any>) => {
+      let newState = reconcile(view.state, handle.change.bind(handle))
       view.updateState(newState)
     }
     handle.on("patch", onPatch)
