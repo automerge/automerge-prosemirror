@@ -17,6 +17,7 @@ type State = {
   lastHeads: Heads
   path: Prop[]
   unreconciledSteps: Invertible[]
+  doc: Doc<any>,
 }
 
 export default function(doc: Doc<any>, path: Prop[]): Plugin {
@@ -27,6 +28,7 @@ export default function(doc: Doc<any>, path: Prop[]): Plugin {
         lastHeads: automerge.getHeads(doc) ,
         path,
         unreconciledSteps: [],
+        doc: automerge.clone(doc),
       }),
       apply: (tr: Transaction, prev: State): State => {
         if (isReconciliation(tr)) {
@@ -81,6 +83,10 @@ export function markAsReconciliation(tr: Transaction): Transaction {
 
 function isReconciliation(tr: Transaction): boolean {
   return !!tr.getMeta(IS_RECONCILIATION)
+}
+
+export function getDoc(state: EditorState): Doc<any> {
+  return pluginKey.getState(state)!.doc
 }
 
 export function takeUnreconciledSteps(state: EditorState): [EditorState, Invertible[]] {

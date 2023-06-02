@@ -54,16 +54,20 @@ export function Editor({handle, path}: EditorProps) {
     }
 
     let state = EditorState.create(editorConfig)
+    const doMerge = (d: automerge.Doc<any>): automerge.Doc<any> => {
+      handle.merge(d)
+      return handle.doc
+    }
     const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
         let newState = view.state.apply(tx)
-        newState = reconcile(newState, handle.change.bind(handle))
+        newState = reconcile(newState, doMerge)
         view.updateState(newState)
       }
     })
     const onPatch = (_p: DocHandlePatchPayload<any>) => {
-      let newState = reconcile(view.state, handle.change.bind(handle))
+      let newState = reconcile(view.state, doMerge)
       view.updateState(newState)
     }
     handle.on("patch", onPatch)
