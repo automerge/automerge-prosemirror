@@ -12,13 +12,16 @@ export function fromAm(doc: Doc<any>, path: Prop[]): Node {
   }
   let amText = text.toString()
   if (amText !== "") {
-    paras = amText.split("\n\n").map(p => {
+    paras = amText.split("\n").map(p => {
       if (p === "") {
         return schema.node("paragraph", null, [])
       } else {
         return schema.node("paragraph", null, [schema.text(p)])
       }
     })
+  }
+  if (paras.length === 0) {
+    paras = [schema.node("paragraph", null, [])]
   }
   let result = schema.node("doc", null, paras)
   for (const mark of unstable.marks(doc, path[path.length - 1])) {

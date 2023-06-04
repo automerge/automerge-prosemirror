@@ -12,8 +12,10 @@ import "prosemirror-view/style/prosemirror.css"
 import {default as automergePlugin} from "./plugin"
 import {ChangeFn, reconcile} from "./reconcile"
 import {Extend, Heads, Patch, Prop} from "@automerge/automerge"
-import * as automerge from "@automerge/automerge"
+import {unstable as automerge} from "@automerge/automerge"
 import { fromAm } from "./model"
+import {intercept} from "./intercept"
+import PatchSemaphore from "./PatchSemaphore"
 
 export type EditorProps = {
   handle: DocHandle<any>
@@ -53,21 +55,21 @@ export function Editor({handle, path}: EditorProps) {
       doc: fromAm(handle.doc, path)
     }
 
+    const semaphore = new PatchSemaphore()
     let state = EditorState.create(editorConfig)
-    const doMerge = (d: automerge.Doc<any>): automerge.Doc<any> => {
-      handle.merge(d)
+    const doChange = (fn: (d: automerge.Doc<any>) => void): automerge.Doc<any> => {
+      handle.change(fn)
       return handle.doc
     }
     const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
-        let newState = view.state.apply(tx)
-        newState = reconcile(newState, doMerge)
+        let newState = semaphore.intercept(automerge.getHeads(handle.doc), doChange, tx, view.state)
         view.updateState(newState)
       }
     })
-    const onPatch = (_p: DocHandlePatchPayload<any>) => {
-      let newState = reconcile(view.state, doMerge)
+    const onPatch = (p: DocHandlePatchPayload<any>) => {
+      let newState = semaphore.reconcilePatch(p.patches, automerge.getHeads(p.after), view.state)
       view.updateState(newState)
     }
     handle.on("patch", onPatch)

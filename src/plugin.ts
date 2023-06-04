@@ -1,22 +1,19 @@
 import { EditorState, Plugin, PluginKey, Transaction } from "prosemirror-state";
-import { Step, Transform } from "prosemirror-transform"
 import * as automerge  from "@automerge/automerge";
 import {Doc, Heads, Prop} from "@automerge/automerge";
-import Invertible from "./invertible"
 
 // The name of the meta field that holds the last heads we reconciled with
 const AM_PLUGIN: string = "automergePlugin"
 const NEW_HEADS: string = "am_newHeads"
 const RESET_UNRECONCILED: string = "am_resetUnreconciledSteps"
 const IS_RECONCILIATION: string = "am_isReconciliation"
+const SET_DOC: string = "am_setDoc"
 
 const pluginKey: PluginKey<State> = new PluginKey(AM_PLUGIN)
-
 
 type State = {
   lastHeads: Heads
   path: Prop[]
-  unreconciledSteps: Invertible[]
   doc: Doc<any>,
 }
 
@@ -43,26 +40,21 @@ export default function(doc: Doc<any>, path: Prop[]): Plugin {
         } else if (tr.getMeta(RESET_UNRECONCILED)) {
           return {
             ...prev,
-            unreconciledSteps: [],
+          }
+        } else if (tr.getMeta(SET_DOC)) {
+          let doc = tr.getMeta(SET_DOC)
+          return {
+            ...prev,
+            doc,
           }
         } else {
           return {
             ...prev,
-            unreconciledSteps: prev.unreconciledSteps.concat(unreconciledFrom(tr)),
           }
         }
       }
     }
   })
-}
-
-function unreconciledFrom(transform: Transform): Invertible[] {
-  let result = []
-  for (let i = 0; i < transform.steps.length; i++)
-    result.push(new Invertible(transform.steps[i],
-                               transform.steps[i].invert(transform.docs[i]),
-                               transform.docs[i]))
-  return result
 }
 
 export function getPath(state: EditorState): Prop[] {
@@ -89,9 +81,6 @@ export function getDoc(state: EditorState): Doc<any> {
   return pluginKey.getState(state)!.doc
 }
 
-export function takeUnreconciledSteps(state: EditorState): [EditorState, Invertible[]] {
-  let txns = pluginKey.getState(state)!.unreconciledSteps
-  let tr = state.tr.setMeta(RESET_UNRECONCILED, true)
-  return [state.apply(tr), txns]
+export function setDoc(tr: Transaction, doc: Doc<any>): Transaction {
+  return tr.setMeta(SET_DOC, doc)
 }
-
