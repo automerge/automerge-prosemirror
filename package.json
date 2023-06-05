@@ -1,36 +1,22 @@
 {
-  "name": "prosemirror-the-second",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "@automerge/prosemirror",
+  "version": "0.0.1",
   "license": "MIT",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsc"
   },
+  "type": "module",
+  "main": "dist/index.js",
   "dependencies": {
     "@automerge/automerge": "^2.1.0-alpha.2",
-    "automerge-repo": "^0.0.54",
-    "automerge-repo-network-broadcastchannel": "^0.0.53",
-    "automerge-repo-react-hooks": "^0.0.53",
-    "automerge-repo-storage-localforage": "^0.0.53",
-    "eventemitter3": "^5.0.1",
     "prosemirror-commands": "^1.5.2",
-    "prosemirror-history": "^1.3.2",
     "prosemirror-keymap": "^1.2.2",
     "prosemirror-model": "^1.19.2",
     "prosemirror-schema-basic": "^1.2.2",
     "prosemirror-state": "^1.4.3",
-    "prosemirror-view": "^1.31.3",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "prosemirror-view": "^1.31.3"
   },
   "devDependencies": {
-    "@types/react": "^18.2.7",
-    "@types/react-dom": "^18.2.4",
-    "@vitejs/plugin-react": "^4.0.0",
-    "vite": "^4.3.8",
-    "vite-plugin-top-level-await": "^1.3.1",
-    "vite-plugin-wasm": "^3.2.2"
+    "typescript": "^5.1.3"
   }
 }

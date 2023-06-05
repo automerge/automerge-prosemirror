@@ -4,7 +4,7 @@ import { AddMarkStep } from "prosemirror-transform"
 import {Doc, Prop, unstable} from "@automerge/automerge";
 import * as automerge from "@automerge/automerge"
 
-export function fromAm(doc: Doc<any>, path: Prop[]): Node {
+export function init(doc: Doc<any>, path: Prop[]): Node {
   let paras: Array<Node> = []
   let text = lookupText(doc, path)
   if (text === null) {
