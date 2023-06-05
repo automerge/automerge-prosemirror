@@ -60,7 +60,7 @@ prosemirror-state@^1.0.0, prosemirror-state@^1.4.3:
     prosemirror-transform "^1.0.0"
     prosemirror-view "^1.27.0"
 
-prosemirror-transform@^1.0.0, prosemirror-transform@^1.1.0:
+prosemirror-transform@^1.0.0, prosemirror-transform@^1.1.0, prosemirror-transform@^1.7.3:
   version "1.7.3"
   resolved "https://registry.yarnpkg.com/prosemirror-transform/-/prosemirror-transform-1.7.3.tgz#cc2225cd1bf88a3c62404b9eb051ff73e9c716a6"
   integrity sha512-qDapyx5lqYfxVeUWEw0xTGgeP2S8346QtE7DxkalsXlX89lpzkY6GZfulgfHyk1n4tf74sZ7CcXgcaCcGjsUtA==

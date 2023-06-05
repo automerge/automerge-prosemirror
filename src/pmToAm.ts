@@ -6,15 +6,18 @@ import { type Extend } from "@automerge/automerge"
 export type ChangeFn = (doc: Extend<any>, field: string) => void
 
 export default function(step: Step, pmDoc: Node, doc: Extend<any>, attr: Prop) {
-  if (step instanceof ReplaceStep) {
-    replaceStep(step, doc, attr, pmDoc)
-  } else if (step instanceof AddMarkStep) {
-    addMarkStep(step, doc, attr, pmDoc)
+  // This shenanigans with the constructor name is necessary for reasons I 
+  // don't really understand. I _think_ that the `*Step` classs we get
+  // passed here can be slightly different to the classes we've imported if the 
+  // dependencies are messed up
+  if (step.constructor.name === "ReplaceStep") {
+    replaceStep(step as ReplaceStep, doc, attr, pmDoc)
+  } else if (step.constructor.name === "AddMarkStep") {
+    addMarkStep(step as AddMarkStep, doc, attr, pmDoc)
   }
 }
 
 function replaceStep(step: ReplaceStep, doc: Extend<any>, field: Prop, pmDoc: Node) {
-  let amText = doc[field].toString()
   let start = pmIdxToAmIdx(step.from, pmDoc)
   let end = pmIdxToAmIdx(step.to, pmDoc)
 
@@ -22,16 +25,14 @@ function replaceStep(step: ReplaceStep, doc: Extend<any>, field: Prop, pmDoc: No
 
   let toInsert = ""
   if (step.slice) {
-    console.log(JSON.stringify(step.slice.toJSON(), null, 4))
     step.slice.content.forEach((node, _, idx) => {
-      console.log(idx)
       if (node.type.name === 'text' && node.text) {
         toInsert += node.text
-      } else if (['paragraph', 'heading'].indexOf(node.type.name) !== -1) {
+      } else if (node.type.name === 'paragraph') {
 
         // if this is the first child and openEnd is zero then we must add the opening delimiter
         const isFirstNode = idx === 0
-        const emitOpeningDelimiter = isFirstNode && step.slice.openStart === 0
+        const emitOpeningDelimiter = step.slice.openStart === 0
         if (isFirstNode && emitOpeningDelimiter) {
           toInsert += "\n"
         }
