@@ -2,6 +2,8 @@ import {AddMarkStep, ReplaceStep, Step } from 'prosemirror-transform';
 import { Node } from 'prosemirror-model';
 import {Prop, unstable as automerge} from "@automerge/automerge";
 import { type Extend } from "@automerge/automerge"
+import { pmIdxToAmIdx } from './positions';
+import { BLOCK_MARKER } from './constants';
 
 export type ChangeFn = (doc: Extend<any>, field: string) => void
 
@@ -30,11 +32,12 @@ function replaceStep(step: ReplaceStep, doc: Extend<any>, field: Prop, pmDoc: No
         toInsert += node.text
       } else if (node.type.name === 'paragraph') {
 
-        // if this is the first child and openEnd is zero then we must add the opening delimiter
+        // if this is the first child of the slice and openStart is zero then
+        // we must add the opening delimiter
         const isFirstNode = idx === 0
         const emitOpeningDelimiter = step.slice.openStart === 0
         if (isFirstNode && emitOpeningDelimiter) {
-          toInsert += "\n"
+          toInsert += BLOCK_MARKER
         }
 
         toInsert += node.textBetween(0, node.content.size)
@@ -44,7 +47,7 @@ function replaceStep(step: ReplaceStep, doc: Extend<any>, field: Prop, pmDoc: No
         const isLastNode = idx === step.slice.content.childCount - 1
         const skipLastDelimiter = step.slice.openEnd > 0
         if (!(isLastNode && skipLastDelimiter)) {
-          toInsert += "\n"
+          toInsert += BLOCK_MARKER
         }
       } else {
         alert(
@@ -64,40 +67,3 @@ function addMarkStep(step: AddMarkStep, doc: Extend<any>, field: Prop, pmDoc: No
   automerge.mark(doc, field, {start, end, expand: "both"}, step.mark.type.name, true)
 }
 
-function pmIdxToAmIdx(
-  position: number,
-  pmDoc: Node
-): number {
-  let idx = 0
-  let blocks = 0
-  let offset = 0
-  let nudge = -1
-  while (idx < pmDoc.content.childCount) {
-    let contentNode = pmDoc.content.maybeChild(idx)
-    if (!contentNode) {
-      idx++
-      continue
-    }
-    let nodeSize = contentNode.nodeSize
-    offset += nodeSize
-
-    // If the last node is an empty node then we nudge the index backward by one so 
-    // we don't point past the end of the doc
-    if (offset > position) {
-      break
-    }
-    idx++
-    blocks++
-  }
-
-  // *2 to account for the fact that prosemirror indices increment on entering
-  // and leaving a the block
-  let prosemirrorBlockCount = blocks * 2
-  let automergeBlockCount = blocks
-
-  let diff = prosemirrorBlockCount - automergeBlockCount
-
-  let amPosition = position - diff + nudge
-
-  return amPosition
-}

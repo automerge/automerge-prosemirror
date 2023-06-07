@@ -3,6 +3,7 @@ import {Node} from "prosemirror-model"
 import { AddMarkStep } from "prosemirror-transform"
 import {Doc, Prop, unstable} from "@automerge/automerge";
 import * as automerge from "@automerge/automerge"
+import { amIdxToPmIdx } from "./positions";
 
 export function init(doc: Doc<any>, path: Prop[]): Node {
   let paras: Array<Node> = []
@@ -46,16 +47,4 @@ function lookupText(doc: Doc<any>, path: Prop[]): automerge.Text | null {
   } else {
     return null
   }
-}
-
-function amIdxToPmIdx(amIdx: number, pmText: string): number {
-  // start at one because that's the index of the first character of the first paragraph
-  let pmIdx = 1
-  for (let i = 0; i < amIdx; i++) {
-    if (pmText[i] === "\n" && pmText[i+1] == "\n") {
-      i++
-    }
-    pmIdx++
-  }
-  return pmIdx
 }

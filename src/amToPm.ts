@@ -2,8 +2,9 @@ import {unstable, InsertPatch, DelPatch, Patch, type Prop, SpliceTextPatch} from
 import {Fragment, Slice, Mark} from "prosemirror-model";
 import {Transaction} from "prosemirror-state";
 import {schema} from "prosemirror-schema-basic";
+import {BLOCK_MARKER} from "./constants"
+import {amIdxToPmIdx} from "./positions"
 
-const BLOCK_MARKER = "\n"
 
 type MarkPatch = {
   action: 'mark'
@@ -111,27 +112,4 @@ function patchContentToSlice(patchContent: string): Slice {
     content = Fragment.from(blocks)
   }
   return new Slice(content, openStart, openEnd)
-}
-
-function amIdxToPmIdx(
-  amIdx: number,
-  amText: string
-): number {
-  // first, count how many paragraphs we have
-  let idx = amText.indexOf(BLOCK_MARKER)
-  let i = 0
-  while (idx < amIdx && idx !== -1) {
-    idx = amText.indexOf(BLOCK_MARKER, idx + 1)
-    i++
-  }
-
-  // this is how many blocks precede the current one.
-  // BtextBmore textBmo^re text after pos
-  let automergeBlockCount = i
-
-  // <p>text</p><p>more text</p><p>mo^re text after pos</p>
-  let prosemirrorBlockCount = automergeBlockCount * 2
-
-  let diff = prosemirrorBlockCount - automergeBlockCount
-  return amIdx + diff + 1 // +1 for the opening paragraph tag
 }
