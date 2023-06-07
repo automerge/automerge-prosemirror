@@ -1,13 +1,15 @@
-import {AddMarkStep, ReplaceStep, Step } from 'prosemirror-transform';
+import {AddMarkStep, RemoveMarkStep, ReplaceStep, Step } from 'prosemirror-transform';
 import { Node } from 'prosemirror-model';
 import {Prop, unstable as automerge} from "@automerge/automerge";
 import { type Extend } from "@automerge/automerge"
 import { pmIdxToAmIdx } from './positions';
 import { BLOCK_MARKER } from './constants';
+import {schema} from 'prosemirror-schema-basic';
+import {MarkMap} from './marks';
 
-export type ChangeFn = (doc: Extend<any>, field: string) => void
+export type ChangeFn<T> = (doc: Extend<T>, field: string) => void
 
-export default function(step: Step, pmDoc: Node, doc: Extend<any>, attr: Prop) {
+export default function<T>(step: Step, marks: MarkMap<T>, pmDoc: Node, doc: Extend<T>, attr: Prop) {
   // This shenanigans with the constructor name is necessary for reasons I 
   // don't really understand. I _think_ that the `*Step` classs we get
   // passed here can be slightly different to the classes we've imported if the 
@@ -15,7 +17,9 @@ export default function(step: Step, pmDoc: Node, doc: Extend<any>, attr: Prop) {
   if (step.constructor.name === "ReplaceStep") {
     replaceStep(step as ReplaceStep, doc, attr, pmDoc)
   } else if (step.constructor.name === "AddMarkStep") {
-    addMarkStep(step as AddMarkStep, doc, attr, pmDoc)
+    addMarkStep(step as AddMarkStep, marks, doc, attr, pmDoc)
+  } else if (step.constructor.name === "RemoveMarkStep") {
+    removeMarkStep(step as RemoveMarkStep, doc, attr, pmDoc)
   }
 }
 
@@ -61,9 +65,19 @@ function replaceStep(step: ReplaceStep, doc: Extend<any>, field: Prop, pmDoc: No
   automerge.splice(doc, field, start, toDelete, toInsert)
 }
 
-function addMarkStep(step: AddMarkStep, doc: Extend<any>, field: Prop, pmDoc: Node) {
+function addMarkStep<T>(step: AddMarkStep, marks: MarkMap<T>, doc: Extend<T>, field: Prop, pmDoc: Node) {
   const start = pmIdxToAmIdx(step.from, pmDoc)
   const end = pmIdxToAmIdx(step.to, pmDoc)
-  automerge.mark(doc, field, {start, end, expand: "both"}, step.mark.type.name, true)
+  const markName = step.mark.type.name
+  const expand = (!!step.mark.type.spec.inclusive) ? "both" : "none"
+  let value = marks.createMark(doc, markName, step.mark.attrs)
+  automerge.mark(doc as Extend<any>, field, {start, end, expand}, markName, value)
 }
 
+function removeMarkStep<T>(step: RemoveMarkStep, doc: Extend<T>, field: Prop, pmDoc: Node) {
+  const start = pmIdxToAmIdx(step.from, pmDoc)
+  const end = pmIdxToAmIdx(step.to, pmDoc)
+  const markName = step.mark.type.name
+  const expand = (!!step.mark.type.spec.inclusive) ? "both" : "none"
+  automerge.unmark(doc as Extend<any>, field, {start, end, expand}, markName)
+}

@@ -1,9 +1,10 @@
-import {unstable, InsertPatch, DelPatch, Patch, type Prop, SpliceTextPatch} from "@automerge/automerge";
+import {unstable, InsertPatch, DelPatch, Patch, type Prop, SpliceTextPatch, Doc} from "@automerge/automerge";
 import {Fragment, Slice, Mark} from "prosemirror-model";
 import {Transaction} from "prosemirror-state";
 import {schema} from "prosemirror-schema-basic";
 import {BLOCK_MARKER} from "./constants"
 import {amIdxToPmIdx} from "./positions"
+import {MarkMap} from "./marks";
 
 
 type MarkPatch = {
@@ -12,7 +13,7 @@ type MarkPatch = {
   marks: unstable.Mark[]
 }
 
-export default function (patches: Array<Patch>, path: Prop[], tx: Transaction): Transaction {
+export default function <T>(doc: Doc<T>, marks: MarkMap<T>, patches: Array<Patch>, path: Prop[], tx: Transaction): Transaction {
   for (const patch of patches) {
     if (patch.action === "insert") {
       tx = handleInsert(patch, path, tx)
@@ -21,7 +22,7 @@ export default function (patches: Array<Patch>, path: Prop[], tx: Transaction): 
     } else if (patch.action === "del") {
       tx = handleDelete(patch, path, tx)
     } else if (patch.action === "mark") {
-      tx = handleMark(patch, path, tx)
+      tx = handleMark<T>(doc, marks, patch, path, tx)
     }
   }
   return tx
@@ -53,13 +54,20 @@ function handleDelete(patch: DelPatch, path: Prop[], tx: Transaction): Transacti
   return tx.delete(start, end)
 }
 
-function handleMark(patch: MarkPatch, path: Prop[], tx: Transaction) {
+function handleMark<T>(doc: T, marks: MarkMap<T>, patch: MarkPatch, path: Prop[], tx: Transaction) {
   if (pathEquals(patch.path, path)) {
     for (const mark of patch.marks) {
       let pmText = tx.doc.textBetween(0, tx.doc.content.size, BLOCK_MARKER)
       const pmStart = amIdxToPmIdx(mark.start, pmText)
       const pmEnd = amIdxToPmIdx(mark.end, pmText)
-      tx = tx.addMark(pmStart, pmEnd, schema.marks[mark.name].create({}))
+      const markType = schema.marks[mark.name]
+      if (markType == null) continue
+      if (mark.value == null) {
+        tx = tx.removeMark(pmStart, pmEnd, markType)
+      } else {
+        const markAttrs = marks.loadMark(doc, mark.name, mark.value)
+        tx = tx.addMark(pmStart, pmEnd, markType.create(markAttrs))
+      }
     }
   }
   return tx

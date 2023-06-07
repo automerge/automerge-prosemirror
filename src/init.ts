@@ -4,8 +4,14 @@ import { AddMarkStep } from "prosemirror-transform"
 import {Doc, Prop, unstable} from "@automerge/automerge";
 import * as automerge from "@automerge/automerge"
 import { amIdxToPmIdx } from "./positions";
+import {defaultMarkMap, MarkMap} from "./marks";
 
-export function init(doc: Doc<any>, path: Prop[]): Node {
+type Options<T> = {
+  markMap: MarkMap<T>
+}
+
+export function init<T>(doc: Doc<T>, path: Prop[], options?: Options<T>): Node {
+  let markMap = options?.markMap || defaultMarkMap<T>()
   let paras: Array<Node> = []
   let text = lookupText(doc, path)
   if (text === null) {
@@ -28,10 +34,13 @@ export function init(doc: Doc<any>, path: Prop[]): Node {
   for (const mark of unstable.marks(doc, path[path.length - 1])) {
     let start = amIdxToPmIdx(mark.start, amText)
     let end = amIdxToPmIdx(mark.end, amText)
-    let step = new AddMarkStep(start, end, schema.marks[mark.name].create({}))
-    let stepResult = step.apply(result)
-    if (stepResult.doc) {
-      result = stepResult.doc
+    let markValue = markMap.loadMark(doc, mark.name, mark.value)
+    if (markValue !== null) {
+      let step = new AddMarkStep(start, end, schema.marks[mark.name].create(markValue))
+      let stepResult = step.apply(result)
+      if (stepResult.doc) {
+        result = stepResult.doc
+      }
     }
   }
   return result
