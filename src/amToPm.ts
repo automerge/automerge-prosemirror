@@ -27,54 +27,66 @@ function makeLoadMark<T>(doc: T, map: MarkMap<T>): LoadMark {
   }
 }
 
-export default function <T>(doc: Doc<T>, marks: MarkMap<T>, patches: Array<Patch>, path: Prop[], tx: Transaction): Transaction {
-  for (const patch of patches) {
-    const loadMark = makeLoadMark(doc, marks)
-    if (patch.action === "insert") {
-      tx = handleInsert(patch, path, tx, loadMark)
-    } else if (patch.action === "splice") {
-      tx = handleSplice(patch, path, tx, loadMark)
-    } else if (patch.action === "del") {
-      tx = handleDelete(patch, path, tx)
-    } else if (patch.action === "mark") {
-      tx = handleMark(patch, path, tx, loadMark)
+type TranslateIdx = (idx: number) => number
+
+function makeTranslateIdx(doc: any, path: Prop[]): TranslateIdx {
+  return function(idx: number): number {
+    let current = doc
+    for (let i = 0; i < path.length; i++) {
+      const prop = path[i]
+      current = current[prop]
     }
+    let amText = current as string
+    return amIdxToPmIdx(idx, amText.toString())
   }
-  return tx
 }
 
-function handleInsert(patch: InsertPatch, path: Prop[], tx: Transaction, loadMark: LoadMark): Transaction {
+export default function <T>(doc: Doc<T>, marks: MarkMap<T>, patches: Array<Patch>, path: Prop[], tx: Transaction): Transaction {
+  let result = tx
+  for (const patch of patches) {
+    const loadMark = makeLoadMark(doc, marks)
+    const translateIdx = makeTranslateIdx(doc, path)
+    if (patch.action === "insert") {
+      result = handleInsert(patch, path, result, translateIdx, loadMark)
+    } else if (patch.action === "splice") {
+      result = handleSplice(patch, path, result, translateIdx, loadMark)
+    } else if (patch.action === "del") {
+      result = handleDelete(patch, path, result, translateIdx)
+    } else if (patch.action === "mark") {
+      result = handleMark(patch, path, result, translateIdx, loadMark)
+    }
+  }
+  return result
+}
+
+function handleInsert(patch: InsertPatch, path: Prop[], tx: Transaction, translate: TranslateIdx, loadMark: LoadMark): Transaction {
   let index = charPath(path, patch.path)
   if (index === null) return tx
-  let pmText = tx.doc.textBetween(0, tx.doc.content.size, BLOCK_MARKER)
-  const pmIdx = amIdxToPmIdx(index, pmText)
+  const pmIdx = translate(index)
   const content = patchContentToSlice(patch.values.join(""), loadMark, patch.marks)
   return tx.replace(pmIdx, pmIdx, content)
 }
 
-function handleSplice(patch: SpliceTextPatch, path: Prop[], tx: Transaction, loadMark: LoadMark): Transaction {
+function handleSplice(patch: SpliceTextPatch, path: Prop[], tx: Transaction, translate: TranslateIdx, loadMark: LoadMark): Transaction {
   let index = charPath(path, patch.path)
   if (index === null) return tx
-  let pmText = tx.doc.textBetween(0, tx.doc.content.size, BLOCK_MARKER)
-  const idx = amIdxToPmIdx(index, pmText)
+  const idx = translate(index)
   return tx.replace(idx, idx, patchContentToSlice(patch.value, loadMark, patch.marks))
 }
 
-function handleDelete(patch: DelPatch, path: Prop[], tx: Transaction): Transaction {
+function handleDelete(patch: DelPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
   let index = charPath(path, patch.path)
   if (index === null) return tx
-  let pmText = tx.doc.textBetween(0, tx.doc.content.size, BLOCK_MARKER)
-  const start = amIdxToPmIdx(index, pmText)
-  const end = amIdxToPmIdx(index + (patch.length || 1), pmText)
+  const start = translate(index)
+  const end = translate(index + (patch.length || 1))
   return tx.delete(start, end)
 }
 
-function handleMark(patch: MarkPatch, path: Prop[], tx: Transaction, loadMark: LoadMark) {
+function handleMark(patch: MarkPatch, path: Prop[], tx: Transaction, translate: TranslateIdx, loadMark: LoadMark) {
   if (pathEquals(patch.path, path)) {
     for (const mark of patch.marks) {
-      let pmText = tx.doc.textBetween(0, tx.doc.content.size, BLOCK_MARKER)
-      const pmStart = amIdxToPmIdx(mark.start, pmText)
-      const pmEnd = amIdxToPmIdx(mark.end, pmText)
+      const pmStart = translate(mark.start)
+      const pmEnd = translate(mark.end)
       const markType = schema.marks[mark.name]
       if (markType == null) continue
       if (mark.value == null) {
@@ -126,6 +138,10 @@ function patchContentToSlice(patchContent: string, loadMark: LoadMark, marks?: M
   let pmMarks: Array<Mark> | undefined = undefined
   if (marks != null) {
     pmMarks = Object.entries(marks).reduce((acc: Mark[], [name, value]: [string, MarkValue]) => {
+      // This should actually never be null because automerge only uses null 
+      // as the value for a mark when a mark is being removed, which would only
+      // happen in a `AddMark` patch, not a `Insert` or `Splice` patch. But we
+      // appease typescript anyway
       if (value != null) {
         let pmAttrs = loadMark(name, value)
         acc.push(schema.mark(name, pmAttrs))
@@ -137,7 +153,7 @@ function patchContentToSlice(patchContent: string, loadMark: LoadMark, marks?: M
   let content = Fragment.empty
   let blocks = patchContent.split(BLOCK_MARKER).map(b => {
     if (b.length == 0) {
-      return schema.node("paragraph", null, [], pmMarks)
+      return schema.node("paragraph", null, [])
     } else {
       return schema.node("paragraph", null, [schema.text(b, pmMarks)])
     }

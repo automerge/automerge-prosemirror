@@ -4,7 +4,7 @@ import { AddMarkStep } from "prosemirror-transform"
 import {Doc, Prop, unstable} from "@automerge/automerge";
 import * as automerge from "@automerge/automerge"
 import { amIdxToPmIdx } from "./positions";
-import {defaultMarkMap, MarkMap, PresentMarkValue} from "./marks";
+import {defaultMarkMap, MarkMap} from "./marks";
 
 type Options<T> = {
   markMap: MarkMap<T>

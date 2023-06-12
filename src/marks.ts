@@ -1,7 +1,20 @@
 import {Attrs} from "prosemirror-model"
 
-export type MarkValue = string | number | boolean | null | Date | Uint8Array
-export type PresentMarkValue = string | number | boolean | Date | Uint8Array 
+/**
+ * The value of a mark, including null which is only passed when removing a mark (i.e. in a mark patch)
+ */
+export type MarkValue = PresentMarkValue | null
+
+/**
+ * The value of a mark, excluding null
+ *
+ * @remarks
+ *
+ * The value of a mark is only ever null when we are removing a mark. `PresentMarkValue`
+ * then is just a convenience type for when we are processing marks which we know 
+ * must be present (as for example in a insert or splice patch)
+ */
+export type PresentMarkValue = string | number | boolean | Date | Uint8Array
 
 /**
  * How to map between mark values in automerge and mark values in prosemirror
@@ -60,7 +73,7 @@ export type MarkMap<T> = {
   loadMark(doc: T, markName: string, markValue: PresentMarkValue): Attrs | null
 }
 
-export function defaultMarkMap<T>(): MarkMap<T>{
+export function defaultMarkMap<T>(): MarkMap<T> {
   return {
     createMark<T>(_doc: T, _markName: string, _value: Attrs): PresentMarkValue | null {
       return true

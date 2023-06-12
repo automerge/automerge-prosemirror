@@ -23,6 +23,8 @@ export default function<T>(step: Step, marks: MarkMap<T>, pmDoc: Node, doc: T, a
 }
 
 function replaceStep(step: ReplaceStep, doc: any, field: Prop, pmDoc: Node) {
+  //@ts-ignore
+  let amText = doc.text.toString()
   let start = pmIdxToAmIdx(step.from, pmDoc)
   let end = pmIdxToAmIdx(step.to, pmDoc)
 
@@ -53,7 +55,7 @@ function replaceStep(step: ReplaceStep, doc: any, field: Prop, pmDoc: Node) {
           toInsert += BLOCK_MARKER
         }
       } else {
-        alert(
+        console.log(
           `Hi! We would love to insert that text (and other stuff), but
           this is a research prototype, and that action hasn't been
           implemented.`

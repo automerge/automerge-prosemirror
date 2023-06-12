@@ -3,7 +3,7 @@ import { Node} from "prosemirror-model"
 
 export function amIdxToPmIdx(
   amIdx: number,
-  amText: string
+  amText: string,
 ): number {
   // first, count how many paragraphs we have
   let idx = amText.indexOf(BLOCK_MARKER)
