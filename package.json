@@ -8,7 +8,7 @@
   "type": "module",
   "main": "dist/index.js",
   "dependencies": {
-    "@automerge/automerge": "^2.1.0-alpha.2",
+    "@automerge/automerge": "^2.1.0-alpha.5",
     "prosemirror-commands": "^1.5.2",
     "prosemirror-keymap": "^1.2.2",
     "prosemirror-model": "^1.19.2",

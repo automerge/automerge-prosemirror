@@ -1,6 +1,7 @@
-import {Extend, Doc} from "@automerge/automerge"
-import {MarkValue} from "@automerge/automerge/dist/types"
 import {Attrs} from "prosemirror-model"
+
+export type MarkValue = string | number | boolean | null | Date | Uint8Array
+export type PresentMarkValue = string | number | boolean | Date | Uint8Array 
 
 /**
  * How to map between mark values in automerge and mark values in prosemirror
@@ -45,7 +46,7 @@ export type MarkMap<T> = {
    *
    * @typeParam T The type of the automerge document
    */
-  createMark(doc: Extend<T>, markName: string, value: Attrs): MarkValue | null
+  createMark(doc: T, markName: string, value: Attrs): PresentMarkValue | null
 
   /**
    * Create a prosemirror mark from a mark in an automerge document
@@ -56,16 +57,16 @@ export type MarkMap<T> = {
    *
    * @typeParam T The type of the automerge document
    */
-  loadMark(doc: T, markName: string, markValue: MarkValue): Attrs | null
+  loadMark(doc: T, markName: string, markValue: PresentMarkValue): Attrs | null
 }
 
 export function defaultMarkMap<T>(): MarkMap<T>{
   return {
-    createMark<T>(_doc: Extend<T>, _markName: string, _value: Attrs): MarkValue | null {
+    createMark<T>(_doc: T, _markName: string, _value: Attrs): PresentMarkValue | null {
       return true
     },
-    loadMark<T>(_doc: T, _markName: string, _markValue: MarkValue): Attrs | null {
-      return {}
+    loadMark<T>(_doc: T, _markName: string, _markValue: PresentMarkValue): Attrs | null {
+      return null
     }
   }
 }

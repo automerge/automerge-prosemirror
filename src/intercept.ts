@@ -1,4 +1,4 @@
-import {Doc, Extend, Heads, Prop} from "@automerge/automerge";
+import {Doc, Heads, Prop} from "@automerge/automerge";
 import {unstable as automerge} from "@automerge/automerge";
 import {EditorState, Transaction} from "prosemirror-state";
 import {getPath, getLastHeads, updateHeads, getMarks} from "./plugin";
@@ -38,7 +38,7 @@ export function intercept<T>(currentHeads: Heads, change: (_: ChangeFn<T>) => Do
   return state.apply(tx)
 }
 
-function docAndAttr(doc: Extend<any>, path: Prop[]): [Extend<any>, Prop] {
+function docAndAttr(doc: any, path: Prop[]): [any, Prop] {
   let result_path = path.slice()
   while (result_path.length > 1) {
     doc = doc[result_path.shift()!]
