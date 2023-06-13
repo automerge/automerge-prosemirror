@@ -13,9 +13,13 @@ type ChangeFn<T> = (doc: Doc<T>) => void
 export default class PatchSemaphore<T> {
   _inLocalTransaction: boolean = false;
 
-  intercept = (currentHeads: Heads, change: (_: ChangeFn<T>) => Doc<T>, intercepted: Transaction, state: EditorState): EditorState => {
+  intercept = (
+    change: (_atHeads: Heads, _doChange: ChangeFn<T>) => Doc<T>,
+    intercepted: Transaction,
+    state: EditorState
+  ): EditorState => {
     this._inLocalTransaction = true;
-    const result = intercept(currentHeads, change, intercepted, state)
+    const result = intercept(change, intercepted, state)
     this._inLocalTransaction = false;
     return result;
   }

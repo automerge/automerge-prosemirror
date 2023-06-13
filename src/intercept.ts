@@ -8,16 +8,17 @@ import mapSelection from "./mapSelection"
 
 type ChangeFn<T> = (doc: Doc<T>) => void
 
-export function intercept<T>(currentHeads: Heads, change: (_: ChangeFn<T>) => Doc<T>, intercepted: Transaction, state: EditorState): EditorState {
+export function intercept<T>(
+  change: (_atHeads: Heads, _doChange: ChangeFn<T>) => Doc<T>,
+  intercepted: Transaction,
+  state: EditorState
+): EditorState {
   let headsBefore = getLastHeads(state)
-  if (!headsEqual(headsBefore, currentHeads)) {
-    throw new Error("Heads changed")
-  }
   let path = getPath(state)
   let marks = getMarks<T>(state)
 
   // Apply the incoming transaction to the automerge doc
-  let updated = change(doc => {
+  let updated = change(headsBefore, doc => {
     let [subdoc, attr] = docAndAttr(doc, path)
     for (let i = 0; i < intercepted.steps.length; i++) {
       let step = intercepted.steps[i]
@@ -45,12 +46,4 @@ function docAndAttr(doc: any, path: Prop[]): [any, Prop] {
     doc = doc[result_path.shift()!]
   }
   return [doc, path[0]]
-}
-
-function headsEqual(a: Heads, b: Heads): boolean {
-  if (a.length != b.length) return false
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false
-  }
-  return true
 }
