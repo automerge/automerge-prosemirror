@@ -30,8 +30,9 @@ export function intercept<T>(currentHeads: Heads, change: (_: ChangeFn<T>) => Do
   // Get the corresponding patches and turn them into a transaction to apply to the editorstate
   let diff = automerge.diff(updated, headsBefore, headsAfter)
 
+  let before = automerge.view(updated, headsBefore)
   // Create a transaction which applies the diff and updates the doc and heads
-  let tx = amToPm(updated, marks, diff, path, state.tr)
+  let tx = amToPm(before, updated, marks, diff, path, state.tr)
   tx = mapSelection(intercepted, tx)
   tx = updateHeads(tx, headsAfter)
 

@@ -10,7 +10,7 @@ type SpliceTextPatch = unstable.SpliceTextPatch
 type InsertPatch = unstable.InsertPatch
 
 type MarkSet = {
-  [name : string]: MarkValue
+  [name: string]: MarkValue
 }
 
 type MarkPatch = {
@@ -22,39 +22,34 @@ type MarkPatch = {
 type LoadMark = (markName: string, markValue: PresentMarkValue) => Attrs | null
 
 function makeLoadMark<T>(doc: T, map: MarkMap<T>): LoadMark {
-  return function(markName: string, markValue: PresentMarkValue): Attrs | null {
+  return function (markName: string, markValue: PresentMarkValue): Attrs | null {
     return map.loadMark(doc, markName, markValue)
   }
 }
 
 type TranslateIdx = (idx: number) => number
 
-function makeTranslateIdx(doc: any, path: Prop[]): TranslateIdx {
-  return function(idx: number): number {
-    let current = doc
-    for (let i = 0; i < path.length; i++) {
-      const prop = path[i]
-      current = current[prop]
-    }
-    let amText = current as string
-    return amIdxToPmIdx(idx, amText.toString())
-  }
-}
-
-export default function <T>(doc: Doc<T>, marks: MarkMap<T>, patches: Array<Patch>, path: Prop[], tx: Transaction): Transaction {
+export default function <T>(
+  before: Doc<T>,
+  after: Doc<T>,
+  marks: MarkMap<T>,
+  patches: Array<Patch>,
+  path: Prop[], tx: Transaction
+): Transaction {
   let result = tx
+  let patchState = new PatchingText(before, path)
   for (const patch of patches) {
-    const loadMark = makeLoadMark(doc, marks)
-    const translateIdx = makeTranslateIdx(doc, path)
+    const loadMark = makeLoadMark(after, marks)
     if (patch.action === "insert") {
-      result = handleInsert(patch, path, result, translateIdx, loadMark)
+      result = handleInsert(patch, path, result, patchState.translate, loadMark)
     } else if (patch.action === "splice") {
-      result = handleSplice(patch, path, result, translateIdx, loadMark)
+      result = handleSplice(patch, path, result, patchState.translate, loadMark)
     } else if (patch.action === "del") {
-      result = handleDelete(patch, path, result, translateIdx)
+      result = handleDelete(patch, path, result, patchState.translate)
     } else if (patch.action === "mark") {
-      result = handleMark(patch, path, result, translateIdx, loadMark)
+      result = handleMark(patch, path, result, patchState.translate, loadMark)
     }
+    patchState.patch(patch)
   }
   return result
 }
@@ -79,6 +74,7 @@ function handleDelete(patch: DelPatch, path: Prop[], tx: Transaction, translate:
   if (index === null) return tx
   const start = translate(index)
   const end = translate(index + (patch.length || 1))
+  let contentSize = tx.doc.content.size
   return tx.delete(start, end)
 }
 
@@ -162,4 +158,52 @@ function patchContentToSlice(patchContent: string, loadMark: LoadMark, marks?: M
     content = Fragment.from(blocks)
   }
   return new Slice(content, openStart, openEnd)
+}
+
+class PatchingText {
+  docPath: Prop[]
+  currentValue: string
+
+  constructor(doc: Doc<any>, path: Prop[]) {
+    this.docPath = path
+    let current = doc
+    for (let i = 0; i < path.length; i++) {
+      const prop = path[i]
+      current = current[prop]
+    }
+    let amText = current.toString()
+    this.currentValue = amText
+  }
+
+  patch = (patch: Patch): void => {
+    if (patch.action === "splice") {
+      const index = charPath(this.docPath, patch.path)
+      if (index == null) {
+        return
+      }
+      const before = this.currentValue.substring(0, index)
+      const after = this.currentValue.substring(index + patch.value.length)
+      this.currentValue = before + patch.value + after
+    } else if (patch.action === "del") {
+      const index = charPath(this.docPath, patch.path)
+      if (index == null) {
+        return
+      }
+      const before = this.currentValue.substring(0, index)
+      const after = this.currentValue.substring(index + (patch.length || 1))
+      this.currentValue = before + after
+    } else if (patch.action === "insert") {
+      const index = charPath(this.docPath, patch.path)
+      if (index == null) {
+        return
+      }
+      const before = this.currentValue.substring(0, index)
+      const after = this.currentValue.substring(index)
+      this.currentValue = before + patch.values.join("") + after
+    }
+  }
+
+  translate = (index: number): number => {
+    return amIdxToPmIdx(index, this.currentValue)
+  }
 }

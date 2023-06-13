@@ -1,8 +1,12 @@
-import {Doc, Heads, Patch} from "@automerge/automerge";
+import {unstable as automerge} from "@automerge/automerge";
 import {EditorState, Transaction} from "prosemirror-state";
 import amToPm from "./amToPm";
 import {intercept} from "./intercept"
-import {getPath, getMarks, updateHeads} from "./plugin";
+import {getPath, getMarks, updateHeads, getLastHeads} from "./plugin";
+
+type Doc<T> = automerge.Doc<T>
+type Heads = automerge.Heads
+type Patch = automerge.Patch
 
 type ChangeFn<T> = (doc: Doc<T>) => void
 
@@ -16,13 +20,18 @@ export default class PatchSemaphore<T> {
     return result;
   }
 
-  reconcilePatch = (docAfter: T, patches: Patch[], headsAfter: Heads, state: EditorState): EditorState => {
+  reconcilePatch = (docAfter: Doc<T>, patches: Patch[], state: EditorState): EditorState => {
     if (this._inLocalTransaction) {
       return state
     }
     let path = getPath(state)
     let marksMap = getMarks<T>(state)
-    let tx = amToPm(docAfter, marksMap, patches, path, state.tr)
+    let headsAfter = automerge.getHeads(docAfter)
+
+    let headsBefore = getLastHeads(state)
+    let docBefore = automerge.view(docAfter, headsBefore)
+
+    let tx = amToPm(docBefore, docAfter, marksMap, patches, path, state.tr)
     tx = updateHeads(tx, headsAfter)
     return state.apply(tx)
   }
