@@ -2,7 +2,6 @@ import {schema} from "prosemirror-schema-basic";
 import {Node} from "prosemirror-model"
 import { AddMarkStep } from "prosemirror-transform"
 import {Doc, Prop, unstable} from "@automerge/automerge";
-import * as automerge from "@automerge/automerge"
 import { amIdxToPmIdx } from "./positions";
 import {defaultMarkMap, MarkMap} from "./marks";
 
@@ -47,12 +46,12 @@ export function init<T>(doc: Doc<T>, path: Prop[], options?: Options<T>): Node {
   return result
 }
 
-function lookupText(doc: Doc<any>, path: Prop[]): automerge.Text | null {
+function lookupText(doc: Doc<any>, path: Prop[]): string | null {
   let current = doc
   for (let i = 0; i < path.length; i++) {
     current = current[path[i]]
   }
-  if (current instanceof automerge.Text) {
+  if (typeof current === "string") {
     return current
   } else {
     return null
