@@ -66,6 +66,6 @@ export function Editor({handle, path}: EditorProps) {
     }
   }, [])
 
-  return <div ref={editorRoot}></div>
+  return <div id="prosemirror" ref={editorRoot}></div>
 
 }
