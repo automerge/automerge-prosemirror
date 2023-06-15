@@ -4,7 +4,7 @@ import {Transaction} from "prosemirror-state";
 import {schema} from "prosemirror-schema-basic";
 import {BLOCK_MARKER} from "./constants"
 import {amIdxToPmIdx} from "./positions"
-import {MarkMap, MarkValue, PresentMarkValue} from "./marks";
+import {MarkValue} from "./marks";
 
 type SpliceTextPatch = unstable.SpliceTextPatch
 type InsertPatch = unstable.InsertPatch
@@ -19,54 +19,44 @@ type MarkPatch = {
   marks: unstable.Mark[]
 }
 
-type LoadMark = (markName: string, markValue: PresentMarkValue) => Attrs | null
-
-function makeLoadMark<T>(doc: T, map: MarkMap<T>): LoadMark {
-  return function (markName: string, markValue: PresentMarkValue): Attrs | null {
-    return map.loadMark(doc, markName, markValue)
-  }
-}
-
 type TranslateIdx = (idx: number) => number
 
 export default function <T>(
   before: Doc<T>,
   after: Doc<T>,
-  marks: MarkMap<T>,
   patches: Array<Patch>,
   path: Prop[], tx: Transaction
 ): Transaction {
   let result = tx
   let patchState = new PatchingText(before, path)
   for (const patch of patches) {
-    const loadMark = makeLoadMark(after, marks)
     if (patch.action === "insert") {
-      result = handleInsert(patch, path, result, patchState.translate, loadMark)
+      result = handleInsert(patch, path, result, patchState.translate)
     } else if (patch.action === "splice") {
-      result = handleSplice(patch, path, result, patchState.translate, loadMark)
+      result = handleSplice(patch, path, result, patchState.translate)
     } else if (patch.action === "del") {
       result = handleDelete(patch, path, result, patchState.translate)
     } else if (patch.action === "mark") {
-      result = handleMark(patch, path, result, patchState.translate, loadMark)
+      result = handleMark(patch, path, result, patchState.translate)
     }
     patchState.patch(patch)
   }
   return result
 }
 
-function handleInsert(patch: InsertPatch, path: Prop[], tx: Transaction, translate: TranslateIdx, loadMark: LoadMark): Transaction {
+function handleInsert(patch: InsertPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
   let index = charPath(path, patch.path)
   if (index === null) return tx
   const pmIdx = translate(index)
-  const content = patchContentToSlice(patch.values.join(""), loadMark, patch.marks)
+  const content = patchContentToSlice(patch.values.join(""), patch.marks)
   return tx.replace(pmIdx, pmIdx, content)
 }
 
-function handleSplice(patch: SpliceTextPatch, path: Prop[], tx: Transaction, translate: TranslateIdx, loadMark: LoadMark): Transaction {
+function handleSplice(patch: SpliceTextPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
   let index = charPath(path, patch.path)
   if (index === null) return tx
   const idx = translate(index)
-  return tx.replace(idx, idx, patchContentToSlice(patch.value, loadMark, patch.marks))
+  return tx.replace(idx, idx, patchContentToSlice(patch.value, patch.marks))
 }
 
 function handleDelete(patch: DelPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
@@ -74,11 +64,10 @@ function handleDelete(patch: DelPatch, path: Prop[], tx: Transaction, translate:
   if (index === null) return tx
   const start = translate(index)
   const end = translate(index + (patch.length || 1))
-  let contentSize = tx.doc.content.size
   return tx.delete(start, end)
 }
 
-function handleMark(patch: MarkPatch, path: Prop[], tx: Transaction, translate: TranslateIdx, loadMark: LoadMark) {
+function handleMark(patch: MarkPatch, path: Prop[], tx: Transaction, translate: TranslateIdx) {
   if (pathEquals(patch.path, path)) {
     for (const mark of patch.marks) {
       const pmStart = translate(mark.start)
@@ -88,7 +77,7 @@ function handleMark(patch: MarkPatch, path: Prop[], tx: Transaction, translate: 
       if (mark.value == null) {
         tx = tx.removeMark(pmStart, pmEnd, markType)
       } else {
-        const markAttrs = loadMark(mark.name, mark.value)
+        let markAttrs = attrsFromMark(mark.value)
         tx = tx.addMark(pmStart, pmEnd, markType.create(markAttrs))
       }
     }
@@ -116,7 +105,7 @@ function pathEquals(path1: Prop[], path2: Prop[]): boolean {
   return true
 }
 
-function patchContentToSlice(patchContent: string, loadMark: LoadMark, marks?: MarkSet): Slice {
+function patchContentToSlice(patchContent: string, marks?: MarkSet): Slice {
   // * The incoming content starts with a newline. In this case we set openStart 
   //   to 0 to indicate a new paragraph
   // * The incoming content does not start with a newline, in which case we set
@@ -139,8 +128,8 @@ function patchContentToSlice(patchContent: string, loadMark: LoadMark, marks?: M
       // happen in a `AddMark` patch, not a `Insert` or `Splice` patch. But we
       // appease typescript anyway
       if (value != null) {
-        let pmAttrs = loadMark(name, value)
-        acc.push(schema.mark(name, pmAttrs))
+        let markAttrs = attrsFromMark(value)
+        acc.push(schema.mark(name, markAttrs))
       }
       return acc
     }, [])
@@ -206,4 +195,18 @@ class PatchingText {
   translate = (index: number): number => {
     return amIdxToPmIdx(index, this.currentValue)
   }
+}
+
+function attrsFromMark(mark: MarkValue): Attrs | null {
+  let markAttrs = null
+  if (typeof mark === "string") {
+    try {
+      let markJson = JSON.parse(mark)
+      if (typeof markJson === "object") {
+        markAttrs = markJson as Attrs
+      }
+    } catch (e) {
+    }
+  }
+  return markAttrs
 }

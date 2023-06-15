@@ -1,7 +1,7 @@
 import {Doc, Heads, Prop} from "@automerge/automerge";
 import {unstable as automerge} from "@automerge/automerge";
 import {EditorState, Transaction} from "prosemirror-state";
-import {getPath, getLastHeads, updateHeads, getMarks} from "./plugin";
+import {getPath, getLastHeads, updateHeads} from "./plugin";
 import pmToAm from "./pmToAm";
 import amToPm from "./amToPm";
 import mapSelection from "./mapSelection"
@@ -15,7 +15,6 @@ export function intercept<T>(
 ): EditorState {
   let headsBefore = getLastHeads(state)
   let path = getPath(state)
-  let marks = getMarks<T>(state)
 
   // Apply the incoming transaction to the automerge doc
   let updated = change(headsBefore, doc => {
@@ -23,7 +22,7 @@ export function intercept<T>(
     for (let i = 0; i < intercepted.steps.length; i++) {
       let step = intercepted.steps[i]
       let pmDoc = intercepted.docs[i]
-      pmToAm(step, marks, pmDoc, subdoc, attr)
+      pmToAm(step, pmDoc, subdoc, attr)
     }
   })
   let headsAfter = automerge.getHeads(updated)
@@ -33,7 +32,7 @@ export function intercept<T>(
 
   let before = automerge.view(updated, headsBefore)
   // Create a transaction which applies the diff and updates the doc and heads
-  let tx = amToPm(before, updated, marks, diff, path, state.tr)
+  let tx = amToPm(before, updated, diff, path, state.tr)
   tx = mapSelection(intercepted, tx)
   tx = updateHeads(tx, headsAfter)
 
