@@ -1,9 +1,9 @@
-import {Doc, Heads, Prop} from "@automerge/automerge";
-import {unstable as automerge} from "@automerge/automerge";
-import {EditorState, Transaction} from "prosemirror-state";
-import {getPath, getLastHeads, updateHeads} from "./plugin";
-import pmToAm from "./pmToAm";
-import amToPm from "./amToPm";
+import { Doc, Heads, Prop } from "@automerge/automerge"
+import { unstable as automerge } from "@automerge/automerge"
+import { EditorState, Transaction } from "prosemirror-state"
+import { getPath, getLastHeads, updateHeads } from "./plugin"
+import pmToAm from "./pmToAm"
+import amToPm from "./amToPm"
 import mapSelection from "./mapSelection"
 
 type ChangeFn<T> = (doc: Doc<T>) => void

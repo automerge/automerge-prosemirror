@@ -1,10 +1,7 @@
-import {BLOCK_MARKER} from "./constants"
-import { Node} from "prosemirror-model"
+import { BLOCK_MARKER } from "./constants"
+import { Node } from "prosemirror-model"
 
-export function amIdxToPmIdx(
-  amIdx: number,
-  amText: string,
-): number {
+export function amIdxToPmIdx(amIdx: number, amText: string): number {
   // first, count how many paragraphs we have
   let idx = amText.indexOf(BLOCK_MARKER)
   let i = 0
@@ -24,10 +21,7 @@ export function amIdxToPmIdx(
   return amIdx + diff + 1 // +1 for the opening paragraph tag
 }
 
-export function pmIdxToAmIdx(
-  position: number,
-  pmDoc: Node
-): number {
+export function pmIdxToAmIdx(position: number, pmDoc: Node): number {
   let idx = 0
   let blocks = 0
   let offset = 0
@@ -41,7 +35,7 @@ export function pmIdxToAmIdx(
     const nodeSize = contentNode.nodeSize
     offset += nodeSize
 
-    // If the last node is an empty node then we nudge the index backward by one so 
+    // If the last node is an empty node then we nudge the index backward by one so
     // we don't point past the end of the doc
     if (offset > position) {
       break

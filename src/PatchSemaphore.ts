@@ -1,8 +1,8 @@
-import {unstable as automerge} from "@automerge/automerge";
-import {EditorState, Transaction} from "prosemirror-state";
-import amToPm from "./amToPm";
-import {intercept} from "./intercept"
-import {getPath, updateHeads, getLastHeads} from "./plugin";
+import { unstable as automerge } from "@automerge/automerge"
+import { EditorState, Transaction } from "prosemirror-state"
+import amToPm from "./amToPm"
+import { intercept } from "./intercept"
+import { getPath, updateHeads, getLastHeads } from "./plugin"
 
 type Doc<T> = automerge.Doc<T>
 type Heads = automerge.Heads
@@ -11,20 +11,24 @@ type Patch = automerge.Patch
 type ChangeFn<T> = (doc: Doc<T>) => void
 
 export default class PatchSemaphore<T> {
-  _inLocalTransaction = false;
+  _inLocalTransaction = false
 
   intercept = (
     change: (_atHeads: Heads, _doChange: ChangeFn<T>) => Doc<T>,
     intercepted: Transaction,
     state: EditorState
   ): EditorState => {
-    this._inLocalTransaction = true;
+    this._inLocalTransaction = true
     const result = intercept(change, intercepted, state)
-    this._inLocalTransaction = false;
-    return result;
+    this._inLocalTransaction = false
+    return result
   }
 
-  reconcilePatch = (docAfter: Doc<T>, patches: Patch[], state: EditorState): EditorState => {
+  reconcilePatch = (
+    docAfter: Doc<T>,
+    patches: Patch[],
+    state: EditorState
+  ): EditorState => {
     if (this._inLocalTransaction) {
       return state
     }

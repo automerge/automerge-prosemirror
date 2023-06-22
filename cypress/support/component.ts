@@ -18,7 +18,7 @@
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
 
-import { mount } from 'cypress/react18'
+import { mount } from "cypress/react18"
 
 // Augment the Cypress namespace to include type definitions for
 // your custom command.
@@ -31,18 +31,18 @@ declare global {
       mount: typeof mount
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       selection(fn: (query: JQuery<any>) => void): Chainable<Element>
-      setSelection(query: string, endQuery?: string): Chainable<Element>;
-      setCursor(query: string, atStart?: boolean): Chainable<Element>;
-      setCursorBefore(query: string): Chainable<Element>;
-      setCursorAfter(query: string): Chainable<Element>;
+      setSelection(query: string, endQuery?: string): Chainable<Element>
+      setCursor(query: string, atStart?: boolean): Chainable<Element>
+      setCursorBefore(query: string): Chainable<Element>
+      setCursorAfter(query: string): Chainable<Element>
     }
   }
 }
 
-import './selection-command'
+import "./selection-command"
 //require("./selection-command")
 
-Cypress.Commands.add('mount', mount)
+Cypress.Commands.add("mount", mount)
 
 // Example use:
 // cy.mount(<MyComponent />)

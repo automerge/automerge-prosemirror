@@ -1,15 +1,20 @@
-import {AddMarkStep, RemoveMarkStep, ReplaceStep, Step } from 'prosemirror-transform';
-import { Node } from 'prosemirror-model';
-import {Prop, unstable as automerge} from "@automerge/automerge";
-import { pmIdxToAmIdx } from './positions';
-import { BLOCK_MARKER } from './constants';
+import {
+  AddMarkStep,
+  RemoveMarkStep,
+  ReplaceStep,
+  Step,
+} from "prosemirror-transform"
+import { Node } from "prosemirror-model"
+import { Prop, unstable as automerge } from "@automerge/automerge"
+import { pmIdxToAmIdx } from "./positions"
+import { BLOCK_MARKER } from "./constants"
 
 export type ChangeFn<T> = (doc: T, field: string) => void
 
-export default function<T>(step: Step, pmDoc: Node, doc: T, attr: Prop) {
-  // This shenanigans with the constructor name is necessary for reasons I 
+export default function <T>(step: Step, pmDoc: Node, doc: T, attr: Prop) {
+  // This shenanigans with the constructor name is necessary for reasons I
   // don't really understand. I _think_ that the `*Step` classs we get
-  // passed here can be slightly different to the classes we've imported if the 
+  // passed here can be slightly different to the classes we've imported if the
   // dependencies are messed up
   if (step.constructor.name === "ReplaceStep") {
     replaceStep(step as ReplaceStep, doc, attr, pmDoc)
@@ -30,10 +35,9 @@ function replaceStep(step: ReplaceStep, doc: any, field: Prop, pmDoc: Node) {
   let toInsert = ""
   if (step.slice) {
     step.slice.content.forEach((node, _, idx) => {
-      if (node.type.name === 'text' && node.text) {
+      if (node.type.name === "text" && node.text) {
         toInsert += node.text
-      } else if (node.type.name === 'paragraph') {
-
+      } else if (node.type.name === "paragraph") {
         // if this is the first child of the slice and openStart is zero then
         // we must add the opening delimiter
         const isFirstNode = idx === 0
@@ -67,20 +71,25 @@ function addMarkStep<T>(step: AddMarkStep, doc: T, field: Prop, pmDoc: Node) {
   const start = pmIdxToAmIdx(step.from, pmDoc)
   const end = pmIdxToAmIdx(step.to, pmDoc)
   const markName = step.mark.type.name
-  const expand = (step.mark.type.spec.inclusive) ? "both" : "none"
+  const expand = step.mark.type.spec.inclusive ? "both" : "none"
   let value: string | boolean = true
   if (step.mark.attrs != null && Object.keys(step.mark.attrs).length > 0) {
     value = JSON.stringify(step.mark.attrs)
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  automerge.mark(doc as any, [field], {start, end, expand}, markName, value)
+  automerge.mark(doc as any, [field], { start, end, expand }, markName, value)
 }
 
-function removeMarkStep<T>(step: RemoveMarkStep, doc: T, field: Prop, pmDoc: Node) {
+function removeMarkStep<T>(
+  step: RemoveMarkStep,
+  doc: T,
+  field: Prop,
+  pmDoc: Node
+) {
   const start = pmIdxToAmIdx(step.from, pmDoc)
   const end = pmIdxToAmIdx(step.to, pmDoc)
   const markName = step.mark.type.name
-  const expand = (step.mark.type.spec.inclusive) ? "both" : "none"
+  const expand = step.mark.type.spec.inclusive ? "both" : "none"
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  automerge.unmark(doc as any, [field], {start, end, expand}, markName)
+  automerge.unmark(doc as any, [field], { start, end, expand }, markName)
 }

@@ -1,7 +1,9 @@
-import {TextSelection, Transaction} from "prosemirror-state"
+import { TextSelection, Transaction } from "prosemirror-state"
 
-
-export default function mapSelection(intercepted: Transaction, propagated: Transaction): Transaction {
+export default function mapSelection(
+  intercepted: Transaction,
+  propagated: Transaction
+): Transaction {
   if (intercepted.steps.length == 0) {
     // There are no steps so we can just set the selection on the propagated
     // transaction to the selection on the intercepted transaction
@@ -18,4 +20,3 @@ export default function mapSelection(intercepted: Transaction, propagated: Trans
   const mapped = initialSelection.map(propagated.doc, propagated.mapping)
   return propagated.setSelection(mapped)
 }
-
