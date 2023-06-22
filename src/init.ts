@@ -1,16 +1,10 @@
 import {schema} from "prosemirror-schema-basic";
-import {Node} from "prosemirror-model"
+import {Attrs, Node} from "prosemirror-model"
 import { AddMarkStep } from "prosemirror-transform"
-import {Doc, Prop, unstable} from "@automerge/automerge";
+import {Doc, Prop, unstable, Text} from "@automerge/automerge";
 import { amIdxToPmIdx } from "./positions";
-import {defaultMarkMap, MarkMap} from "./marks";
 
-type Options<T> = {
-  markMap: MarkMap<T>
-}
-
-export function init<T>(doc: Doc<T>, path: Prop[], options?: Options<T>): Node {
-  let markMap = options?.markMap || defaultMarkMap<T>()
+export function init<T>(doc: Doc<T>, path: Prop[]): Node {
   let paras: Array<Node> = []
   let text = lookupText(doc, path)
   if (text === null) {
@@ -36,8 +30,14 @@ export function init<T>(doc: Doc<T>, path: Prop[], options?: Options<T>): Node {
     if (mark.value == null) {
       continue
     }
-    let markValue = markMap.loadMark(doc, mark.name, mark.value)
-    let step = new AddMarkStep(start, end, schema.mark(mark.name, markValue))
+    let markValue = mark.value
+    if (typeof markValue === "string") {
+      try {
+        markValue = JSON.parse(markValue)
+      } catch (e) {
+      }
+    }
+    let step = new AddMarkStep(start, end, schema.mark(mark.name, markValue as Attrs))
     let stepResult = step.apply(result)
     if (stepResult.doc) {
       result = stepResult.doc
@@ -53,6 +53,8 @@ function lookupText(doc: Doc<any>, path: Prop[]): string | null {
   }
   if (typeof current === "string") {
     return current
+  } else if (current instanceof Text) {
+    return current.toString()
   } else {
     return null
   }
