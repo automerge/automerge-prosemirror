@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
+    "prettier": "prettier '**/*.{js,ts,tsx,json}' --check",
     "build": "tsc -p ./tsconfig/tsconfig.build.json",
     "lint": "eslint .",
     "cypress:open": "cypress open"
@@ -25,6 +26,7 @@
     "cypress": "^12.14.0",
     "eslint": "^8.43.0",
     "ist": "^1.1.7",
+    "prettier": "^2.8.8",
     "prosemirror-commands": "^1.5.2",
     "prosemirror-keymap": "^1.2.2",
     "react": "^18.2.0",

@@ -1,13 +1,13 @@
-import React, {useEffect, useRef } from "react"
+import React, { useEffect, useRef } from "react"
 
-import {Command, EditorState, Transaction} from "prosemirror-state"
-import {keymap} from "prosemirror-keymap"
-import {baseKeymap, toggleMark} from "prosemirror-commands"
-import {schema} from "prosemirror-schema-basic"
-import {MarkType} from "prosemirror-model"
-import {EditorView} from "prosemirror-view"
+import { Command, EditorState, Transaction } from "prosemirror-state"
+import { keymap } from "prosemirror-keymap"
+import { baseKeymap, toggleMark } from "prosemirror-commands"
+import { schema } from "prosemirror-schema-basic"
+import { MarkType } from "prosemirror-model"
+import { EditorView } from "prosemirror-view"
 import "prosemirror-view/style/prosemirror.css"
-import {unstable as automerge, Prop} from "@automerge/automerge"
+import { unstable as automerge, Prop } from "@automerge/automerge"
 import { plugin as amgPlugin, init as initPm, PatchSemaphore } from "../src"
 import { type DocHandle } from "./DocHandle"
 
@@ -28,7 +28,7 @@ function toggleMarkCommand(mark: MarkType): Command {
   }
 }
 
-export function Editor({handle, path}: EditorProps) {
+export function Editor({ handle, path }: EditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,11 +40,14 @@ export function Editor({handle, path}: EditorProps) {
           ...baseKeymap,
           "Mod-b": toggleBold,
           "Mod-i": toggleItalic,
-          "Mod-l": toggleMark(schema.marks.link, {href: "https://example.com", title: "example"}),
+          "Mod-l": toggleMark(schema.marks.link, {
+            href: "https://example.com",
+            title: "example",
+          }),
         }),
         amgPlugin(handle.doc, path),
       ],
-      doc: initPm(handle.doc, path)
+      doc: initPm(handle.doc, path),
     }
 
     const semaphore = new PatchSemaphore()
@@ -54,10 +57,13 @@ export function Editor({handle, path}: EditorProps) {
       dispatchTransaction: (tx: Transaction) => {
         const newState = semaphore.intercept(handle.changeAt, tx, view.state)
         view.updateState(newState)
-      }
+      },
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const onPatch: any = (docAfter: automerge.Doc<any>, patches: Array<automerge.Patch>) => {
+    const onPatch: any = (
+      docAfter: automerge.Doc<any>,
+      patches: Array<automerge.Patch>
+    ) => {
       const newState = semaphore.reconcilePatch(docAfter, patches, view.state)
       view.updateState(newState)
     }
@@ -68,5 +74,4 @@ export function Editor({handle, path}: EditorProps) {
   }, [])
 
   return <div id="prosemirror" ref={editorRoot}></div>
-
 }

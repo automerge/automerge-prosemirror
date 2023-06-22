@@ -1,10 +1,10 @@
-import {unstable, DelPatch, Patch, type Prop, Doc} from "@automerge/automerge";
-import {Fragment, Slice, Mark, Attrs} from "prosemirror-model";
-import {Transaction} from "prosemirror-state";
-import {schema} from "prosemirror-schema-basic";
-import {BLOCK_MARKER} from "./constants"
-import {amIdxToPmIdx} from "./positions"
-import {MarkValue} from "./marks";
+import { unstable, DelPatch, Patch, type Prop, Doc } from "@automerge/automerge"
+import { Fragment, Slice, Mark, Attrs } from "prosemirror-model"
+import { Transaction } from "prosemirror-state"
+import { schema } from "prosemirror-schema-basic"
+import { BLOCK_MARKER } from "./constants"
+import { amIdxToPmIdx } from "./positions"
+import { MarkValue } from "./marks"
 
 type SpliceTextPatch = unstable.SpliceTextPatch
 type InsertPatch = unstable.InsertPatch
@@ -14,8 +14,8 @@ type MarkSet = {
 }
 
 type MarkPatch = {
-  action: 'mark'
-  path: Prop[],
+  action: "mark"
+  path: Prop[]
   marks: unstable.Mark[]
 }
 
@@ -24,7 +24,8 @@ type TranslateIdx = (idx: number) => number
 export default function <T>(
   before: Doc<T>,
   patches: Array<Patch>,
-  path: Prop[], tx: Transaction
+  path: Prop[],
+  tx: Transaction
 ): Transaction {
   let result = tx
   const patchState = new PatchingText(before, path)
@@ -43,7 +44,12 @@ export default function <T>(
   return result
 }
 
-function handleInsert(patch: InsertPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
+function handleInsert(
+  patch: InsertPatch,
+  path: Prop[],
+  tx: Transaction,
+  translate: TranslateIdx
+): Transaction {
   const index = charPath(path, patch.path)
   if (index === null) return tx
   const pmIdx = translate(index)
@@ -51,14 +57,24 @@ function handleInsert(patch: InsertPatch, path: Prop[], tx: Transaction, transla
   return tx.replace(pmIdx, pmIdx, content)
 }
 
-function handleSplice(patch: SpliceTextPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
+function handleSplice(
+  patch: SpliceTextPatch,
+  path: Prop[],
+  tx: Transaction,
+  translate: TranslateIdx
+): Transaction {
   const index = charPath(path, patch.path)
   if (index === null) return tx
   const idx = translate(index)
   return tx.replace(idx, idx, patchContentToSlice(patch.value, patch.marks))
 }
 
-function handleDelete(patch: DelPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
+function handleDelete(
+  patch: DelPatch,
+  path: Prop[],
+  tx: Transaction,
+  translate: TranslateIdx
+): Transaction {
   const index = charPath(path, patch.path)
   if (index === null) return tx
   const start = translate(index)
@@ -66,7 +82,12 @@ function handleDelete(patch: DelPatch, path: Prop[], tx: Transaction, translate:
   return tx.delete(start, end)
 }
 
-function handleMark(patch: MarkPatch, path: Prop[], tx: Transaction, translate: TranslateIdx) {
+function handleMark(
+  patch: MarkPatch,
+  path: Prop[],
+  tx: Transaction,
+  translate: TranslateIdx
+) {
   if (pathEquals(patch.path, path)) {
     for (const mark of patch.marks) {
       const pmStart = translate(mark.start)
@@ -105,7 +126,7 @@ function pathEquals(path1: Prop[], path2: Prop[]): boolean {
 }
 
 function patchContentToSlice(patchContent: string, marks?: MarkSet): Slice {
-  // * The incoming content starts with a newline. In this case we set openStart 
+  // * The incoming content starts with a newline. In this case we set openStart
   //   to 0 to indicate a new paragraph
   // * The incoming content does not start with a newline, in which case we set
   //   openStart to 1 to indicate continuing a paragraph
@@ -116,22 +137,27 @@ function patchContentToSlice(patchContent: string, marks?: MarkSet): Slice {
   //   0 to indicate that the paragraph is closed
   // * The incoming content does not end with a newline, in which case we set
   //   openEnd to 1 to indicate that there coule be more paragraph afterwards
-  const endsWithNewline = patchContent.length > 1 && patchContent[patchContent.length - 1] === BLOCK_MARKER
+  const endsWithNewline =
+    patchContent.length > 1 &&
+    patchContent[patchContent.length - 1] === BLOCK_MARKER
   const openEnd = endsWithNewline ? 0 : 1
 
   let pmMarks: Array<Mark> | undefined = undefined
   if (marks != null) {
-    pmMarks = Object.entries(marks).reduce((acc: Mark[], [name, value]: [string, MarkValue]) => {
-      // This should actually never be null because automerge only uses null 
-      // as the value for a mark when a mark is being removed, which would only
-      // happen in a `AddMark` patch, not a `Insert` or `Splice` patch. But we
-      // appease typescript anyway
-      if (value != null) {
-        const markAttrs = attrsFromMark(value)
-        acc.push(schema.mark(name, markAttrs))
-      }
-      return acc
-    }, [])
+    pmMarks = Object.entries(marks).reduce(
+      (acc: Mark[], [name, value]: [string, MarkValue]) => {
+        // This should actually never be null because automerge only uses null
+        // as the value for a mark when a mark is being removed, which would only
+        // happen in a `AddMark` patch, not a `Insert` or `Splice` patch. But we
+        // appease typescript anyway
+        if (value != null) {
+          const markAttrs = attrsFromMark(value)
+          acc.push(schema.mark(name, markAttrs))
+        }
+        return acc
+      },
+      []
+    )
   }
 
   let content = Fragment.empty

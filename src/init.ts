@@ -1,8 +1,8 @@
-import {schema} from "prosemirror-schema-basic";
-import {Attrs, Node} from "prosemirror-model"
+import { schema } from "prosemirror-schema-basic"
+import { Attrs, Node } from "prosemirror-model"
 import { AddMarkStep } from "prosemirror-transform"
-import {Doc, Prop, unstable, Text} from "@automerge/automerge";
-import { amIdxToPmIdx } from "./positions";
+import { Doc, Prop, unstable, Text } from "@automerge/automerge"
+import { amIdxToPmIdx } from "./positions"
 
 export function init<T>(doc: Doc<T>, path: Prop[]): Node {
   let paras: Array<Node> = []
@@ -38,7 +38,11 @@ export function init<T>(doc: Doc<T>, path: Prop[]): Node {
         // ignore
       }
     }
-    const step = new AddMarkStep(start, end, schema.mark(mark.name, markValue as Attrs))
+    const step = new AddMarkStep(
+      start,
+      end,
+      schema.mark(mark.name, markValue as Attrs)
+    )
     const stepResult = step.apply(result)
     if (stepResult.doc) {
       result = stepResult.doc
