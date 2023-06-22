@@ -37,6 +37,8 @@
  */
 
 // Low level command reused by `setSelection` and low level command `setCursor`
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 Cypress.Commands.add('selection', { prevSubject: true }, (subject, fn) => {
   cy.wrap(subject)
     .trigger('mousedown')
@@ -53,9 +55,16 @@ Cypress.Commands.add('setSelection', { prevSubject: true }, (subject, query, end
       if (typeof query === 'string') {
         const anchorNode = getTextNode($el[0], query);
         const focusNode = endQuery ? getTextNode($el[0], endQuery) : anchorNode;
-        const anchorOffset = anchorNode.wholeText.indexOf(query);
+        let anchorOffset = -1
+        if (anchorNode instanceof Text) {
+          anchorOffset = anchorNode.wholeText.indexOf(query);
+        }
+        let endOffset = -1
+        if (focusNode instanceof Text && endQuery) {
+          endOffset = focusNode.wholeText.indexOf(endQuery);
+        }
         const focusOffset = endQuery ?
-          focusNode.wholeText.indexOf(endQuery) + endQuery.length :
+          endOffset + endQuery.length :
           anchorOffset + query.length;
         setBaseAndExtent(anchorNode, anchorOffset, focusNode, focusOffset);
       }
@@ -67,10 +76,14 @@ Cypress.Commands.add('setCursor', { prevSubject: true }, (subject, query, atStar
   return cy.wrap(subject)
     .selection($el => {
       const node = getTextNode($el[0], query);
-      const offset = node.wholeText.indexOf(query) + (atStart ? 0 : query.length);
-      const document = node.ownerDocument;
-      document.getSelection().removeAllRanges();
-      document.getSelection().collapse(node, offset);
+      let queryOffset = -1
+      if (node instanceof Text) {
+        queryOffset = node.wholeText.indexOf(query);
+      }
+      const offset = queryOffset + (atStart ? 0 : query.length);
+      const document = node?.ownerDocument;
+      document?.getSelection()?.removeAllRanges();
+      document?.getSelection()?.collapse(node, offset);
     })
     // Depending on what you're testing, you may need to chain a `.click()` here to ensure
     // further commands are picked up by whatever you're testing (this was required for Slate, for example).
@@ -91,7 +104,7 @@ function getTextNode(el: Element, match?: string){
     return walk.nextNode();
   }
 
-  let node: Node = walk.nextNode();
+  let node: Node | null= walk.nextNode();
   // eslint-disable-next-line no-constant-condition
   while(true) {
     if (node instanceof Text && node.wholeText.includes(match)) {
@@ -101,7 +114,8 @@ function getTextNode(el: Element, match?: string){
   }
 }
 
-function setBaseAndExtent(...args) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setBaseAndExtent(...args: any[]) {
   const document = args[0].ownerDocument;
   document.getSelection().removeAllRanges();
   document.getSelection().setBaseAndExtent(...args);
