@@ -1,4 +1,4 @@
-name: Cypress Tests
+name: CI
 
 on:
   push:
@@ -10,6 +10,18 @@ on:
       - main
 
 jobs:
+  check:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: yarn install
+        run: yarn install
+      - name: typecheck 
+        run: yarn tsc
+      - name: lint 
+        run: yarn lint
+
   cypress-run:
     runs-on: ubuntu-22.04
     steps:
@@ -19,3 +31,6 @@ jobs:
         uses: cypress-io/github-action@v5
         with:
           component: true
+
+
+

@@ -3,7 +3,6 @@ import { Node } from 'prosemirror-model';
 import {Prop, unstable as automerge} from "@automerge/automerge";
 import { pmIdxToAmIdx } from './positions';
 import { BLOCK_MARKER } from './constants';
-import {schema} from 'prosemirror-schema-basic';
 
 export type ChangeFn<T> = (doc: T, field: string) => void
 
@@ -21,13 +20,12 @@ export default function<T>(step: Step, pmDoc: Node, doc: T, attr: Prop) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function replaceStep(step: ReplaceStep, doc: any, field: Prop, pmDoc: Node) {
-  //@ts-ignore
-  let amText = doc.text.toString()
-  let start = pmIdxToAmIdx(step.from, pmDoc)
-  let end = pmIdxToAmIdx(step.to, pmDoc)
+  const start = pmIdxToAmIdx(step.from, pmDoc)
+  const end = pmIdxToAmIdx(step.to, pmDoc)
 
-  let toDelete = end - start
+  const toDelete = end - start
 
   let toInsert = ""
   if (step.slice) {
@@ -69,11 +67,12 @@ function addMarkStep<T>(step: AddMarkStep, doc: T, field: Prop, pmDoc: Node) {
   const start = pmIdxToAmIdx(step.from, pmDoc)
   const end = pmIdxToAmIdx(step.to, pmDoc)
   const markName = step.mark.type.name
-  const expand = (!!step.mark.type.spec.inclusive) ? "both" : "none"
+  const expand = (step.mark.type.spec.inclusive) ? "both" : "none"
   let value: string | boolean = true
   if (step.mark.attrs != null && Object.keys(step.mark.attrs).length > 0) {
     value = JSON.stringify(step.mark.attrs)
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   automerge.mark(doc as any, [field], {start, end, expand}, markName, value)
 }
 
@@ -81,6 +80,7 @@ function removeMarkStep<T>(step: RemoveMarkStep, doc: T, field: Prop, pmDoc: Nod
   const start = pmIdxToAmIdx(step.from, pmDoc)
   const end = pmIdxToAmIdx(step.to, pmDoc)
   const markName = step.mark.type.name
-  const expand = (!!step.mark.type.spec.inclusive) ? "both" : "none"
+  const expand = (step.mark.type.spec.inclusive) ? "both" : "none"
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   automerge.unmark(doc as any, [field], {start, end, expand}, markName)
 }

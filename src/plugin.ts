@@ -3,12 +3,13 @@ import * as automerge  from "@automerge/automerge";
 import {Doc, Heads, Prop} from "@automerge/automerge";
 
 // The name of the meta field that holds the last heads we reconciled with
-const NEW_HEADS: string = "am_newHeads"
+const NEW_HEADS = "am_newHeads"
 
-const AM_PLUGIN: string = "automergePlugin"
-const pluginKey: PluginKey<State<any>> = new PluginKey(AM_PLUGIN)
+const AM_PLUGIN = "automergePlugin"
 
-type State<T> = {
+const pluginKey: PluginKey<State> = new PluginKey(AM_PLUGIN)
+
+type State = {
   // The heads at the last point we updated the state of the editor from the 
   // state of the automerge document
   lastHeads: Heads
@@ -16,7 +17,8 @@ type State<T> = {
   path: Prop[]
 }
 
-export function plugin<T>(doc: Doc<T>, path: Prop[]): Plugin {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function plugin(doc: Doc<any>, path: Prop[]): Plugin {
   return new Plugin({
     key: pluginKey,
     state: {
@@ -24,8 +26,8 @@ export function plugin<T>(doc: Doc<T>, path: Prop[]): Plugin {
         lastHeads: automerge.getHeads(doc) ,
         path,
       }),
-      apply: (tr: Transaction, prev: State<any>): State<any> => {
-        let newHeads: Heads = tr.getMeta(NEW_HEADS)
+      apply: (tr: Transaction, prev: State): State => {
+        const newHeads: Heads = tr.getMeta(NEW_HEADS)
         if (newHeads) {
           return {
             ...prev,
@@ -42,10 +44,12 @@ export function plugin<T>(doc: Doc<T>, path: Prop[]): Plugin {
 }
 
 export function getPath(state: EditorState): Prop[] {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return pluginKey.getState(state)!.path
 }
 
 export function getLastHeads(state: EditorState): Heads {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return pluginKey.getState(state)!.lastHeads
 }
 

@@ -1,14 +1,14 @@
-import React, {useEffect, useRef, useState} from "react"
+import React, {useEffect, useRef } from "react"
 
 import {Command, EditorState, Transaction} from "prosemirror-state"
 import {keymap} from "prosemirror-keymap"
 import {baseKeymap, toggleMark} from "prosemirror-commands"
 import {schema} from "prosemirror-schema-basic"
-import {Attrs, MarkType} from "prosemirror-model"
+import {MarkType} from "prosemirror-model"
 import {EditorView} from "prosemirror-view"
 import "prosemirror-view/style/prosemirror.css"
 import {unstable as automerge, Prop} from "@automerge/automerge"
-import { plugin as amgPlugin, init as initPm, PatchSemaphore, MarkMap } from "../src"
+import { plugin as amgPlugin, init as initPm, PatchSemaphore } from "../src"
 import { type DocHandle } from "./DocHandle"
 
 export type EditorProps = {
@@ -29,10 +29,10 @@ function toggleMarkCommand(mark: MarkType): Command {
 }
 
 export function Editor({handle, path}: EditorProps) {
-  const editorRoot = useRef<HTMLDivElement>(null!)
+  const editorRoot = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    let editorConfig = {
+    const editorConfig = {
       schema,
       history,
       plugins: [
@@ -48,16 +48,17 @@ export function Editor({handle, path}: EditorProps) {
     }
 
     const semaphore = new PatchSemaphore()
-    let state = EditorState.create(editorConfig)
+    const state = EditorState.create(editorConfig)
     const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
-        let newState = semaphore.intercept(handle.changeAt, tx, view.state)
+        const newState = semaphore.intercept(handle.changeAt, tx, view.state)
         view.updateState(newState)
       }
     })
-    const onPatch = (docAfter: automerge.Doc<any>, patches: Array<automerge.Patch>) => {
-      let newState = semaphore.reconcilePatch(docAfter, patches, view.state)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const onPatch: any = (docAfter: automerge.Doc<any>, patches: Array<automerge.Patch>) => {
+      const newState = semaphore.reconcilePatch(docAfter, patches, view.state)
       view.updateState(newState)
     }
     handle.addListener(onPatch)

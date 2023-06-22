@@ -11,7 +11,7 @@ type Patch = automerge.Patch
 type ChangeFn<T> = (doc: Doc<T>) => void
 
 export default class PatchSemaphore<T> {
-  _inLocalTransaction: boolean = false;
+  _inLocalTransaction = false;
 
   intercept = (
     change: (_atHeads: Heads, _doChange: ChangeFn<T>) => Doc<T>,
@@ -28,13 +28,13 @@ export default class PatchSemaphore<T> {
     if (this._inLocalTransaction) {
       return state
     }
-    let path = getPath(state)
-    let headsAfter = automerge.getHeads(docAfter)
+    const path = getPath(state)
+    const headsAfter = automerge.getHeads(docAfter)
 
-    let headsBefore = getLastHeads(state)
-    let docBefore = automerge.view(docAfter, headsBefore)
+    const headsBefore = getLastHeads(state)
+    const docBefore = automerge.view(docAfter, headsBefore)
 
-    let tx = amToPm(docBefore, docAfter, patches, path, state.tr)
+    let tx = amToPm(docBefore, patches, path, state.tr)
     tx = updateHeads(tx, headsAfter)
     return state.apply(tx)
   }

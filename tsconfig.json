@@ -1,4 +1,7 @@
 {
-  "include": ["./src/**/*.ts", "./test/**/*.tsx", "./cypress/support/component.ts"],
-  "extends": "./tsconfig/tsconfig.base.json"
+  "include": ["./src/**/*.ts", "./test/**/*.tsx", "./cypress/**/*.ts"],
+  "extends": "./tsconfig/tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "cypress"]
+  }
 }

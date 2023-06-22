@@ -1,22 +1,16 @@
 import {schema} from "prosemirror-schema-basic";
-import {Node} from "prosemirror-model"
+import {Attrs, Node} from "prosemirror-model"
 import { AddMarkStep } from "prosemirror-transform"
-import {Doc, Prop, unstable} from "@automerge/automerge";
+import {Doc, Prop, unstable, Text} from "@automerge/automerge";
 import { amIdxToPmIdx } from "./positions";
-import {defaultMarkMap, MarkMap} from "./marks";
 
-type Options<T> = {
-  markMap: MarkMap<T>
-}
-
-export function init<T>(doc: Doc<T>, path: Prop[], options?: Options<T>): Node {
-  let markMap = options?.markMap || defaultMarkMap<T>()
+export function init<T>(doc: Doc<T>, path: Prop[]): Node {
   let paras: Array<Node> = []
-  let text = lookupText(doc, path)
+  const text = lookupText(doc, path)
   if (text === null) {
     throw new Error("No text at path " + path.join("/"))
   }
-  let amText = text.toString()
+  const amText = text.toString()
   if (amText !== "") {
     paras = amText.split("\n").map(p => {
       if (p === "") {
@@ -31,14 +25,21 @@ export function init<T>(doc: Doc<T>, path: Prop[], options?: Options<T>): Node {
   }
   let result = schema.node("doc", null, paras)
   for (const mark of unstable.marks(doc, path[path.length - 1])) {
-    let start = amIdxToPmIdx(mark.start, amText)
-    let end = amIdxToPmIdx(mark.end, amText)
+    const start = amIdxToPmIdx(mark.start, amText)
+    const end = amIdxToPmIdx(mark.end, amText)
     if (mark.value == null) {
       continue
     }
-    let markValue = markMap.loadMark(doc, mark.name, mark.value)
-    let step = new AddMarkStep(start, end, schema.mark(mark.name, markValue))
-    let stepResult = step.apply(result)
+    let markValue = mark.value
+    if (typeof markValue === "string") {
+      try {
+        markValue = JSON.parse(markValue)
+      } catch (e) {
+        // ignore
+      }
+    }
+    const step = new AddMarkStep(start, end, schema.mark(mark.name, markValue as Attrs))
+    const stepResult = step.apply(result)
     if (stepResult.doc) {
       result = stepResult.doc
     }
@@ -46,6 +47,7 @@ export function init<T>(doc: Doc<T>, path: Prop[], options?: Options<T>): Node {
   return result
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function lookupText(doc: Doc<any>, path: Prop[]): string | null {
   let current = doc
   for (let i = 0; i < path.length; i++) {
@@ -53,6 +55,8 @@ function lookupText(doc: Doc<any>, path: Prop[]): string | null {
   }
   if (typeof current === "string") {
     return current
+  } else if (current instanceof Text) {
+    return current.toString()
   } else {
     return null
   }
