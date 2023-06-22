@@ -91,12 +91,13 @@ function getTextNode(el: Element, match?: string){
     return walk.nextNode();
   }
 
-  const nodes: Node[] = [];
-  let node;
-  while(node = walk.nextNode()) {
-    if (node.wholeText.includes(match)) {
+  let node: Node = walk.nextNode();
+  // eslint-disable-next-line no-constant-condition
+  while(true) {
+    if (node instanceof Text && node.wholeText.includes(match)) {
       return node;
     }
+    node = walk.nextNode();
   }
 }
 

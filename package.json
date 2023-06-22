@@ -4,7 +4,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc -p ./tsconfig/tsconfig.build.json",
-    "lint": "eslint",
+    "lint": "eslint .",
     "cypress:open": "cypress open"
   },
   "type": "module",

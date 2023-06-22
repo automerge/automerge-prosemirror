@@ -23,12 +23,11 @@ type TranslateIdx = (idx: number) => number
 
 export default function <T>(
   before: Doc<T>,
-  after: Doc<T>,
   patches: Array<Patch>,
   path: Prop[], tx: Transaction
 ): Transaction {
   let result = tx
-  let patchState = new PatchingText(before, path)
+  const patchState = new PatchingText(before, path)
   for (const patch of patches) {
     if (patch.action === "insert") {
       result = handleInsert(patch, path, result, patchState.translate)
@@ -45,7 +44,7 @@ export default function <T>(
 }
 
 function handleInsert(patch: InsertPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
-  let index = charPath(path, patch.path)
+  const index = charPath(path, patch.path)
   if (index === null) return tx
   const pmIdx = translate(index)
   const content = patchContentToSlice(patch.values.join(""), patch.marks)
@@ -53,14 +52,14 @@ function handleInsert(patch: InsertPatch, path: Prop[], tx: Transaction, transla
 }
 
 function handleSplice(patch: SpliceTextPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
-  let index = charPath(path, patch.path)
+  const index = charPath(path, patch.path)
   if (index === null) return tx
   const idx = translate(index)
   return tx.replace(idx, idx, patchContentToSlice(patch.value, patch.marks))
 }
 
 function handleDelete(patch: DelPatch, path: Prop[], tx: Transaction, translate: TranslateIdx): Transaction {
-  let index = charPath(path, patch.path)
+  const index = charPath(path, patch.path)
   if (index === null) return tx
   const start = translate(index)
   const end = translate(index + (patch.length || 1))
@@ -77,7 +76,7 @@ function handleMark(patch: MarkPatch, path: Prop[], tx: Transaction, translate: 
       if (mark.value == null) {
         tx = tx.removeMark(pmStart, pmEnd, markType)
       } else {
-        let markAttrs = attrsFromMark(mark.value)
+        const markAttrs = attrsFromMark(mark.value)
         tx = tx.addMark(pmStart, pmEnd, markType.create(markAttrs))
       }
     }
@@ -128,7 +127,7 @@ function patchContentToSlice(patchContent: string, marks?: MarkSet): Slice {
       // happen in a `AddMark` patch, not a `Insert` or `Splice` patch. But we
       // appease typescript anyway
       if (value != null) {
-        let markAttrs = attrsFromMark(value)
+        const markAttrs = attrsFromMark(value)
         acc.push(schema.mark(name, markAttrs))
       }
       return acc
@@ -136,7 +135,7 @@ function patchContentToSlice(patchContent: string, marks?: MarkSet): Slice {
   }
 
   let content = Fragment.empty
-  let blocks = patchContent.split(BLOCK_MARKER).map(b => {
+  const blocks = patchContent.split(BLOCK_MARKER).map(b => {
     if (b.length == 0) {
       return schema.node("paragraph", null, [])
     } else {
@@ -153,6 +152,7 @@ class PatchingText {
   docPath: Prop[]
   currentValue: string
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(doc: Doc<any>, path: Prop[]) {
     this.docPath = path
     let current = doc
@@ -160,7 +160,7 @@ class PatchingText {
       const prop = path[i]
       current = current[prop]
     }
-    let amText = current.toString()
+    const amText = current.toString()
     this.currentValue = amText
   }
 
@@ -201,11 +201,12 @@ function attrsFromMark(mark: MarkValue): Attrs | null {
   let markAttrs = null
   if (typeof mark === "string") {
     try {
-      let markJson = JSON.parse(mark)
+      const markJson = JSON.parse(mark)
       if (typeof markJson === "object") {
         markAttrs = markJson as Attrs
       }
     } catch (e) {
+      // ignore
     }
   }
   return markAttrs

@@ -15,12 +15,12 @@ export function amIdxToPmIdx(
 
   // this is how many blocks precede the current one.
   // BtextBmore textBmo^re text after pos
-  let automergeBlockCount = i
+  const automergeBlockCount = i
 
   // <p>text</p><p>more text</p><p>mo^re text after pos</p>
-  let prosemirrorBlockCount = automergeBlockCount * 2
+  const prosemirrorBlockCount = automergeBlockCount * 2
 
-  let diff = prosemirrorBlockCount - automergeBlockCount
+  const diff = prosemirrorBlockCount - automergeBlockCount
   return amIdx + diff + 1 // +1 for the opening paragraph tag
 }
 
@@ -31,14 +31,14 @@ export function pmIdxToAmIdx(
   let idx = 0
   let blocks = 0
   let offset = 0
-  let nudge = -1
+  const nudge = -1
   while (idx < pmDoc.content.childCount) {
-    let contentNode = pmDoc.content.maybeChild(idx)
+    const contentNode = pmDoc.content.maybeChild(idx)
     if (!contentNode) {
       idx++
       continue
     }
-    let nodeSize = contentNode.nodeSize
+    const nodeSize = contentNode.nodeSize
     offset += nodeSize
 
     // If the last node is an empty node then we nudge the index backward by one so 
@@ -52,12 +52,12 @@ export function pmIdxToAmIdx(
 
   // *2 to account for the fact that prosemirror indices increment on entering
   // and leaving a the block
-  let prosemirrorBlockCount = blocks * 2
-  let automergeBlockCount = blocks
+  const prosemirrorBlockCount = blocks * 2
+  const automergeBlockCount = blocks
 
-  let diff = prosemirrorBlockCount - automergeBlockCount
+  const diff = prosemirrorBlockCount - automergeBlockCount
 
-  let amPosition = position - diff + nudge
+  const amPosition = position - diff + nudge
 
   return amPosition
 }

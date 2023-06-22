@@ -6,11 +6,11 @@ import { amIdxToPmIdx } from "./positions";
 
 export function init<T>(doc: Doc<T>, path: Prop[]): Node {
   let paras: Array<Node> = []
-  let text = lookupText(doc, path)
+  const text = lookupText(doc, path)
   if (text === null) {
     throw new Error("No text at path " + path.join("/"))
   }
-  let amText = text.toString()
+  const amText = text.toString()
   if (amText !== "") {
     paras = amText.split("\n").map(p => {
       if (p === "") {
@@ -25,8 +25,8 @@ export function init<T>(doc: Doc<T>, path: Prop[]): Node {
   }
   let result = schema.node("doc", null, paras)
   for (const mark of unstable.marks(doc, path[path.length - 1])) {
-    let start = amIdxToPmIdx(mark.start, amText)
-    let end = amIdxToPmIdx(mark.end, amText)
+    const start = amIdxToPmIdx(mark.start, amText)
+    const end = amIdxToPmIdx(mark.end, amText)
     if (mark.value == null) {
       continue
     }
@@ -35,10 +35,11 @@ export function init<T>(doc: Doc<T>, path: Prop[]): Node {
       try {
         markValue = JSON.parse(markValue)
       } catch (e) {
+        // ignore
       }
     }
-    let step = new AddMarkStep(start, end, schema.mark(mark.name, markValue as Attrs))
-    let stepResult = step.apply(result)
+    const step = new AddMarkStep(start, end, schema.mark(mark.name, markValue as Attrs))
+    const stepResult = step.apply(result)
     if (stepResult.doc) {
       result = stepResult.doc
     }
@@ -46,6 +47,7 @@ export function init<T>(doc: Doc<T>, path: Prop[]): Node {
   return result
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function lookupText(doc: Doc<any>, path: Prop[]): string | null {
   let current = doc
   for (let i = 0; i < path.length; i++) {

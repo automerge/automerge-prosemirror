@@ -13,35 +13,37 @@ export function intercept<T>(
   intercepted: Transaction,
   state: EditorState
 ): EditorState {
-  let headsBefore = getLastHeads(state)
-  let path = getPath(state)
+  const headsBefore = getLastHeads(state)
+  const path = getPath(state)
 
   // Apply the incoming transaction to the automerge doc
-  let updated = change(headsBefore, doc => {
-    let [subdoc, attr] = docAndAttr(doc, path)
+  const updated = change(headsBefore, doc => {
+    const [subdoc, attr] = docAndAttr(doc, path)
     for (let i = 0; i < intercepted.steps.length; i++) {
-      let step = intercepted.steps[i]
-      let pmDoc = intercepted.docs[i]
+      const step = intercepted.steps[i]
+      const pmDoc = intercepted.docs[i]
       pmToAm(step, pmDoc, subdoc, attr)
     }
   })
-  let headsAfter = automerge.getHeads(updated)
+  const headsAfter = automerge.getHeads(updated)
 
   // Get the corresponding patches and turn them into a transaction to apply to the editorstate
-  let diff = automerge.diff(updated, headsBefore, headsAfter)
+  const diff = automerge.diff(updated, headsBefore, headsAfter)
 
-  let before = automerge.view(updated, headsBefore)
+  const before = automerge.view(updated, headsBefore)
   // Create a transaction which applies the diff and updates the doc and heads
-  let tx = amToPm(before, updated, diff, path, state.tr)
+  let tx = amToPm(before, diff, path, state.tr)
   tx = mapSelection(intercepted, tx)
   tx = updateHeads(tx, headsAfter)
 
   return state.apply(tx)
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function docAndAttr(doc: any, path: Prop[]): [any, Prop] {
-  let result_path = path.slice()
+  const result_path = path.slice()
   while (result_path.length > 1) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     doc = doc[result_path.shift()!]
   }
   return [doc, path[0]]
