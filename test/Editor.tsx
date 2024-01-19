@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useState, useRef } from "react"
 
 import { Command, EditorState, Transaction } from "prosemirror-state"
 import { keymap } from "prosemirror-keymap"
@@ -7,9 +7,10 @@ import { schema } from "prosemirror-schema-basic"
 import { MarkType } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import "prosemirror-view/style/prosemirror.css"
-import { unstable as automerge, Prop } from "@automerge/automerge"
+import { next as automerge, Prop } from "@automerge/automerge"
 import { plugin as amgPlugin, init as initPm, PatchSemaphore } from "../src"
 import { type DocHandle } from "./DocHandle"
+import { exampleSetup } from "prosemirror-example-setup"
 
 export type EditorProps = {
   handle: DocHandle
@@ -30,6 +31,7 @@ function toggleMarkCommand(mark: MarkType): Command {
 
 export function Editor({ handle, path }: EditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null)
+  const [view, setView] = useState<EditorView | null>(null)
 
   useEffect(() => {
     const editorConfig = {
@@ -55,23 +57,66 @@ export function Editor({ handle, path }: EditorProps) {
     const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
+        console.log("Dispatching transaction", tx)
         const newState = semaphore.intercept(handle.changeAt, tx, view.state)
         view.updateState(newState)
       },
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onPatch: any = (
-      docAfter: automerge.Doc<any>,
+      docAfter: automerge.Doc<unknown>,
       patches: Array<automerge.Patch>
     ) => {
       const newState = semaphore.reconcilePatch(docAfter, patches, view.state)
       view.updateState(newState)
     }
     handle.addListener(onPatch)
+
+
+    setView(view)
+
     return () => {
       view.destroy()
     }
   }, [])
 
-  return <div id="prosemirror" ref={editorRoot}></div>
+  const onBoldClicked = () => {
+    if (view) {
+      toggleBold(view.state, view.dispatch, view)
+    }
+  }
+
+  const onItalicClicked = () => {
+    if (view) {
+      toggleItalic(view.state, view.dispatch, view)
+    }
+  }
+
+  const toggleLink = () => {
+    if (view) {
+      toggleMark(schema.marks.link, {
+        href: "https://example.com",
+        title: "example",
+      })(view.state, view.dispatch, view)
+    }
+  }
+
+  return <div id="prosemirror">
+    <MenuBar onBoldClicked={onBoldClicked} onItalicClicked={onItalicClicked} onLinkClicked={toggleLink}/>
+    <div id="editor" ref={editorRoot} />
+  </div>
+}
+
+type MenuBarProps = {
+  onBoldClicked: () => void
+  onItalicClicked: () => void
+  onLinkClicked: () => void
+}
+
+function MenuBar({onBoldClicked, onItalicClicked, onLinkClicked}: MenuBarProps) {
+  return <div id="menubar">
+    <button id="bold" onClick={onBoldClicked}>𝐁</button>
+    <button id="italic" onClick={onItalicClicked}>I</button>
+    <button id="link" onClick={onLinkClicked}>🔗</button>
+  </div>
 }

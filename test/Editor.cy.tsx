@@ -1,6 +1,6 @@
 import React from "react"
 import { Editor } from "./Editor"
-import { unstable as automerge } from "@automerge/automerge"
+import { next as automerge } from "@automerge/automerge"
 import { DocHandle } from "./DocHandle"
 import { mount } from "cypress/react18"
 
@@ -9,8 +9,7 @@ describe("<Editor />", () => {
     const doc = automerge.from({ text: "Hello World" })
     const handle = new DocHandle(doc)
     mount(<Editor handle={handle} path={["text"]} />)
-    cy.get("div#prosemirror")
-      .children()
+    editorContents()
       .should("have.html", expectedHtml(["Hello World"]))
   })
 
@@ -19,20 +18,16 @@ describe("<Editor />", () => {
       const doc = automerge.from({ text: "Hello World" })
       const handle = new DocHandle(doc)
       mount(<Editor handle={handle} path={["text"]} />)
-      cy.get("div#prosemirror")
-        .children()
+      editorContents()
         .should("have.html", expectedHtml(["Hello World"]))
-      cy.get("div#prosemirror").type("{enter}")
-      cy.get("div#prosemirror")
-        .children()
+      editorContents().type("{enter}")
+      editorContents()
         .should("have.html", expectedHtml(["Hello World", null]))
-      cy.get("div#prosemirror").type("{backspace}")
-      cy.get("div#prosemirror")
-        .children()
+      editorContents().type("{backspace}")
+      editorContents()
         .should("have.html", expectedHtml(["Hello World"]))
-      cy.get("div#prosemirror").type("!")
-      cy.get("div#prosemirror")
-        .children()
+      editorContents().type("!")
+      editorContents()
         .should("have.html", expectedHtml(["Hello World!"]))
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
@@ -44,18 +39,15 @@ describe("<Editor />", () => {
       const doc = automerge.from({ text: "Hello World" })
       const handle = new DocHandle(doc)
       mount(<Editor handle={handle} path={["text"]} />)
-      cy.get("div#prosemirror")
-        .children()
+      editorContents()
         .should("have.html", expectedHtml(["Hello World"]))
-      cy.get("div#prosemirror").type("{moveToEnd}{enter}{enter}{enter}")
-      cy.get("div#prosemirror")
-        .children()
+      editorContents().type("{moveToEnd}{enter}{enter}{enter}")
+      editorContents()
         .should("have.html", expectedHtml(["Hello World", null, null, null]))
-      cy.get("div#prosemirror").type(
+      editorContents().type(
         "{moveToStart}{downArrow}{downArrow}{downArrow}{backspace}line two"
       )
-      cy.get("div#prosemirror")
-        .children()
+      editorContents()
         .should("have.html", expectedHtml(["Hello World", null, "line two"]))
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
@@ -67,14 +59,12 @@ describe("<Editor />", () => {
       const doc = automerge.from({ text: "Hello Happy World" })
       const handle = new DocHandle(doc)
       mount(<Editor handle={handle} path={["text"]} />)
-      cy.get("div#prosemirror")
-        .children()
+      editorContents()
         .should("have.html", expectedHtml(["Hello Happy World"]))
-      cy.get("div#prosemirror").setSelection("Happy")
-      cy.get("div#prosemirror").type("{ctrl}{b}")
 
-      cy.get("div#prosemirror")
-        .children()
+      withSelection("Happy", () => boldButton().click())
+
+      editorContents()
         .should(
           "have.html",
           expectedHtml(["Hello <strong>Happy</strong> World"])
@@ -84,7 +74,7 @@ describe("<Editor />", () => {
         .then(() => handle.doc.text)
         .should("equal", "Hello Happy World")
       cy.wait(100)
-        .then(() => automerge.marks(handle.doc, "text"))
+        .then(() => automerge.marks(handle.doc, ["text"]))
         .should("deep.equal", [
           { name: "strong", value: true, start: 6, end: 11 },
         ])
@@ -94,11 +84,10 @@ describe("<Editor />", () => {
       const doc = automerge.from({ text: "My homepage is here" })
       const handle = new DocHandle(doc)
       mount(<Editor handle={handle} path={["text"]} />)
-      cy.get("div#prosemirror").setSelection("homepage")
-      cy.get("div#prosemirror").type("{ctrl}{l}")
+      
+      withSelection("homepage", () => linkButton().click())
 
-      cy.get("div#prosemirror")
-        .children()
+      editorContents()
         .should(
           "have.html",
           expectedHtml([
@@ -107,7 +96,7 @@ describe("<Editor />", () => {
         )
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
-        .then(() => automerge.marks(handle.doc, "text"))
+        .then(() => automerge.marks(handle.doc, ["text"]))
         .should("deep.equal", [
           {
             name: "link",
@@ -128,8 +117,7 @@ describe("<Editor />", () => {
       const handle = new DocHandle(doc)
       mount(<Editor handle={handle} path={["text"]} />)
       handle.change(d => automerge.splice(d, ["text"], 5, 0, " Happy"))
-      cy.get("div#prosemirror")
-        .children()
+      editorContents()
         .should("have.html", expectedHtml(["Hello Happy World"]))
     })
 
@@ -147,8 +135,7 @@ describe("<Editor />", () => {
       const handle = new DocHandle(doc)
       mount(<Editor handle={handle} path={["text"]} />)
       handle.change(d => automerge.splice(d, ["text"], 6, 0, "Strong"))
-      cy.get("div#prosemirror")
-        .children()
+      editorContents()
         .should(
           "have.html",
           expectedHtml(["Hello <strong>StrongWorld</strong>"])
@@ -171,4 +158,26 @@ function expectedHtml(expected: Expected[]): string {
       }
     })
     .join("")
+}
+
+function editorContents(): Cypress.Chainable<JQuery<HTMLDivElement>> {
+  return cy.get("div#editor div[contenteditable=true]")
+}
+
+function boldButton(): Cypress.Chainable<JQuery<HTMLButtonElement>> {
+  return cy.get("div#prosemirror button#bold")
+}
+
+function italicButton(): Cypress.Chainable<JQuery<HTMLButtonElement>> {
+  return cy.get("div#prosemirror button#italic")
+}
+
+function linkButton(): Cypress.Chainable<JQuery<HTMLButtonElement>> {
+  return cy.get("div#prosemirror button#link")
+}
+
+function withSelection(selection: string, action: () => void) {
+    editorContents().setSelection(selection)
+    editorContents().focus()
+    action()
 }

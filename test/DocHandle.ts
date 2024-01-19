@@ -1,4 +1,4 @@
-import { unstable as automerge } from "@automerge/automerge"
+import { next as automerge } from "@automerge/automerge"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PatchListener = (
@@ -24,15 +24,16 @@ export class DocHandle {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   changeAt = (
     atHeads: automerge.Heads,
-    fn: (doc: automerge.Doc<any>) => void
-  ): automerge.Doc<any> => {
-    this.doc = automerge.changeAt(this.doc, atHeads, fn)
+    fn: (doc: automerge.Doc<unknown>) => void
+  ): {newDoc: automerge.Doc<unknown>, newHeads: automerge.Heads | null} => {
+    const { newDoc, newHeads } = automerge.changeAt(this.doc, atHeads, fn)
+    this.doc = newDoc
     this._notifyListeners()
-    return this.doc
+    return {newDoc: this.doc, newHeads}
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  change = (fn: (doc: automerge.Doc<any>) => void): automerge.Doc<any> => {
+  change = (fn: (doc: automerge.Doc<unknown>) => void): automerge.Doc<unknown> => {
     this.doc = automerge.change(this.doc, fn)
     this._notifyListeners()
     return this.doc
