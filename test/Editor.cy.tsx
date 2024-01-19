@@ -1,8 +1,9 @@
 import React from "react"
-import { Editor } from "./Editor"
+import { Editor } from "../playground/src/Editor"
 import { next as automerge } from "@automerge/automerge"
-import { DocHandle } from "./DocHandle"
+import { DocHandle } from "../playground/src/DocHandle"
 import { mount } from "cypress/react18"
+import "../playground/src/playground.css"
 
 describe("<Editor />", () => {
   it("renders", () => {

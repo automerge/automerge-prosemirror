@@ -6,7 +6,8 @@
     "prettier": "prettier '**/*.{js,ts,tsx,json}' --check",
     "build": "tsc -p ./tsconfig/tsconfig.build.json",
     "lint": "eslint .",
-    "cypress:open": "cypress open"
+    "cypress:open": "cypress open",
+    "playground": "vite dev playground"
   },
   "type": "module",
   "main": "dist/index.js",

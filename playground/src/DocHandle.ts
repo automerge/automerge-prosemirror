@@ -10,15 +10,17 @@ type Listener = {
   callback: PatchListener
 }
 
+type ListenerId = symbol
+
 export class DocHandle {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   doc: automerge.Doc<any>
-  listeners: Array<Listener>
+  listeners: Map<ListenerId, Listener>
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(doc: automerge.Doc<any>) {
     this.doc = doc
-    this.listeners = []
+    this.listeners = new Map()
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,14 +41,20 @@ export class DocHandle {
     return this.doc
   }
 
-  addListener = (listener: PatchListener) => {
+  addListener = (listener: PatchListener): ListenerId => {
     const heads = automerge.getHeads(this.doc)
-    this.listeners.push({ heads, callback: listener })
+    const id = Symbol()
+    this.listeners.set(id, { heads, callback: listener })
+    return id
+  }
+
+  removeListener = (id: ListenerId): void => {
+    this.listeners.delete(id)
   }
 
   _notifyListeners = () => {
     const newHeads = automerge.getHeads(this.doc)
-    for (const listener of this.listeners) {
+    for (const [_, listener] of this.listeners) {
       if (listener.heads !== newHeads) {
         const diff = automerge.diff(this.doc, listener.heads, newHeads)
         if (diff.length > 0) {

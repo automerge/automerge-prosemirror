@@ -1,0 +1,14 @@
+#editors {
+    display: flex;
+    flex-direction: row;
+    width: 600px;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.editor {
+    flex: 1;
+    height: 300px;
+    border: 1px solid #ccc;
+    padding: 10px;
+}

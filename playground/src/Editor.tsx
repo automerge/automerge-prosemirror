@@ -8,7 +8,7 @@ import { MarkType } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import "prosemirror-view/style/prosemirror.css"
 import { next as automerge, Prop } from "@automerge/automerge"
-import { plugin as amgPlugin, init as initPm, PatchSemaphore } from "../src"
+import { plugin as amgPlugin, init as initPm, PatchSemaphore } from "../../src"
 import { type DocHandle } from "./DocHandle"
 import { exampleSetup } from "prosemirror-example-setup"
 
@@ -57,7 +57,6 @@ export function Editor({ handle, path }: EditorProps) {
     const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
-        console.log("Dispatching transaction", tx)
         const newState = semaphore.intercept(handle.changeAt, tx, view.state)
         view.updateState(newState)
       },
@@ -70,12 +69,12 @@ export function Editor({ handle, path }: EditorProps) {
       const newState = semaphore.reconcilePatch(docAfter, patches, view.state)
       view.updateState(newState)
     }
-    handle.addListener(onPatch)
-
+    const listenerId = handle.addListener(onPatch)
 
     setView(view)
 
     return () => {
+      handle.removeListener(listenerId)
       view.destroy()
     }
   }, [])
