@@ -1,4 +1,4 @@
-import { unstable, DelPatch, Patch, type Prop, Doc } from "@automerge/automerge"
+import { next as am, DelPatch, Patch, type Prop, Doc } from "@automerge/automerge"
 import { Fragment, Slice, Mark, Attrs } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
 import { schema } from "prosemirror-schema-basic"
@@ -6,8 +6,8 @@ import { BLOCK_MARKER } from "./constants"
 import { amIdxToPmIdx } from "./positions"
 import { MarkValue } from "./marks"
 
-type SpliceTextPatch = unstable.SpliceTextPatch
-type InsertPatch = unstable.InsertPatch
+type SpliceTextPatch = am.SpliceTextPatch
+type InsertPatch = am.InsertPatch
 
 type MarkSet = {
   [name: string]: MarkValue
@@ -16,7 +16,7 @@ type MarkSet = {
 type MarkPatch = {
   action: "mark"
   path: Prop[]
-  marks: unstable.Mark[]
+  marks: am.Mark[]
 }
 
 type TranslateIdx = (idx: number) => number

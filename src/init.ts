@@ -1,7 +1,7 @@
 import { schema } from "prosemirror-schema-basic"
 import { Attrs, Node } from "prosemirror-model"
 import { AddMarkStep } from "prosemirror-transform"
-import { Doc, Prop, unstable, Text } from "@automerge/automerge"
+import { Doc, Prop, next as am, Text } from "@automerge/automerge"
 import { amIdxToPmIdx } from "./positions"
 
 export function init<T>(doc: Doc<T>, path: Prop[]): Node {
@@ -24,7 +24,7 @@ export function init<T>(doc: Doc<T>, path: Prop[]): Node {
     paras = [schema.node("paragraph", null, [])]
   }
   let result = schema.node("doc", null, paras)
-  for (const mark of unstable.marks(doc, path[path.length - 1])) {
+  for (const mark of am.marks(doc, [path[path.length - 1]])) {
     const start = amIdxToPmIdx(mark.start, amText)
     const end = amIdxToPmIdx(mark.end, amText)
     if (mark.value == null) {

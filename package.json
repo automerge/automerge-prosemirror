@@ -11,7 +11,7 @@
   "type": "module",
   "main": "dist/index.js",
   "dependencies": {
-    "@automerge/automerge": "^2.1.0-alpha.5",
+    "@automerge/automerge": "^2.1.10",
     "prosemirror-model": "^1.19.2",
     "prosemirror-schema-basic": "^1.2.2",
     "prosemirror-state": "^1.4.3",
@@ -23,7 +23,7 @@
     "@typescript-eslint/eslint-plugin": "^5.60.0",
     "@typescript-eslint/parser": "^5.60.0",
     "@vitejs/plugin-react": "^4.0.0",
-    "cypress": "^12.14.0",
+    "cypress": "^13.6.3",
     "eslint": "^8.43.0",
     "ist": "^1.1.7",
     "prettier": "^2.8.8",

@@ -1,5 +1,5 @@
 import { Doc, Heads, Prop } from "@automerge/automerge"
-import { unstable as automerge } from "@automerge/automerge"
+import { next as am } from "@automerge/automerge"
 import { EditorState, Transaction } from "prosemirror-state"
 import { getPath, getLastHeads, updateHeads } from "./plugin"
 import pmToAm from "./pmToAm"
@@ -9,7 +9,7 @@ import mapSelection from "./mapSelection"
 type ChangeFn<T> = (doc: Doc<T>) => void
 
 export function intercept<T>(
-  change: (_atHeads: Heads, _doChange: ChangeFn<T>) => Doc<T>,
+  change: (_atHeads: Heads, _doChange: ChangeFn<T>) => { newDoc: Doc<T>, newHeads: Heads | null },
   intercepted: Transaction,
   state: EditorState
 ): EditorState {
@@ -17,20 +17,22 @@ export function intercept<T>(
   const path = getPath(state)
 
   // Apply the incoming transaction to the automerge doc
-  const updated = change(headsBefore, doc => {
+  const {newDoc: updated} = change(headsBefore, doc => {
     const [subdoc, attr] = docAndAttr(doc, path)
     for (let i = 0; i < intercepted.steps.length; i++) {
       const step = intercepted.steps[i]
+      console.log(step)
       const pmDoc = intercepted.docs[i]
       pmToAm(step, pmDoc, subdoc, attr)
     }
   })
-  const headsAfter = automerge.getHeads(updated)
+  const headsAfter = am.getHeads(updated)
 
   // Get the corresponding patches and turn them into a transaction to apply to the editorstate
-  const diff = automerge.diff(updated, headsBefore, headsAfter)
+  const diff = am.diff(updated, headsBefore, headsAfter)
+  console.log(JSON.stringify(diff))
 
-  const before = automerge.view(updated, headsBefore)
+  const before = am.view(updated, headsBefore)
   // Create a transaction which applies the diff and updates the doc and heads
   let tx = amToPm(before, diff, path, state.tr)
   tx = mapSelection(intercepted, tx)

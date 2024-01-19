@@ -1,4 +1,4 @@
-import { unstable as automerge } from "@automerge/automerge"
+import { next as automerge } from "@automerge/automerge"
 import { EditorState, Transaction } from "prosemirror-state"
 import amToPm from "./amToPm"
 import { intercept } from "./intercept"
@@ -14,7 +14,7 @@ export default class PatchSemaphore<T> {
   _inLocalTransaction = false
 
   intercept = (
-    change: (_atHeads: Heads, _doChange: ChangeFn<T>) => Doc<T>,
+    change: (_atHeads: Heads, _doChange: ChangeFn<T>) => {newDoc: Doc<T>, newHeads: Heads | null},
     intercepted: Transaction,
     state: EditorState
   ): EditorState => {

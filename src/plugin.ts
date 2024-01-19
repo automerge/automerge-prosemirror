@@ -1,5 +1,5 @@
 import { EditorState, Plugin, PluginKey, Transaction } from "prosemirror-state"
-import * as automerge from "@automerge/automerge"
+import { next as automerge } from "@automerge/automerge"
 import { Doc, Heads, Prop } from "@automerge/automerge"
 
 // The name of the meta field that holds the last heads we reconciled with

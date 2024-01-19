@@ -5,7 +5,7 @@ import {
   Step,
 } from "prosemirror-transform"
 import { Node } from "prosemirror-model"
-import { Prop, unstable as automerge } from "@automerge/automerge"
+import { Prop, next as automerge } from "@automerge/automerge"
 import { pmIdxToAmIdx } from "./positions"
 import { BLOCK_MARKER } from "./constants"
 
@@ -16,11 +16,11 @@ export default function <T>(step: Step, pmDoc: Node, doc: T, attr: Prop) {
   // don't really understand. I _think_ that the `*Step` classs we get
   // passed here can be slightly different to the classes we've imported if the
   // dependencies are messed up
-  if (step.constructor.name === "ReplaceStep") {
+  if (step.constructor.name === "ReplaceStep" || step.constructor.name === "_ReplaceStep") {
     replaceStep(step as ReplaceStep, doc, attr, pmDoc)
-  } else if (step.constructor.name === "AddMarkStep") {
+  } else if (step.constructor.name === "AddMarkStep" || step.constructor.name === "_AddMarkStep") {
     addMarkStep(step as AddMarkStep, doc, attr, pmDoc)
-  } else if (step.constructor.name === "RemoveMarkStep") {
+  } else if (step.constructor.name === "RemoveMarkStep" || step.constructor.name === "_RemoveMarkStep") {
     removeMarkStep(step as RemoveMarkStep, doc, attr, pmDoc)
   }
 }
