@@ -1,42 +1,55 @@
-import { Doc, Heads, Prop } from "@automerge/automerge"
+import { Prop } from "@automerge/automerge"
 import { next as am } from "@automerge/automerge"
-import { EditorState, Transaction } from "prosemirror-state"
-import { getPath, getLastHeads, updateHeads } from "./plugin"
+import { EditorState, Transaction, TextSelection } from "prosemirror-state"
+import { getPath } from "./plugin"
 import pmToAm from "./pmToAm"
 import amToPm from "./amToPm"
-import mapSelection from "./mapSelection"
-
-type ChangeFn<T> = (doc: Doc<T>) => void
+import { DocHandle } from "./DocHandle"
 
 export function intercept<T>(
-  change: (_atHeads: Heads, _doChange: ChangeFn<T>) => { newDoc: Doc<T>, newHeads: Heads | null },
+  handle: DocHandle<T>,
   intercepted: Transaction,
-  state: EditorState
+  state: EditorState,
 ): EditorState {
-  const headsBefore = getLastHeads(state)
   const path = getPath(state)
 
+  const docBefore = handle.docSync()
+  if (docBefore === undefined) throw new Error("handle is not ready")
+  const headsBefore = am.getHeads(docBefore)
+  const spansBefore = am.spans(docBefore, path)
+
   // Apply the incoming transaction to the automerge doc
-  const {newDoc: updated} = change(headsBefore, doc => {
-    const [subdoc, attr] = docAndAttr(doc, path)
+  handle.change(d => {
+    const [subdoc, attr] = docAndAttr(d, path)
     for (let i = 0; i < intercepted.steps.length; i++) {
+      const spans = am.spans(handle.docSync()!, path)
       const step = intercepted.steps[i]
       console.log(step)
       const pmDoc = intercepted.docs[i]
-      pmToAm(step, pmDoc, subdoc, attr)
+      pmToAm(spans, step, subdoc, pmDoc, attr)
     }
   })
-  const headsAfter = am.getHeads(updated)
+
+  //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const headsAfter = am.getHeads(handle.docSync()!)
+  if (headsEqual(headsBefore, headsAfter)) {
+    return state.apply(intercepted)
+  }
 
   // Get the corresponding patches and turn them into a transaction to apply to the editorstate
-  const diff = am.diff(updated, headsBefore, headsAfter)
-  console.log(JSON.stringify(diff))
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const diff = am.diff(handle.docSync()!, headsBefore, headsAfter)
+  console.log("Intercept diff: ")
+  console.log(diff)
 
-  const before = am.view(updated, headsBefore)
   // Create a transaction which applies the diff and updates the doc and heads
-  let tx = amToPm(before, diff, path, state.tr)
-  tx = mapSelection(intercepted, tx)
-  tx = updateHeads(tx, headsAfter)
+  let tx = amToPm(state.schema, spansBefore, diff, path, state.tr, true)
+  const selectionAfter = state.apply(intercepted).selection
+  const resolvedSelectionAfter = new TextSelection(
+    tx.doc.resolve(selectionAfter.from),
+    tx.doc.resolve(selectionAfter.to),
+  )
+  tx = tx.setSelection(resolvedSelectionAfter)
 
   return state.apply(tx)
 }
@@ -49,4 +62,12 @@ function docAndAttr(doc: any, path: Prop[]): [any, Prop] {
     doc = doc[result_path.shift()!]
   }
   return [doc, path[0]]
+}
+
+function headsEqual(headsBefore: am.Heads, headsAfter: am.Heads): boolean {
+  if (headsBefore.length !== headsAfter.length) return false
+  for (let i = 0; i < headsBefore.length; i++) {
+    if (headsBefore[i] !== headsAfter[i]) return false
+  }
+  return true
 }

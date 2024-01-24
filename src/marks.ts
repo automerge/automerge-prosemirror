@@ -78,14 +78,14 @@ export function defaultMarkMap<T>(): MarkMap<T> {
     createMark<T>(
       _doc: T,
       _markName: string,
-      _value: Attrs
+      _value: Attrs,
     ): PresentMarkValue | null {
       return true
     },
     loadMark<T>(
       _doc: T,
       _markName: string,
-      _markValue: PresentMarkValue
+      _markValue: PresentMarkValue,
     ): Attrs | null {
       return null
     },

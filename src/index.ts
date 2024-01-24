@@ -1,5 +1,6 @@
 export { default as PatchSemaphore } from "./PatchSemaphore"
 export { plugin } from "./plugin"
-export { init } from "./init"
+export { schema } from "./schema"
 export { type MarkMap } from "./marks"
 export { defaultMarkMap } from "./marks"
+export { type DocHandle } from "./DocHandle"

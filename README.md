@@ -50,7 +50,7 @@ let editorConfig = {
 let state = EditorState.create(editorConfig)
 
 // This is how the plugin modifies the document whenever there are changes, it
-// must apply the provided change function to the document and return the 
+// must apply the provided change function to the document and return the
 // updated document
 const doChange = (fn: (d: automerge.Doc<any>) => void): automerge.Doc<any> => {
     ...
@@ -85,14 +85,14 @@ of concurrent inserts of newlines).
 
 We attempt to have a unidirectional dataflow, which looks like this:
 
-* In `intercept`
-    * We translate the prosemirror transaction into
-      modifications to the automerge document.
-    * Then we generate a diff for the changes we just made to the document
-    * Then we create a prosemirror transaction from the diff and apply it to the 
-      editorstate
-* in `reconcilePatch`
-    * We use the same process as above to generate a transaction and apply it
-      to the document
+- In `intercept`
+  - We translate the prosemirror transaction into
+    modifications to the automerge document.
+  - Then we generate a diff for the changes we just made to the document
+  - Then we create a prosemirror transaction from the diff and apply it to the
+    editorstate
+- in `reconcilePatch`
+  - We use the same process as above to generate a transaction and apply it
+    to the document
 
 The upshot is that the source of truth is always the automerge document.

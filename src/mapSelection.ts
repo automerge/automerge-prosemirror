@@ -2,12 +2,20 @@ import { TextSelection, Transaction } from "prosemirror-state"
 
 export default function mapSelection(
   intercepted: Transaction,
-  propagated: Transaction
+  propagated: Transaction,
 ): Transaction {
-  if (intercepted.steps.length == 0) {
+  if (!intercepted.docChanged) {
     // There are no steps so we can just set the selection on the propagated
     // transaction to the selection on the intercepted transaction
-    return propagated.setSelection(intercepted.selection)
+    //
+    const anchor = intercepted.mapping
+      .invert()
+      .map(intercepted.selection.anchor)
+    const head = intercepted.mapping.invert().map(intercepted.selection.head)
+    const $anchor = propagated.doc.resolve(anchor)
+    const $head = propagated.doc.resolve(head)
+    const selection = new TextSelection($anchor, $head)
+    return propagated.setSelection(selection)
   }
   // get the selection at the start of the intercepted transasction by inverting the steps in it
   const anchor = intercepted.mapping.invert().map(intercepted.selection.anchor)

@@ -1,14 +1,58 @@
 #editors {
-    display: flex;
-    flex-direction: row;
-    width: 600px;
-    justify-content: space-between;
-    gap: 10px;
+  display: flex;
+  flex-direction: row;
+  width: 800px;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .editor {
-    flex: 1;
-    height: 300px;
-    border: 1px solid #ccc;
-    padding: 10px;
+  flex: 1;
+  min-height: 300px;
+  border: 1px solid #ccc;
+  padding: 10px;
+}
+
+.menubar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.menubar button {
+  padding: 10px;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+.menubar .row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.captionedButton {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 10px;
+  font-size: 10px;
+}
+
+.captionedButton p {
+  padding: 0;
+  margin: 0;
+}
+
+blockquote {
+  background: #f9f9f9;
+  border-left: 10px solid #ccc;
+  margin: 1em 10px;
+  padding: 0.5em 10px;
+  quotes: "\201C" "\201D" "\2018" "\2019";
 }

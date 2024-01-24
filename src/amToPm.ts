@@ -1,10 +1,21 @@
-import { next as am, DelPatch, Patch, type Prop, Doc } from "@automerge/automerge"
-import { Fragment, Slice, Mark, Attrs } from "prosemirror-model"
-import { Transaction } from "prosemirror-state"
-import { schema } from "prosemirror-schema-basic"
-import { BLOCK_MARKER } from "./constants"
-import { amIdxToPmIdx } from "./positions"
+import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
+import {
+  Fragment,
+  Slice,
+  Mark,
+  Attrs,
+  Schema,
+  NodeType,
+} from "prosemirror-model"
+import { TextSelection, Transaction } from "prosemirror-state"
 import { MarkValue } from "./marks"
+import {
+  amIdxToPmBlockIdx,
+  amSpliceIdxToPmIdx,
+  docFromSpans,
+} from "./traversal"
+import { patchSpans } from "./maintainSpans"
+import { printTree } from "../test/utils"
 
 type SpliceTextPatch = am.SpliceTextPatch
 type InsertPatch = am.InsertPatch
@@ -19,79 +30,103 @@ type MarkPatch = {
   marks: am.Mark[]
 }
 
-type TranslateIdx = (idx: number) => number
-
-export default function <T>(
-  before: Doc<T>,
+export default function (
+  schema: Schema,
+  spansAtStart: am.Span[],
   patches: Array<Patch>,
   path: Prop[],
-  tx: Transaction
+  tx: Transaction,
+  isLocal: boolean,
 ): Transaction {
   let result = tx
-  const patchState = new PatchingText(before, path)
   for (const patch of patches) {
+    console.log(JSON.stringify(patch))
     if (patch.action === "insert") {
-      result = handleInsert(patch, path, result, patchState.translate)
+      result = handleInsert(schema, patch, path, result)
+      patchSpans(spansAtStart, patch)
     } else if (patch.action === "splice") {
-      result = handleSplice(patch, path, result, patchState.translate)
+      result = handleSplice(schema, spansAtStart, patch, path, result, isLocal)
+      patchSpans(spansAtStart, patch)
     } else if (patch.action === "del") {
-      result = handleDelete(patch, path, result, patchState.translate)
+      result = handleDelete(schema, spansAtStart, patch, path, result)
+      patchSpans(spansAtStart, patch)
     } else if (patch.action === "mark") {
-      result = handleMark(patch, path, result, patchState.translate)
+      result = handleMark(spansAtStart, schema, patch, path, result)
+      patchSpans(spansAtStart, patch)
+    } else if (
+      patch.action === "splitBlock" ||
+      patch.action === "joinBlock" ||
+      patch.action === "updateBlock"
+    ) {
+      handleBlockChange(schema, spansAtStart, patch, tx, isLocal)
     }
-    patchState.patch(patch)
   }
   return result
 }
 
 function handleInsert(
+  schema: Schema,
   patch: InsertPatch,
   path: Prop[],
   tx: Transaction,
-  translate: TranslateIdx
 ): Transaction {
-  const index = charPath(path, patch.path)
-  if (index === null) return tx
-  const pmIdx = translate(index)
-  const content = patchContentToSlice(patch.values.join(""), patch.marks)
-  return tx.replace(pmIdx, pmIdx, content)
+  //const index = charPath(path, patch.path)
+  //if (index === null) return tx
+  //const pmIdx = amIdxToPmIdx(tx.doc, index)
+  //if (pmIdx == null) throw new Error("Invalid index")
+  //const content = patchContentToSlice(schema, patch.values.join(""), patch.marks)
+  //return tx.replace(pmIdx, pmIdx, content)
+  return tx
 }
 
-function handleSplice(
+export function handleSplice(
+  schema: Schema,
+  spans: am.Span[],
   patch: SpliceTextPatch,
   path: Prop[],
   tx: Transaction,
-  translate: TranslateIdx
+  isLocal: boolean,
 ): Transaction {
   const index = charPath(path, patch.path)
   if (index === null) return tx
-  const idx = translate(index)
-  return tx.replace(idx, idx, patchContentToSlice(patch.value, patch.marks))
+  const pmIdx = amSpliceIdxToPmIdx(spans, index)
+  if (pmIdx == null) throw new Error("Invalid index")
+  const content = patchContentToFragment(schema, patch.value, patch.marks)
+  tx = tx.replace(pmIdx, pmIdx, new Slice(content, 0, 0))
+  if (isLocal) {
+    const sel = tx.doc.resolve(pmIdx + content.size)
+    tx = tx.setSelection(new TextSelection(sel, sel))
+  }
+  return tx
 }
 
 function handleDelete(
+  schema: Schema,
+  spans: am.Span[],
   patch: DelPatch,
   path: Prop[],
   tx: Transaction,
-  translate: TranslateIdx
 ): Transaction {
   const index = charPath(path, patch.path)
   if (index === null) return tx
-  const start = translate(index)
-  const end = translate(index + (patch.length || 1))
+  const start = amSpliceIdxToPmIdx(spans, index)
+  if (start == null) throw new Error("Invalid index")
+  const end = start + (patch.length || 1)
   return tx.delete(start, end)
 }
 
 function handleMark(
+  spans: am.Span[],
+  schema: Schema,
   patch: MarkPatch,
   path: Prop[],
   tx: Transaction,
-  translate: TranslateIdx
 ) {
   if (pathEquals(patch.path, path)) {
     for (const mark of patch.marks) {
-      const pmStart = translate(mark.start)
-      const pmEnd = translate(mark.end)
+      const pmStart = amSpliceIdxToPmIdx(spans, mark.start)
+      const pmEnd = amSpliceIdxToPmIdx(spans, mark.end)
+      if (pmStart == null || pmEnd == null) throw new Error("Invalid index")
       const markType = schema.marks[mark.name]
       if (markType == null) continue
       if (mark.value == null) {
@@ -103,6 +138,99 @@ function handleMark(
     }
   }
   return tx
+}
+
+export function handleBlockChange(
+  schema: Schema,
+  spans: am.Span[],
+  patch: am.SplitBlockPatch | am.JoinBlockPatch | am.UpdateBlockPatch,
+  tx: Transaction,
+  isLocal: boolean,
+): Transaction {
+  patchSpans(spans, patch)
+  //console.log(JSON.stringify(spans, null, 2))
+  const docAfter = docFromSpans(spans)
+  //console.log(JSON.stringify(docAfter, null, 2))
+  const change = findDiff(tx.doc.content, docAfter.content)
+  if (change == null) return tx
+
+  const $from = docAfter.resolve(change.start)
+  const $to = docAfter.resolve(change.endB)
+  const $fromA = tx.doc.resolve(change.start)
+  const inlineChange =
+    $from.sameParent($to) &&
+    $from.parent.inlineContent &&
+    $fromA.end() >= change.endA
+
+  const chFrom = change.start
+  const chTo = change.endA
+
+  let handledByInline = false
+  if (inlineChange) {
+    if ($from.pos == $to.pos) {
+      // Deletion
+      handledByInline = true
+      tx = tx.delete(chFrom, chTo)
+    } else if (
+      $from.parent.child($from.index()).isText &&
+      $from.index() == $to.index() - ($to.textOffset ? 0 : 1)
+    ) {
+      handledByInline = true
+      // Both positions in the same text node -- simply insert text
+      const text = $from.parent.textBetween(
+        $from.parentOffset,
+        $to.parentOffset,
+      )
+      tx = tx.insertText(text, chFrom, chTo)
+    }
+  }
+  if (!handledByInline) {
+    tx = tx.replace(chFrom, chTo, docAfter.slice(change.start, change.endB))
+  }
+  if (isLocal) {
+    const blockIdx = amIdxToPmBlockIdx(spans, patch.index)
+    if (blockIdx == null) throw new Error("Invalid index")
+    tx = tx.setSelection(TextSelection.create(tx.doc, blockIdx))
+  }
+
+  return tx
+}
+
+function findDiff(
+  a: Fragment,
+  b: Fragment,
+): { start: number; endA: number; endB: number } | null {
+  let start = a.findDiffStart(b)
+  if (start == null) return null
+  //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  let { a: endA, b: endB } = a.findDiffEnd(b)!
+  if (endA < start && a.size < b.size) {
+    if (
+      start &&
+      start < b.size &&
+      isSurrogatePair(b.textBetween(start - 1, start + 1))
+    )
+      start -= 1
+    endB = start + (endB - endA)
+    endA = start
+  } else if (endB < start) {
+    if (
+      start &&
+      start < a.size &&
+      isSurrogatePair(a.textBetween(start - 1, start + 1))
+    )
+      start -= 1
+    endA = start + (endA - endB)
+    endB = start
+  }
+  return { start, endA, endB }
+}
+
+function isSurrogatePair(str: string) {
+  if (str.length != 2) return false
+  const a = str.charCodeAt(0),
+    b = str.charCodeAt(1)
+  return a >= 0xdc00 && a <= 0xdfff && b >= 0xd800 && b <= 0xdbff
 }
 
 // If the path of the patch is of the form [path, <index>] then we know this is
@@ -125,23 +253,11 @@ function pathEquals(path1: Prop[], path2: Prop[]): boolean {
   return true
 }
 
-function patchContentToSlice(patchContent: string, marks?: MarkSet): Slice {
-  // * The incoming content starts with a newline. In this case we set openStart
-  //   to 0 to indicate a new paragraph
-  // * The incoming content does not start with a newline, in which case we set
-  //   openStart to 1 to indicate continuing a paragraph
-  const startsWithNewline = patchContent[-1] === BLOCK_MARKER
-  const openStart = startsWithNewline ? 0 : 1
-
-  // * The incoming content ends with a newline, in which case we set openEnd to
-  //   0 to indicate that the paragraph is closed
-  // * The incoming content does not end with a newline, in which case we set
-  //   openEnd to 1 to indicate that there coule be more paragraph afterwards
-  const endsWithNewline =
-    patchContent.length > 1 &&
-    patchContent[patchContent.length - 1] === BLOCK_MARKER
-  const openEnd = endsWithNewline ? 0 : 1
-
+function patchContentToFragment(
+  schema: Schema,
+  patchContent: string,
+  marks?: MarkSet,
+): Fragment {
   let pmMarks: Array<Mark> | undefined = undefined
   if (marks != null) {
     pmMarks = Object.entries(marks).reduce(
@@ -156,74 +272,17 @@ function patchContentToSlice(patchContent: string, marks?: MarkSet): Slice {
         }
         return acc
       },
-      []
+      [],
     )
   }
 
-  let content = Fragment.empty
-  const blocks = patchContent.split(BLOCK_MARKER).map(b => {
-    if (b.length == 0) {
-      return schema.node("paragraph", null, [])
-    } else {
-      return schema.node("paragraph", null, [schema.text(b, pmMarks)])
-    }
-  })
-  if (blocks.length > 0) {
-    content = Fragment.from(blocks)
-  }
-  return new Slice(content, openStart, openEnd)
+  // Splice is only ever called once a block has already been created so we're
+  // only inserting text. This means we don't have to think about openStart
+  // and openEnd
+  return Fragment.from(schema.text(patchContent, pmMarks))
 }
 
-class PatchingText {
-  docPath: Prop[]
-  currentValue: string
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  constructor(doc: Doc<any>, path: Prop[]) {
-    this.docPath = path
-    let current = doc
-    for (let i = 0; i < path.length; i++) {
-      const prop = path[i]
-      current = current[prop]
-    }
-    const amText = current.toString()
-    this.currentValue = amText
-  }
-
-  patch = (patch: Patch): void => {
-    if (patch.action === "splice") {
-      const index = charPath(this.docPath, patch.path)
-      if (index == null) {
-        return
-      }
-      const before = this.currentValue.substring(0, index)
-      const after = this.currentValue.substring(index + patch.value.length)
-      this.currentValue = before + patch.value + after
-    } else if (patch.action === "del") {
-      const index = charPath(this.docPath, patch.path)
-      if (index == null) {
-        return
-      }
-      const before = this.currentValue.substring(0, index)
-      const after = this.currentValue.substring(index + (patch.length || 1))
-      this.currentValue = before + after
-    } else if (patch.action === "insert") {
-      const index = charPath(this.docPath, patch.path)
-      if (index == null) {
-        return
-      }
-      const before = this.currentValue.substring(0, index)
-      const after = this.currentValue.substring(index)
-      this.currentValue = before + patch.values.join("") + after
-    }
-  }
-
-  translate = (index: number): number => {
-    return amIdxToPmIdx(index, this.currentValue)
-  }
-}
-
-function attrsFromMark(mark: MarkValue): Attrs | null {
+export function attrsFromMark(mark: MarkValue): Attrs | null {
   let markAttrs = null
   if (typeof mark === "string") {
     try {

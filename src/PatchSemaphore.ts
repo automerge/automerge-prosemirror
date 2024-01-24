@@ -2,43 +2,44 @@ import { next as automerge } from "@automerge/automerge"
 import { EditorState, Transaction } from "prosemirror-state"
 import amToPm from "./amToPm"
 import { intercept } from "./intercept"
-import { getPath, updateHeads, getLastHeads } from "./plugin"
+import { getLastHeads, getPath, updateHeads } from "./plugin"
+import { DocHandle } from "./DocHandle"
+import { printTree } from "../test/utils"
 
 type Doc<T> = automerge.Doc<T>
-type Heads = automerge.Heads
 type Patch = automerge.Patch
-
-type ChangeFn<T> = (doc: Doc<T>) => void
 
 export default class PatchSemaphore<T> {
   _inLocalTransaction = false
 
   intercept = (
-    change: (_atHeads: Heads, _doChange: ChangeFn<T>) => {newDoc: Doc<T>, newHeads: Heads | null},
+    handle: DocHandle<T>,
     intercepted: Transaction,
-    state: EditorState
+    state: EditorState,
   ): EditorState => {
     this._inLocalTransaction = true
-    const result = intercept(change, intercepted, state)
+    const result = intercept(handle, intercepted, state)
     this._inLocalTransaction = false
     return result
   }
 
   reconcilePatch = (
+    docBefore: Doc<T>,
     docAfter: Doc<T>,
     patches: Patch[],
-    state: EditorState
+    state: EditorState,
   ): EditorState => {
     if (this._inLocalTransaction) {
       return state
     }
+    console.log("reconciling")
+    console.log(patches)
     const path = getPath(state)
+    const headsBefore = automerge.getHeads(docBefore)
     const headsAfter = automerge.getHeads(docAfter)
 
-    const headsBefore = getLastHeads(state)
-    const docBefore = automerge.view(docAfter, headsBefore)
-
-    let tx = amToPm(docBefore, patches, path, state.tr)
+    const spans = automerge.spans(automerge.view(docAfter, headsBefore), path)
+    let tx = amToPm(state.schema, spans, patches, path, state.tr, false)
     tx = updateHeads(tx, headsAfter)
     return state.apply(tx)
   }

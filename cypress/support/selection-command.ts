@@ -68,7 +68,7 @@ Cypress.Commands.add(
         setBaseAndExtent(anchorNode, anchorOffset, focusNode, focusOffset)
       }
     })
-  }
+  },
 )
 
 // Low level command reused by `setCursorBefore` and `setCursorAfter`, equal to `setCursorAfter`
@@ -89,7 +89,7 @@ Cypress.Commands.add(
     })
     // Depending on what you're testing, you may need to chain a `.click()` here to ensure
     // further commands are picked up by whatever you're testing (this was required for Slate, for example).
-  }
+  },
 )
 
 Cypress.Commands.add(
@@ -97,7 +97,7 @@ Cypress.Commands.add(
   { prevSubject: true },
   (subject, query) => {
     cy.wrap(subject).setCursor(query, true)
-  }
+  },
 )
 
 Cypress.Commands.add(
@@ -105,7 +105,7 @@ Cypress.Commands.add(
   { prevSubject: true },
   (subject, query) => {
     cy.wrap(subject).setCursor(query)
-  }
+  },
 )
 
 // Helper functions
