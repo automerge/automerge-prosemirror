@@ -1,17 +1,16 @@
 import { Prop } from "@automerge/automerge"
 import { next as am } from "@automerge/automerge"
 import { EditorState, Transaction, TextSelection } from "prosemirror-state"
-import { getPath } from "./plugin"
 import pmToAm from "./pmToAm"
 import amToPm from "./amToPm"
 import { DocHandle } from "./DocHandle"
 
 export function intercept<T>(
+  path: am.Prop[],
   handle: DocHandle<T>,
   intercepted: Transaction,
   state: EditorState,
 ): EditorState {
-  const path = getPath(state)
 
   const docBefore = handle.docSync()
   if (docBefore === undefined) throw new Error("handle is not ready")

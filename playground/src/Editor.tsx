@@ -14,7 +14,7 @@ import { MarkType } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import "prosemirror-view/style/prosemirror.css"
 import { next as automerge, Prop } from "@automerge/automerge"
-import { plugin as amgPlugin, PatchSemaphore } from "../../src"
+import { PatchSemaphore, initialize } from "../../src"
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo"
 import {
   wrapInList,
@@ -101,7 +101,7 @@ export function Editor({ name, handle, path }: EditorProps) {
     if (!handleReady) {
       return
     }
-    const { plugin, initialDoc } = amgPlugin(handle.docSync(), path)
+    const initialDoc = initialize(handle, path)
     const editorConfig = {
       schema,
       history,
@@ -116,12 +116,11 @@ export function Editor({ name, handle, path }: EditorProps) {
           Enter: splitListItem(schema.nodes.list_item),
         }),
         keymap(baseKeymap),
-        plugin,
       ],
       doc: initialDoc,
     }
 
-    const semaphore = new PatchSemaphore()
+    const semaphore = new PatchSemaphore(path)
     const state = EditorState.create(editorConfig)
     const view = new EditorView(editorRoot.current, {
       state,

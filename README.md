@@ -2,32 +2,47 @@
 
 ## Status
 
-Inserting (inclulding pasting) text and adding marks (well, currently just a
-bold mark) and merging concurrent changes works to some extent. There are
-numerous bugs but I believe the underlying idea is solid.
+Support for all elements in the `prosemirror-schema-basic` and `prosemirror-schema-list` except for the `hr` element is implemented. The next step is to generalize this to allow adapting user provided schemas.
 
 ## How to play
 
-This is developed in tandem with [a demo
-repo](https://github.com/alexjg/automerge-prosemirror-demo). You'll need to do
-a `yarn link` dance with "@automerge/prosemirror" to play with it.
+This work is based on the `@automerge/automerge@2.1.11-richtext-alpha.1` package, so you'll need to add an entry in your package.json `overrides` for that. I.e.:
 
-```bash
-#in this repo
-yarn link
-
-#in the demo repo
-yarn link @automerge/prosemirror
+```json
+{
+  ...
+  "overrides": {
+    "@automerge/automerge": "2.1.11-richtext-alpha.1"
+  }
+  ...
+}
 ```
 
-Currently the interface for the library is something like this:
+There is a fully functional editor in this repository, you can play with that by running `yarn playground` and then visiting `http://localhost:5173`.
+
+
+## Example
+
+The API for this library is based around a (slightly misnamed) object called a `PatchSemaphore`. This object is used to intercept transactions from Prosemirror and to handle changes received over the network. This is best used in tandem with `@automerge/automerge-repo`. See the `playground/src/Editor.tsx` file for a fully featured example.
+
+The workflow when using this plugin is to first initialize the document using `initialize` and then use `PatchSemaphore.intercept` to intercept local transactions and `PatchSemaphore.reconcilePatch` to handle changes received from the network.
+
+For example
+
 
 ```javascript
-import { init as initPm, plugin as amgPlugin, PatchSemaphore} from "@automerge/prosemirror"
+import {initialize, PatchSemaphore} from "@automerge/prosemirror"
+
+//
+
+const handle = repo.find("some-doc-url")
+// somehow wait for the handle to be ready before continuing
+await handle.whenReady()
 
 // This is used to ensure patches and transactions don't trample on each other
-// create it and keep it around for the lifetime of your editor
-const semaphore = new PatchSemaphore()
+// create it and keep it around for the lifetime of your editor. The constructor
+// argument is the path to the text field we are editing in the automerge document
+const semaphore = new PatchSemaphore(["text"])
 
 // Create your prosemirror state
 let editorConfig = {
@@ -42,19 +57,12 @@ let editorConfig = {
       "Mod-y": redo,
       "Mod-Shift-z": redo,
     }),
-    amgPlugin(handle.doc, path),
   ],
-  doc: initPm(handle.doc, path)
+  doc: initialize(handle.docSync(), ["text"])
 }
 
 let state = EditorState.create(editorConfig)
 
-// This is how the plugin modifies the document whenever there are changes, it
-// must apply the provided change function to the document and return the
-// updated document
-const doChange = (fn: (d: automerge.Doc<any>) => void): automerge.Doc<any> => {
-    ...
-}
 
 const view = new EditorView(editorRoot.current, {
   state,
@@ -69,30 +77,14 @@ const view = new EditorView(editorRoot.current, {
 // received from elsewhere. The type signature here assuems you're using
 // automerge-repo
 const onPatch = (p: DocHandlePatchPayload<any>) => {
-  let newState = semaphore.reconcilePatch(p.patches, automerge.getHeads(p.after), view.state)
+  const newState = semaphore.reconcilePatch(
+    patchInfo.before,
+    doc,
+    patches,
+    view.state,
+  )
   view.updateState(newState)
 }
 // somehow wire up the callback
 handle.on("patch", onPatch)
 ```
-
-## How it works
-
-We only model a very simple prosemirror document consisting of paragraphs and
-marks. We represent paragraph breaks as single line breaks (I did experiment
-with double line breaks but this very quickly becomes quite messy in the face
-of concurrent inserts of newlines).
-
-We attempt to have a unidirectional dataflow, which looks like this:
-
-- In `intercept`
-  - We translate the prosemirror transaction into
-    modifications to the automerge document.
-  - Then we generate a diff for the changes we just made to the document
-  - Then we create a prosemirror transaction from the diff and apply it to the
-    editorstate
-- in `reconcilePatch`
-  - We use the same process as above to generate a transaction and apply it
-    to the document
-
-The upshot is that the source of truth is always the automerge document.
