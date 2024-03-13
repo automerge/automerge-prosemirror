@@ -15,7 +15,6 @@ import {
   docFromSpans,
 } from "./traversal"
 import { patchSpans } from "./maintainSpans"
-import { printTree } from "../test/utils"
 
 type SpliceTextPatch = am.SpliceTextPatch
 type InsertPatch = am.InsertPatch
