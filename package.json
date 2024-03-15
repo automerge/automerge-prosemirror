@@ -1,6 +1,6 @@
 {
   "name": "@automerge/prosemirror",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "MIT",
   "scripts": {
     "prettier": "prettier '**/*.{js,ts,tsx,json}' --check",
@@ -23,7 +23,10 @@
     "prosemirror-view": "^1.33.1"
   },
   "overrides": {
-    "@automerge/automerge": "^2.1.11-richtext-alpha.1"
+    "@automerge/automerge": "^2.1.11-richtext-alpha.1",
+    "@automerge/automerge-repo": {
+      "@automerge/automerge": "^2.1.11-richtext-alpha.1"
+    }
   },
   "devDependencies": {
     "@automerge/automerge-repo": "^1.1.1",

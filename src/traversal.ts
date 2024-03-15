@@ -106,7 +106,7 @@ export function amSpliceIdxToPmIdx(
       return maxInsertableIndex
     }
     if (state.event.type === "openTag") {
-      if (state.event.tag === "paragraph") {
+      if (state.event.tag === "paragraph" || state.event.tag === "heading") {
         maxInsertableIndex = state.after.pmIdx
       }
     } else if (state.event.type === "leafNode") {

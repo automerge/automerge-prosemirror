@@ -205,6 +205,25 @@ describe("the traversal API", () => {
       // pm: 0     0   1                                          2    3      4
       assert.equal(amSpliceIdxToPmIdx(spans, 2), 2)
     })
+
+    it("should find the index inside a lone header tag", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: "heading",
+            parents: [],
+            attrs: {level: 1},
+          },
+        },
+      ]
+      console.log(printIndexTableForSpans(spans))
+      // am         0
+      //     <doc> <h1> </h1> </doc>
+      // pm 0     0    1     2     
+      assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
+    })
+
   })
 
   describe("the pmRangeToAmRange function", () => {

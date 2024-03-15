@@ -39,7 +39,7 @@ export default function (
 ): Transaction {
   let result = tx
   for (const patch of patches) {
-    console.log(JSON.stringify(patch))
+    //console.log(JSON.stringify(patch))
     if (patch.action === "insert") {
       result = handleInsert(schema, patch, path, result)
       patchSpans(spansAtStart, patch)
@@ -86,6 +86,7 @@ export function handleSplice(
   tx: Transaction,
   isLocal: boolean,
 ): Transaction {
+  console.log(spans)
   const index = charPath(path, patch.path)
   if (index === null) return tx
   const pmIdx = amSpliceIdxToPmIdx(spans, index)

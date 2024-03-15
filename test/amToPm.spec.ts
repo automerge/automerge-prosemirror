@@ -138,40 +138,34 @@ describe("the amToPm function", () => {
       assert.equal(patched.selection.to, 4)
     })
 
-    it("should update the selection to be in the next line when inserting a new paragraph block in a list item", () => {
+    it("should calculate the correct index when deleting the first block", () => {
       const patched = performPatch({
         initialDoc: [
-          { type: "paragraph", parents: [], attrs: {} },
-          "item 1",
-          { type: "paragraph", parents: ["ordered-list-item"], attrs: {} },
-          "item 2",
-          { type: "paragraph", parents: [], attrs: {} },
-          "item 3",
+          { type: "heading", parents: [], attrs: {level: 1} },
+          "heading",
         ],
         patches: [
           {
-            action: "updateBlock",
-            path: ["text", 14],
-            index: 14,
-            new_parents: ["ordered-list-item"],
-            new_type: null,
-            new_attrs: null,
+            action: "del",
+            path: ["text", 1],
+            length: 7
           },
           {
-            action: "splitBlock",
-            path: ["text", 15],
-            index: 15,
-            type: "paragraph",
-            parents: [],
-            attrs: {},
-          },
-        ],
+            action: "splice",
+            path: ["text", 1],
+            value: "a",
+          }
+        ]
       }).doc
-
-      // afterwards
-      //    <p> i t e m 1 </p> <ol> <li> <p> i  t  e  m  2  </p> </li> </ol> <p>  i  t  e  m  3 </p>
-      //   0   1 2 3 4 5 6    7    8    9  10 11 12 13 14 15    16    17   18   19 20 21 22 23 24  25
-      //assert.equal(patched.selection.from,
+      assert.isTrue(
+        patched.eq(
+          schema.node("doc", null, [
+            schema.node("heading", { isAmgBlock: true }, [
+              schema.text("a", []),
+            ]),
+          ]),
+        ),
+      )
     })
   })
 

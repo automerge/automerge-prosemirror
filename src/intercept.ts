@@ -23,7 +23,7 @@ export function intercept<T>(
     for (let i = 0; i < intercepted.steps.length; i++) {
       const spans = am.spans(handle.docSync()!, path)
       const step = intercepted.steps[i]
-      console.log(step)
+      //console.log(step)
       const pmDoc = intercepted.docs[i]
       pmToAm(spans, step, subdoc, pmDoc, attr)
     }
@@ -38,8 +38,8 @@ export function intercept<T>(
   // Get the corresponding patches and turn them into a transaction to apply to the editorstate
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const diff = am.diff(handle.docSync()!, headsBefore, headsAfter)
-  console.log("Intercept diff: ")
-  console.log(diff)
+  //console.log("Intercept diff: ")
+  //console.log(diff)
 
   // Create a transaction which applies the diff and updates the doc and heads
   let tx = amToPm(state.schema, spansBefore, diff, path, state.tr, true)

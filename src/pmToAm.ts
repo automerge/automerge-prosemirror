@@ -100,9 +100,9 @@ function replaceAroundStep(
   if (applied == null) {
     throw new Error("Could not apply step to document")
   }
-  console.log(JSON.stringify(applied, null, 2))
+  //console.log(JSON.stringify(applied, null, 2))
   const newBlocks = blocksFromNode(applied)
-  console.log(JSON.stringify(newBlocks, null, 2))
+  //console.log(JSON.stringify(newBlocks, null, 2))
   automerge.updateBlocks(doc, [field], newBlocks)
 }
 
