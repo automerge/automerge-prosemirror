@@ -86,7 +86,6 @@ export function handleSplice(
   tx: Transaction,
   isLocal: boolean,
 ): Transaction {
-  console.log(spans)
   const index = charPath(path, patch.path)
   if (index === null) return tx
   const pmIdx = amSpliceIdxToPmIdx(spans, index)

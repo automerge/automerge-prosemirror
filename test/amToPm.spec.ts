@@ -142,13 +142,13 @@ describe("the amToPm function", () => {
       const patched = performPatch({
         initialDoc: [
           { type: "heading", parents: [], attrs: {level: 1} },
-          "heading",
+          "Untitled",
         ],
         patches: [
           {
             action: "del",
             path: ["text", 1],
-            length: 7
+            length: 8
           },
           {
             action: "splice",

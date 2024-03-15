@@ -36,8 +36,8 @@ export default class PatchSemaphore<T> {
     if (this._inLocalTransaction) {
       return state
     }
-    console.log("reconciling")
-    console.log(patches)
+    //console.log("reconciling")
+    //console.log(patches)
     const headsBefore = automerge.getHeads(docBefore)
 
     const spans = automerge.spans(automerge.view(docAfter, headsBefore), this.path)
