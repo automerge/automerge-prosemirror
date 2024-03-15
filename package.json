@@ -13,7 +13,7 @@
   "type": "module",
   "main": "dist/index.js",
   "dependencies": {
-    "@automerge/automerge": "^2.1.10",
+    "@automerge/automerge": "^2.1.11-richtext-alpha.1",
     "ordered-map": "^0.1.0",
     "prosemirror-model": "^1.19.4",
     "prosemirror-schema-basic": "^1.2.2",
@@ -21,6 +21,9 @@
     "prosemirror-state": "^1.4.3",
     "prosemirror-transform": "^1.7.3",
     "prosemirror-view": "^1.33.1"
+  },
+  "overrides": {
+    "@automerge/automerge": "^2.1.11-richtext-alpha.1"
   },
   "devDependencies": {
     "@automerge/automerge-repo": "^1.1.1",
