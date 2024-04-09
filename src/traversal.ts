@@ -1,18 +1,34 @@
 import { next as am } from "@automerge/automerge"
 import { Mark, Node, Schema } from "prosemirror-model"
-import { isBlockMetadata, BlockMetadata, BlockType } from "./types"
+import {
+  isBlockMarker,
+  BlockType,
+  BlockMarker,
+  Span,
+  amSpanToSpan,
+} from "./types"
 import { schema } from "./schema"
-import { BlockAttrValue } from "@automerge/automerge/dist/next_types"
 import { attrsFromMark } from "./amToPm"
 
 type RenderRole = "explicit" | "render-only"
+
+//type BlockAttrValue = string | number | boolean | null
+type BlockAttrValue = am.MaterializeValue
 
 export type TraversalEvent =
   | { type: "openTag"; tag: string; role: RenderRole }
   | { type: "closeTag"; tag: string; role: RenderRole }
   | { type: "leafNode"; tag: string; role: RenderRole }
   | { type: "text"; text: string; marks: am.MarkSet }
-  | { type: "block"; block: BlockMetadata }
+  | {
+      type: "block"
+      block: {
+        type: string
+        parents: string[]
+        attrs: { [key: string]: BlockAttrValue }
+        isEmbed: boolean
+      }
+    }
 
 export function docFromSpans(spans: am.Span[]): Node {
   const events = traverseSpans(spans)
@@ -28,7 +44,7 @@ export function docFromSpans(spans: am.Span[]): Node {
       children: [],
     },
   ]
-  let nextBlockAmgAttrs: { [key: string]: am.BlockAttrValue } | null = null
+  let nextBlockAmgAttrs: { [key: string]: BlockAttrValue } | null = null
 
   for (const event of events) {
     if (event.type === "openTag") {
@@ -221,6 +237,7 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
       } else {
         let blockType: BlockType | null = null
         const attrs: { [key: string]: BlockAttrValue } = {}
+        let isEmbed = false
         const nodeType = cur.type.name
         if (nodeType === "list_item") {
           const parentNode = nodePath[nodePath.length - 1]
@@ -243,8 +260,8 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
           blockType = nodeType
         } else if (nodeType === "image") {
           blockType = nodeType
-          attrs.isEmbed = true
-          attrs.src = cur.attrs.src
+          isEmbed = true
+          attrs.src = new am.RawString(cur.attrs.src)
           attrs.alt = cur.attrs.alt
           attrs.title = cur.attrs.title
         } else if (nodeType === "blockquote") {
@@ -312,7 +329,12 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
         if (role === "explicit" && blockType != null) {
           yield {
             type: "block",
-            block: { type: blockType, parents: findParents(nodePath), attrs },
+            block: {
+              type: blockType,
+              parents: findParents(nodePath),
+              attrs,
+              isEmbed,
+            },
           }
         }
         yield { type: "openTag", tag: cur.type.name, role }
@@ -367,20 +389,21 @@ function findParents(parentNodes: Node[]): string[] {
 export function* traverseSpans(
   amSpans: am.Span[],
 ): IterableIterator<TraversalEvent> {
-  if (amSpans.length === 0) {
+  const blockSpans = amSpans.map(amSpanToSpan)
+  if (blockSpans.length === 0) {
     return yield* [
       { type: "openTag", tag: "paragraph", role: "render-only" },
       { type: "closeTag", tag: "paragraph", role: "render-only" },
     ]
   }
 
-  const spanQueue = amSpans.slice()
+  const spanQueue = blockSpans.slice()
 
   function* inner(
-    spans: am.Span[],
-    enclosingBlock: BlockMetadata | null = null,
+    spans: Span[],
+    enclosingBlock: BlockMarker | null = null,
   ): IterableIterator<TraversalEvent> {
-    let lastBlock: BlockMetadata | null = null
+    let lastBlock: BlockMarker | null = null
 
     while (spans.length > 0) {
       //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -400,8 +423,8 @@ export function* traverseSpans(
           yield { type: "closeTag", tag: "paragraph", role: "render-only" }
         }
       } else if (span.type === "block") {
-        let subSpans: am.Span[] = []
-        if (!span.value.attrs.isEmbed) {
+        let subSpans: Span[] = []
+        if (!span.value.isEmbed) {
           subSpans = popSpansBelow(span.value, spans)
         }
 
@@ -421,9 +444,13 @@ export function* traverseSpans(
             // TODO: replace this with ContentMatch.fillBefore
             yield* fillBefore(block.block, block.containedBlock)
           } else {
-            yield { type: "block", block: span.value }
-            if (span.value.attrs.isEmbed) {
-              yield { type: "leafNode", tag: span.value.type, role: "explicit" }
+            yield blockEvent(span.value)
+            if (span.value.isEmbed) {
+              yield {
+                type: "leafNode",
+                tag: span.value.type.val,
+                role: "explicit",
+              }
             } else {
               yield* openBlock(block.block, false)
             }
@@ -431,15 +458,19 @@ export function* traverseSpans(
         }
 
         if (subSpans.length == 0) {
-          yield* openInnerWrappers(span.value.type, null)
-          yield* closeInnerWrappers(span.value.type, null)
+          yield* openInnerWrappers(span.value.type.val, null)
+          yield* closeInnerWrappers(span.value.type.val, null)
         } else {
           let lastBlock = null
           while (subSpans.length > 0) {
             const subNext = subSpans[0]
             if (subNext.type === "text") {
               const textSpans = popTextSpans(subSpans)
-              const wrapping = findWrapping(span.value.type, lastBlock, subNext)
+              const wrapping = findWrapping(
+                span.value.type.val,
+                lastBlock,
+                subNext,
+              )
               if (wrapping == null)
                 throw new Error(`wrapping not found for ${span.value.type}`)
               yield* wrapping.before
@@ -449,7 +480,11 @@ export function* traverseSpans(
               yield* wrapping.after
             } else {
               // TODO replace this with ContentMatch.findWrapping
-              const wrapping = findWrapping(span.value.type, lastBlock, subNext)
+              const wrapping = findWrapping(
+                span.value.type.val,
+                lastBlock,
+                subNext,
+              )
               if (wrapping == null)
                 throw new Error(
                   `wrapping not found for ${subNext.value.type} inside ${span.value.type} following ${lastBlock}`,
@@ -464,7 +499,7 @@ export function* traverseSpans(
 
         for (const block of newBlocks.toClose) {
           if (!block.isParent) {
-            if (!span.value.attrs.isEmbed) {
+            if (!span.value.isEmbed) {
               yield* closeBlock(block.block, false)
             }
           } else {
@@ -481,7 +516,25 @@ export function* traverseSpans(
   yield* inner(spanQueue, null)
 }
 
-function peekNextBlock(spans: am.Span[]): BlockMetadata | null {
+function blockEvent(block: BlockMarker): TraversalEvent {
+  const attrs = { ...block.attrs }
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value instanceof am.RawString) {
+      attrs[key] = value.val
+    }
+  }
+  return {
+    type: "block",
+    block: {
+      attrs,
+      parents: block.parents.map(p => p.val),
+      type: block.type.val,
+      isEmbed: block.isEmbed || false,
+    },
+  }
+}
+
+function peekNextBlock(spans: Span[]): BlockMarker | null {
   for (const span of spans) {
     if (span.type === "block") {
       return span.value
@@ -506,16 +559,19 @@ function popTextSpans(
   return result
 }
 
-function popSpansBelow(parent: BlockMetadata, spans: am.Span[]): am.Span[] {
-  const result: am.Span[] = []
-  const parentPath = [...parent.parents, parent.type]
+function popSpansBelow(parent: BlockMarker, spans: Span[]): Span[] {
+  const result: Span[] = []
+  const parentPath = [...parent.parents.map(p => p.val), parent.type.val]
   while (spans.length > 0) {
     const next = spans[0]
     if (next.type === "text") {
       //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result.push(spans.shift()!)
     } else {
-      const nextPath = [...next.value.parents, next.value.type]
+      const nextPath = [
+        ...next.value.parents.map(p => p.val),
+        next.value.type.val,
+      ]
       if (
         commonPrefixLength(parentPath, nextPath) == parentPath.length &&
         nextPath.length > parentPath.length
@@ -531,10 +587,10 @@ function popSpansBelow(parent: BlockMetadata, spans: am.Span[]): am.Span[] {
 }
 
 type BlockDiffArgs = {
-  enclosing: BlockMetadata | null
-  previous: BlockMetadata | null
-  block: BlockMetadata
-  following: BlockMetadata | null
+  enclosing: BlockMarker | null
+  previous: BlockMarker | null
+  block: BlockMarker
+  following: BlockMarker | null
 }
 type BlockDiff = {
   toOpen: {
@@ -551,10 +607,16 @@ export function blockDiff({
   block,
   following,
 }: BlockDiffArgs): BlockDiff {
-  const enclosingPath = enclosing ? [...enclosing.parents, enclosing.type] : []
-  const blockPath = [...block.parents, block.type]
-  const previousPath = previous ? [...previous.parents, previous.type] : []
-  const nextPath = following ? [...following.parents, following.type] : []
+  const enclosingPath = enclosing
+    ? [...enclosing.parents.map(p => p.val), enclosing.type.val]
+    : []
+  const blockPath = [...block.parents.map(p => p.val), block.type.val]
+  const previousPath = previous
+    ? [...previous.parents.map(p => p.val), previous.type.val]
+    : []
+  const nextPath = following
+    ? [...following.parents.map(p => p.val), following.type.val]
+    : []
 
   const commonPrefix = commonPrefixLength(enclosingPath, blockPath)
 
@@ -725,7 +787,14 @@ function findWrapping(
         after: [{ type: "closeTag", tag: "paragraph", role: "render-only" }],
       }
     } else if (block.type === "block") {
-      if (block.value.type === "paragraph") {
+      let lastBlockType = null
+      if (lastBlock != null) {
+        if (lastBlock.type == "block" && lastBlock.value.type instanceof am.RawString) {
+          lastBlockType = lastBlock.value.type.val
+        }
+      }
+      const blockType = block.value.type instanceof am.RawString ? block.value.type.val : "paragraph"
+      if (blockType === "paragraph") {
         return {
           before: [],
           after: [],
@@ -733,7 +802,7 @@ function findWrapping(
       }
       if (
         lastBlock != null &&
-        ((lastBlock.type === "block" && lastBlock.value.type === "paragraph") ||
+        ((lastBlock.type === "block" && lastBlockType === "paragraph") ||
           lastBlock.type === "text")
       ) {
         return {
@@ -883,9 +952,9 @@ function commonPrefixLength(a: string[], b: string[]): number {
 export function blockAtIdx(
   spans: am.Span[],
   target: number,
-): { index: number; block: BlockMetadata } | null {
+): { index: number; block: BlockMarker } | null {
   let idx = 0
-  let block: { index: number; block: BlockMetadata } | null = null
+  let block: { index: number; block: BlockMarker } | null = null
   for (const span of spans) {
     if (idx > target) {
       return block
@@ -896,7 +965,7 @@ export function blockAtIdx(
       }
       idx += span.value.length
     } else {
-      if (isBlockMetadata(span.value)) {
+      if (isBlockMarker(span.value)) {
         block = { index: idx, block: span.value }
       }
       idx += 1
@@ -907,32 +976,41 @@ export function blockAtIdx(
 
 export function blocksFromNode(node: Node): (
   | {
-      type: string
-      parents: string[]
-      attrs: { [key: string]: BlockAttrValue }
+      type: "block"
+      value: {
+        type: am.RawString,
+        parents: am.RawString[]
+        attrs: { [key: string]: BlockAttrValue }
+      }
     }
-  | string
+  | { type: "text"; value: string }
 )[] {
   const events = traverseNode(node)
   const result: (
     | {
-        type: string
-        parents: string[]
-        attrs: { [key: string]: BlockAttrValue }
+        type: "block"
+        value: {
+          type: am.RawString
+          parents: am.RawString[]
+          attrs: { [key: string]: BlockAttrValue }
+        }
       }
-    | string
+    | { type: "text"; value: string }
   )[] = []
   for (const event of events) {
     if (event.type == "block") {
       const attrs = { ...event.block.attrs }
       delete attrs.isAmgBlock
       result.push({
-        type: event.block.type,
-        parents: event.block.parents,
-        attrs,
+        type: "block",
+        value: {
+          type: new am.RawString(event.block.type),
+          parents: event.block.parents.map(p => new am.RawString(p)),
+          attrs,
+        },
       })
     } else if (event.type == "text") {
-      result.push(event.text)
+      result.push({ type: "text", value: event.text })
     }
   }
   return result

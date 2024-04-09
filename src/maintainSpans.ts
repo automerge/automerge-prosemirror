@@ -1,16 +1,34 @@
 import { next as am } from "@automerge/automerge"
+import {pathIsPrefixOf, pathsEqual} from "./pathUtils"
 
-export function patchSpans(spans: am.Span[], patch: am.Patch) {
-  if (patch.action === "splice") {
-    spliceSpans(spans, patch)
-  } else if (patch.action === "del") {
-    deleteSpans(spans, patch)
-  } else if (patch.action === "splitBlock") {
-    splitBlockSpans(spans, patch)
-  } else if (patch.action === "updateBlock") {
-    updateBlockSpans(spans, patch)
-  } else if (patch.action === "joinBlock") {
-    joinBlockSpans(spans, patch)
+export function patchSpans(
+  atPath: am.Prop[],
+  spans: am.Span[],
+  patch: am.Patch,
+) {
+  if (pathsEqual(patch.path, atPath)) {
+    if (patch.action === "splice") {
+      spliceSpans(spans, patch)
+    }
+  } else if (pathIsPrefixOf(atPath, patch.path)) {
+    if (patch.path.length === atPath.length + 1) {
+      // This is either an insert or delete of a block
+      if (patch.action === "insert") {
+        insertBlock(spans, patch)
+      } else if (patch.action === "del") {
+        deleteSpans(spans, patch)
+      } 
+    } else {
+      const index = patch.path[atPath.length]
+      if (typeof index !== "number") {
+        throw new Error("Invalid path")
+      }
+      const block = findBlockAtCharIdx(spans, index)
+      if (block == null) {
+        throw new Error("Invalid path")
+      }
+      applyBlockPatch(atPath, patch, block)
+    }
   }
 }
 
@@ -60,29 +78,107 @@ function deleteSpans(spans: am.Span[], patch: am.DelPatch) {
         idx += span.value.length
       }
     } else {
+      if (idx === patchIndex) {
+        spans.splice(index, 1)
+        const prevSpan = spans[index - 1]
+        const nextSpan = spans[index]
+        if (nextSpan != null && prevSpan != null) {
+          if (prevSpan.type === "text" && nextSpan.type === "text") {
+            prevSpan.value += nextSpan.value
+            spans.splice(index, 1)
+          }
+        }
+        return
+      }
       idx += 1
     }
   }
 }
 
-function splitBlockSpans(spans: am.Span[], patch: am.SplitBlockPatch) {
+export function applyBlockPatch(
+  parentPath: am.Prop[],
+  patch: am.Patch,
+  block: { [key: string]: am.MaterializeValue },
+) {
+  const pathInBlock = patch.path.slice(parentPath.length + 1)
+  if (patch.action === "put") {
+    const target = resolveTarget(block, pathInBlock.slice(0, -1))
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const key = patch.path.pop()!
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    target[key] = patch.value
+  } else if (patch.action === "insert") {
+    const target = resolveTarget(block, pathInBlock.slice(0, -2))
+    const insertAt = pathInBlock.pop()! as number
+    const prop = pathInBlock.pop()!
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const arr = target[prop] as am.MaterializeValue[]
+    if (!Array.isArray(arr)) {
+      throw new Error("Invalid path")
+    }
+    arr.splice(insertAt, 0, ...patch.values)
+  } else if (patch.action === "splice") {
+    const target = resolveTarget(block, pathInBlock.slice(0, -2))
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const insertAt = pathInBlock.pop()! as number
+    const prop = pathInBlock.pop()!
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const before: string = target![prop] as string
+    const after =
+      before.slice(0, insertAt) + patch.value + before.slice(insertAt)
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    target[prop] = after
+  } else if (patch.action === "del") {
+    const target = resolveTarget(block, pathInBlock.slice(0, -1))
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const key = patch.path.pop()!
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    delete target[key]
+  }
+}
+
+function resolveTarget(
+  block: { [key: string]: am.MaterializeValue },
+  path: am.Prop[],
+): am.MaterializeValue {
+  let target: am.MaterializeValue = block
+  for (const pathElem of path) {
+    if (typeof target !== "object") {
+      throw new Error("Invalid path")
+    }
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    target = target[pathElem]
+  }
+  return target
+}
+
+function insertBlock(spans: am.Span[], patch: am.InsertPatch) {
   let idx = 0
   let spanIdx = 0
-  while (idx < patch.index && spanIdx < spans.length) {
+  const patchIndex = patch.path[patch.path.length - 1]
+  if (typeof patchIndex !== "number") {
+    throw new Error(
+      `Invalid patch path, expected a number got ", ${patch.path[patch.path.length - 1]}`,
+    )
+  }
+  while (idx < patchIndex && spanIdx < spans.length) {
     const span = spans[spanIdx]
     if (span.type == "text") {
-      if (span.value.length + idx > patch.index) {
-        const offset = patch.index - idx
+      if (span.value.length + idx > patchIndex) {
+        const offset = patchIndex - idx
         const left = span.value.slice(0, offset)
         const right = span.value.slice(offset)
         span.value = left
         spans.splice(spanIdx + 1, 0, {
           type: "block",
-          value: {
-            type: patch.type,
-            parents: patch.parents,
-            attrs: patch.attrs,
-          },
+          value: {},
         })
         spans.splice(spanIdx + 2, 0, {
           type: "text",
@@ -98,50 +194,8 @@ function splitBlockSpans(spans: am.Span[], patch: am.SplitBlockPatch) {
   }
   spans.splice(spanIdx, 0, {
     type: "block",
-    value: { type: patch.type, parents: patch.parents, attrs: patch.attrs },
+    value: {},
   })
-}
-
-function updateBlockSpans(spans: am.Span[], patch: am.UpdateBlockPatch) {
-  const spanIdx = findBlockSpanIdx(spans, patch.index)
-  if (spanIdx === null) {
-    throw new Error("Could not find block span")
-  }
-  const span = spans[spanIdx] as {
-    type: "block"
-    value: {
-      type: string
-      parents: string[]
-      attrs: { [key: string]: am.BlockAttrValue }
-    }
-  }
-  if (span.type === "block") {
-    if (patch.new_type != null) {
-      span.value.type = patch.new_type
-    }
-    if (patch.new_parents != null) {
-      span.value.parents = patch.new_parents
-    }
-    if (patch.new_attrs != null) {
-      span.value.attrs = patch.new_attrs
-    }
-  }
-}
-
-function joinBlockSpans(spans: am.Span[], patch: am.JoinBlockPatch) {
-  const spanIdx = findBlockSpanIdx(spans, patch.index)
-  if (spanIdx === null) {
-    throw new Error("Could not find block span")
-  }
-  spans.splice(spanIdx, 1)
-  const prevSpan = spans[spanIdx - 1]
-  const nextSpan = spans[spanIdx]
-  if (nextSpan != null && prevSpan != null) {
-    if (prevSpan.type === "text" && nextSpan.type === "text") {
-      prevSpan.value += nextSpan.value
-      spans.splice(spanIdx, 1)
-    }
-  }
 }
 
 function findBlockSpanIdx(spans: am.Span[], blockIdx: number): number | null {
@@ -154,6 +208,24 @@ function findBlockSpanIdx(spans: am.Span[], blockIdx: number): number | null {
       }
       idx += 1
     } else if (span.type === "text") {
+      idx += span.value.length
+    }
+  }
+  return null
+}
+
+export function findBlockAtCharIdx(
+  spans: am.Span[],
+  charIdx: number,
+): { [key: string]: am.MaterializeValue } | null {
+  let idx = 0
+  for (const span of spans) {
+    if (span.type === "block") {
+      if (idx === charIdx) {
+        return span.value
+      }
+      idx += 1
+    } else {
       idx += span.value.length
     }
   }

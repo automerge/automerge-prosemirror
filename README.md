@@ -6,14 +6,16 @@ Support for all elements in the `prosemirror-schema-basic` and `prosemirror-sche
 
 ## How to play
 
-This work is based on the `@automerge/automerge@2.1.11-richtext-alpha.1` package, so you'll need to add an entry in your package.json `overrides` for that. I.e.:
+This work is based on the `@automerge/automerge@2.2.0-rc.2` package, so you'll need to add an entry in your package.json `overrides` for that. E.g.:
 
 ```json
 {
   ...
   "overrides": {
-    "@automerge/automerge": "2.1.11-richtext-alpha.1"
-  }
+    "@automerge/automerge-repo": {
+      "@automerge/automerge": "2.2.0-rc.2"
+    }
+  },
   ...
 }
 ```

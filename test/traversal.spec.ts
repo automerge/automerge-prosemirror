@@ -13,7 +13,7 @@ import {
   eventsWithIndexChanges,
 } from "../src/traversal"
 import { next as am } from "@automerge/automerge"
-import { docFromBlocksNotation, makeDoc } from "./utils"
+import { docFromBlocksNotation, makeDoc, printTree } from "./utils"
 import { schema } from "../src/schema"
 import { AssertionError } from "assert"
 
@@ -181,7 +181,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
+            type: new am.RawString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -189,14 +189,14 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "image",
-            parents: ["paragraph"],
+            type: new am.RawString("image"),
+            parents: [new am.RawString("paragraph")],
             attrs: {
-              isEmbed: true,
               alt: "Andromeda Galaxy",
-              src: "https://archive.org/services/img/Hubble_Andromeda_Galaxy_",
+              src: new am.RawString("https://archive.org/services/img/Hubble_Andromeda_Galaxy_"),
               title: "Andromeda Galaxy",
             },
+            isEmbed: true,
           },
         },
       ]
@@ -213,17 +213,15 @@ describe("the traversal API", () => {
           value: {
             type: "heading",
             parents: [],
-            attrs: {level: 1},
+            attrs: { level: 1 },
           },
         },
       ]
-      console.log(printIndexTableForSpans(spans))
       // am         0
       //     <doc> <h1> </h1> </doc>
-      // pm 0     0    1     2     
+      // pm 0     0    1     2
       assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
     })
-
   })
 
   describe("the pmRangeToAmRange function", () => {
@@ -601,30 +599,30 @@ describe("the traversal API", () => {
     it("should return the active block on a block boundary", () => {
       assert.deepStrictEqual(blockAtIdx(spans, 5), {
         index: 5,
-        block: { type: "paragraph", parents: [], attrs: {} },
+        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
       })
     })
 
     it("should return the active block after a span boundary", () => {
       assert.deepStrictEqual(blockAtIdx(spans, 6), {
         index: 5,
-        block: { type: "paragraph", parents: [], attrs: {} },
+        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
       })
       assert.deepStrictEqual(blockAtIdx(spans, 7), {
         index: 5,
-        block: { type: "paragraph", parents: [], attrs: {} },
+        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
       })
       assert.deepStrictEqual(blockAtIdx(spans, 8), {
         index: 5,
-        block: { type: "paragraph", parents: [], attrs: {} },
+        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
       })
       assert.deepStrictEqual(blockAtIdx(spans, 9), {
         index: 5,
-        block: { type: "paragraph", parents: [], attrs: {} },
+        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
       })
       assert.deepStrictEqual(blockAtIdx(spans, 10), {
         index: 5,
-        block: { type: "paragraph", parents: [], attrs: {} },
+        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
       })
     })
 
@@ -635,7 +633,11 @@ describe("the traversal API", () => {
       ])
       assert.deepStrictEqual(blockAtIdx(spans, 7), {
         index: 0,
-        block: { type: "ordered-list-item", parents: [], attrs: {} },
+        block: {
+          type: new am.RawString("ordered-list-item"),
+          parents: [],
+          attrs: {},
+        },
       })
     })
   })
@@ -655,8 +657,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "ordered-list-item",
-            parents: ["unordered-list-item"],
+            type: new am.RawString("ordered-list-item"),
+            parents: [new am.RawString("unordered-list-item")],
             attrs: {},
           },
         },
@@ -675,6 +677,7 @@ describe("the traversal API", () => {
             type: "ordered-list-item",
             parents: ["unordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
@@ -698,11 +701,27 @@ describe("the traversal API", () => {
       ]
       const events = Array.from(traverseSpans(spans))
       const expected: TraversalEvent[] = [
-        { type: "block", block: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "hello", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "block", block: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "world", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
@@ -715,8 +734,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["ordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -732,6 +751,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["ordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -745,20 +765,28 @@ describe("the traversal API", () => {
 
     it("should return the correct events for a paragraph followed by a nested list item", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
         { type: "text", value: "paragraph" },
         {
           type: "block",
           value: {
-            type: "ordered-list-item",
-            parents: ["unordered-list-item"],
+            type: new am.RawString("ordered-list-item"),
+            parents: [new am.RawString("unordered-list-item")],
             attrs: {},
           },
         },
       ]
       const events = Array.from(traverseSpans(spans))
       const expected: TraversalEvent[] = [
-        { type: "block", block: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "paragraph", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
@@ -773,6 +801,7 @@ describe("the traversal API", () => {
             type: "ordered-list-item",
             parents: ["unordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
@@ -788,23 +817,31 @@ describe("the traversal API", () => {
 
     it("a list item between two paragraphs", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
         { type: "text", value: "item 1" },
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["ordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("ordered-list-item")],
             attrs: {},
           },
         },
         { type: "text", value: "item 2" },
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
         { type: "text", value: "item 3" },
       ]
       const events = Array.from(traverseSpans(spans))
       assert.deepStrictEqual(events, [
-        { type: "block", block: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "item 1", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
@@ -816,6 +853,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["ordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -823,7 +861,15 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "explicit" },
         { type: "closeTag", tag: "list-item", role: "render-only" },
         { type: "closeTag", tag: "ordered-list", role: "render-only" },
-        { type: "block", block: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "item 3", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
@@ -832,29 +878,52 @@ describe("the traversal API", () => {
 
     it("a nested list with trailing empty list item", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+          },
+        },
         { type: "text", value: "item 1" },
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["ordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("ordered-list-item")],
             attrs: {},
           },
         },
         { type: "text", value: "item 2" },
         {
           type: "block",
-          value: { type: "ordered-list-item", parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("ordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
         {
           type: "block",
-          value: { type: "ordered-list-item", parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("ordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
       ]
       const events = Array.from(traverseSpans(spans))
       assert.deepStrictEqual(events, [
-        { type: "block", block: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "item 1", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
@@ -866,6 +935,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["ordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -874,7 +944,12 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "list-item", role: "render-only" },
         {
           type: "block",
-          block: { type: "ordered-list-item", parents: [], attrs: {} },
+          block: {
+            type: "ordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
@@ -882,7 +957,12 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "list-item", role: "explicit" },
         {
           type: "block",
-          block: { type: "ordered-list-item", parents: [], attrs: {} },
+          block: {
+            type: "ordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
@@ -896,13 +976,13 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: "ordered-list-item", parents: [], attrs: {} },
+          value: { type: new am.RawString("ordered-list-item"), parents: [], attrs: {} },
         },
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["ordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -910,8 +990,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["ordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -921,7 +1001,12 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "ordered-list", role: "render-only" },
         {
           type: "block",
-          block: { type: "ordered-list-item", parents: [], attrs: {} },
+          block: {
+            type: "ordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
         {
@@ -930,6 +1015,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["ordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -941,6 +1027,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["ordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -954,15 +1041,16 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: "unordered-list-item", parents: [], attrs: {} },
+          value: { type: new am.RawString("unordered-list-item"), parents: [], attrs: {} },
         },
         { type: "text", value: "item 1" },
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["unordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("unordered-list-item")],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "text", value: "item 2" },
@@ -972,7 +1060,12 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "unordered-list", role: "render-only" },
         {
           type: "block",
-          block: { type: "unordered-list-item", parents: [], attrs: {} },
+          block: {
+            type: "unordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
@@ -984,6 +1077,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["unordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -1012,7 +1106,7 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: "unordered-list-item", parents: [], attrs: {} },
+          value: { type: new am.RawString("unordered-list-item"), parents: [], attrs: {} },
         },
         { type: "text", value: "hello " },
         { type: "text", value: "world" },
@@ -1022,7 +1116,12 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "unordered-list", role: "render-only" },
         {
           type: "block",
-          block: { type: "unordered-list-item", parents: [], attrs: {} },
+          block: {
+            type: "unordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
@@ -1036,11 +1135,22 @@ describe("the traversal API", () => {
 
     it("creates aside blocks with inner paragraph wrappers", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: "aside", parents: [], attrs: {} } },
+        {
+          type: "block",
+          value: { type: new am.RawString("aside"), parents: [], attrs: {}, isEmbed: false },
+        },
       ]
       const events = Array.from(traverseSpans(spans))
       assert.deepStrictEqual(events, [
-        { type: "block", block: { type: "aside", parents: [], attrs: {} } },
+        {
+          type: "block",
+          block: {
+            type: "aside",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
         { type: "openTag", tag: "aside", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
@@ -1052,12 +1162,22 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: "heading", parents: [], attrs: { level: 1 } },
+          value: {
+            type: new am.RawString("heading"),
+            parents: [],
+            attrs: { level: 1 },
+            isEmbed: false,
+          },
         },
         { type: "text", value: "hello" },
         {
           type: "block",
-          value: { type: "heading", parents: [], attrs: { level: 2 } },
+          value: {
+            type: new am.RawString("heading"),
+            parents: [],
+            attrs: { level: 2 },
+            isEmbed: false,
+          },
         },
         { type: "text", value: "world" },
       ]
@@ -1065,14 +1185,24 @@ describe("the traversal API", () => {
       assert.deepStrictEqual(events, [
         {
           type: "block",
-          block: { type: "heading", parents: [], attrs: { level: 1 } },
+          block: {
+            type: "heading",
+            parents: [],
+            attrs: { level: 1 },
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "heading", role: "explicit" },
         { type: "text", text: "hello", marks: {} },
         { type: "closeTag", tag: "heading", role: "explicit" },
         {
           type: "block",
-          block: { type: "heading", parents: [], attrs: { level: 2 } },
+          block: {
+            type: "heading",
+            parents: [],
+            attrs: { level: 2 },
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "heading", role: "explicit" },
         { type: "text", text: "world", marks: {} },
@@ -1084,18 +1214,28 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: "ordered-list-item", parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("ordered-list-item"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "text", value: "item 1" },
         {
           type: "block",
-          value: { type: "ordered-list-item", parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("ordered-list-item"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         {
           type: "block",
           value: {
-            type: "ordered-list-item",
-            parents: ["ordered-list-item"],
+            type: new am.RawString("ordered-list-item"),
+            parents: [new am.RawString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -1109,7 +1249,12 @@ describe("the traversal API", () => {
         // First block
         {
           type: "block",
-          block: { type: "ordered-list-item", parents: [], attrs: {} },
+          block: {
+            type: "ordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
@@ -1120,7 +1265,12 @@ describe("the traversal API", () => {
         // Second block
         {
           type: "block",
-          block: { type: "ordered-list-item", parents: [], attrs: {} },
+          block: {
+            type: "ordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
@@ -1134,6 +1284,7 @@ describe("the traversal API", () => {
             type: "ordered-list-item",
             parents: ["ordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
@@ -1153,14 +1304,14 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "image",
-            parents: ["paragraph"],
+            type: new am.RawString("image"),
+            parents: [new am.RawString("paragraph")],
             attrs: {
-              src: "image.png",
+              src: new am.RawString("image.png"),
               alt: "image alt",
               title: "image title",
-              isEmbed: true,
             },
+            isEmbed: true,
           },
         },
       ]
@@ -1176,8 +1327,8 @@ describe("the traversal API", () => {
               src: "image.png",
               alt: "image alt",
               title: "image title",
-              isEmbed: true,
             },
+            isEmbed: true,
           },
         },
         { type: "leafNode", tag: "image", role: "explicit" },
@@ -1187,25 +1338,36 @@ describe("the traversal API", () => {
 
     it("should immediately close image tags", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          value: { type: new am.RawString("paragraph"), parents: [], attrs: {}, isEmbed: false },
+        },
         {
           type: "block",
           value: {
-            type: "image",
-            parents: ["paragraph"],
+            type: new am.RawString("image"),
+            parents: [new am.RawString("paragraph")],
             attrs: {
-              src: "image.png",
+              src: new am.RawString("image.png"),
               alt: "image alt",
               title: "image title",
-              isEmbed: true,
             },
+            isEmbed: true,
           },
         },
         { type: "text", value: "hello" },
       ]
       const events = Array.from(traverseSpans(spans))
       assertTraversalEqual(events, [
-        { type: "block", block: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         {
           type: "block",
@@ -1216,8 +1378,8 @@ describe("the traversal API", () => {
               src: "image.png",
               alt: "image alt",
               title: "image title",
-              isEmbed: true,
             },
+            isEmbed: true,
           },
         },
         { type: "leafNode", tag: "image", role: "explicit" },
@@ -1231,14 +1393,14 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["blockquote", "unordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("blockquote"), new am.RawString("unordered-list-item")],
             attrs: {},
           },
         },
         {
           type: "block",
-          value: { type: "paragraph", parents: ["blockquote"], attrs: {} },
+          value: { type: new am.RawString("paragraph"), parents: [new am.RawString("blockquote")], attrs: {} },
         },
         { type: "text", value: "hello" },
       ]
@@ -1253,6 +1415,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["blockquote", "unordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -1261,7 +1424,12 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "unordered-list", role: "render-only" },
         {
           type: "block",
-          block: { type: "paragraph", parents: ["blockquote"], attrs: {} },
+          block: {
+            type: "paragraph",
+            parents: ["blockquote"],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "hello", marks: {} },
@@ -1274,7 +1442,7 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: "code-block", parents: [], attrs: {} },
+          value: { type: new am.RawString("code-block"), parents: [], attrs: {}, isEmbed: false },
         },
         { type: "text", value: "var x" },
       ]
@@ -1282,11 +1450,62 @@ describe("the traversal API", () => {
       assertTraversalEqual(events, [
         {
           type: "block",
-          block: { type: "code-block", parents: [], attrs: {} },
+          block: {
+            type: "code-block",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "code_block", role: "explicit" },
         { type: "text", text: "var x", marks: {} },
         { type: "closeTag", tag: "code_block", role: "explicit" },
+      ])
+    })
+
+    it("should generate a paragraph in a list item following a header", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: { type: new am.RawString("heading"), parents: [], attrs: { level: 1 }, isEmbed: false },
+        },
+        { type: "text", value: "heading" },
+        {
+          type: "block",
+          value: { type: new am.RawString("paragraph"), parents: [new am.RawString("ordered-list-item")], attrs: {} },
+        },
+        { type: "text", value: "some text" },
+      ]
+      const events = Array.from(traverseSpans(spans))
+      assertTraversalEqual(events, [
+        {
+          type: "block",
+          block: {
+            type: "heading",
+            parents: [],
+            attrs: { level: 1 },
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "heading", role: "explicit" },
+        { type: "text", text: "heading", marks: {} },
+        { type: "closeTag", tag: "heading", role: "explicit" },
+        { type: "openTag", tag: "ordered-list", role: "render-only" },
+        { type: "openTag", tag: "list-item", role: "render-only" },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: ["ordered-list-item"],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "paragraph", role: "explicit" },
+        { type: "text", text: "some text", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "explicit" },
+        { type: "closeTag", tag: "list-item", role: "render-only" },
+        { type: "closeTag", tag: "ordered-list", role: "render-only" },
       ])
     })
   })
@@ -1304,7 +1523,12 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
-          block: { type: "unordered-list-item", parents: [], attrs: {} },
+          block: {
+            type: "unordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
@@ -1335,6 +1559,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["unordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -1373,6 +1598,7 @@ describe("the traversal API", () => {
             type: "ordered-list-item",
             parents: ["unordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "list_item", role: "explicit" },
@@ -1407,6 +1633,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["unordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -1417,6 +1644,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["unordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -1438,14 +1666,24 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
-          block: { type: "heading", parents: [], attrs: { level: 1 } },
+          block: {
+            type: "heading",
+            parents: [],
+            attrs: { level: 1 },
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "heading", role: "explicit" },
         { type: "text", text: "hello", marks: {} },
         { type: "closeTag", tag: "heading", role: "explicit" },
         {
           type: "block",
-          block: { type: "heading", parents: [], attrs: { level: 2 } },
+          block: {
+            type: "heading",
+            parents: [],
+            attrs: { level: 2 },
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "heading", role: "explicit" },
         { type: "text", text: "world", marks: {} },
@@ -1463,12 +1701,25 @@ describe("the traversal API", () => {
       const events = Array.from(traverseNode(node))
       assert.deepStrictEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
-        { type: "block", block: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
         {
           type: "block",
-          block: { type: "heading", parents: [], attrs: { level: 1 } },
+          block: {
+            type: "heading",
+            parents: [],
+            attrs: { level: 1 },
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "heading", role: "explicit" },
         { type: "text", text: "hello", marks: {} },
@@ -1497,11 +1748,11 @@ describe("the traversal API", () => {
             type: "image",
             parents: ["paragraph"],
             attrs: {
-              src: "some-image.png",
+              src: new am.RawString("some-image.png"),
               alt: "some image",
               title: "some title",
-              isEmbed: true,
             },
+            isEmbed: true,
           },
         },
         { type: "openTag", tag: "image", role: "explicit" },
@@ -1521,7 +1772,12 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "blockquote", role: "render-only" },
         {
           type: "block",
-          block: { type: "paragraph", parents: ["blockquote"], attrs: {} },
+          block: {
+            type: "paragraph",
+            parents: ["blockquote"],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
@@ -1543,14 +1799,24 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "blockquote", role: "render-only" },
         {
           type: "block",
-          block: { type: "paragraph", parents: ["blockquote"], attrs: {} },
+          block: {
+            type: "paragraph",
+            parents: ["blockquote"],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "hello", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
         {
           type: "block",
-          block: { type: "paragraph", parents: ["blockquote"], attrs: {} },
+          block: {
+            type: "paragraph",
+            parents: ["blockquote"],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "world", marks: {} },
@@ -1581,6 +1847,7 @@ describe("the traversal API", () => {
             type: "unordered-list-item",
             parents: ["blockquote"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "list_item", role: "explicit" },
@@ -1616,6 +1883,7 @@ describe("the traversal API", () => {
             type: "paragraph",
             parents: ["blockquote", "unordered-list-item"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
@@ -1624,7 +1892,12 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
-          block: { type: "paragraph", parents: ["blockquote"], attrs: {} },
+          block: {
+            type: "paragraph",
+            parents: ["blockquote"],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
@@ -1638,8 +1911,11 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["blockquote", "unordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [
+              new am.RawString("blockquote"),
+              new am.RawString("unordered-list-item"),
+            ],
             attrs: {},
           },
         },
@@ -1647,8 +1923,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["blockquote"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("blockquote")],
             attrs: {},
           },
         },
@@ -1656,8 +1932,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "unordered-list-item",
-            parents: ["blockquote"],
+            type: new am.RawString("unordered-list-item"),
+            parents: [new am.RawString("blockquote")],
             attrs: {},
           },
         },
@@ -1673,6 +1949,7 @@ describe("the traversal API", () => {
           block: {
             type: "paragraph",
             parents: ["blockquote", "unordered-list-item"],
+            isEmbed: false,
             attrs: {},
           },
         },
@@ -1683,7 +1960,12 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "unordered-list", role: "render-only" },
         {
           type: "block",
-          block: { type: "paragraph", parents: ["blockquote"], attrs: {} },
+          block: {
+            type: "paragraph",
+            parents: ["blockquote"],
+            isEmbed: false,
+            attrs: {},
+          },
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "middle", marks: {} },
@@ -1695,6 +1977,7 @@ describe("the traversal API", () => {
             type: "unordered-list-item",
             parents: ["blockquote"],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "openTag", tag: "list-item", role: "explicit" },
@@ -1715,7 +1998,12 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
-          block: { type: "code-block", parents: [], attrs: {} },
+          block: {
+            type: "code-block",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "openTag", tag: "code_block", role: "explicit" },
         { type: "text", text: "var x", marks: {} },
@@ -1780,8 +2068,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "ordered-list-item",
-            parents: ["unordered-list-item"],
+            type: new am.RawString("ordered-list-item"),
+            parents: [new am.RawString("unordered-list-item")],
             attrs: {},
           },
         },
@@ -1810,12 +2098,20 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: "ordered-list-item", parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("ordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
         { type: "text", value: "item 1" },
         {
           type: "block",
-          value: { type: "ordered-list-item", parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("ordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
         { type: "text", value: "item 2" },
       ]
@@ -1838,18 +2134,32 @@ describe("the traversal API", () => {
 
     it("should work with a list item in the middle of two paragraphs", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+          },
+        },
         { type: "text", value: "item 1" },
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["ordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("ordered-list-item")],
             attrs: {},
           },
         },
         { type: "text", value: "item 2" },
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+          },
+        },
         { type: "text", value: "item 3" },
       ]
       const doc = docFromSpans(spans)
@@ -1882,19 +2192,27 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["ordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("ordered-list-item")],
             attrs: {},
           },
         },
         { type: "text", value: "item 2" },
         {
           type: "block",
-          value: { type: "ordered-list-item", parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("ordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
         {
           type: "block",
-          value: { type: "ordered-list-item", parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("ordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
       ]
 
@@ -1926,26 +2244,37 @@ describe("the traversal API", () => {
 
     it("should work with trailing nested paragraphs", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { parents: [], type: "paragraph", attrs: {} } },
+        {
+          type: "block",
+          value: {
+            parents: [],
+            type: new am.RawString("paragraph"),
+            attrs: {},
+          },
+        },
         { type: "text", value: "item 1" },
         {
           type: "block",
           value: {
-            parents: ["ordered-list-item"],
-            type: "paragraph",
+            parents: [new am.RawString("ordered-list-item")],
+            type: new am.RawString("paragraph"),
             attrs: {},
           },
         },
         { type: "text", value: "item 2" },
         {
           type: "block",
-          value: { parents: [], type: "ordered-list-item", attrs: {} },
+          value: {
+            parents: [],
+            type: new am.RawString("ordered-list-item"),
+            attrs: {},
+          },
         },
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["ordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -1977,14 +2306,18 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: "unordered-list-item", parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("unordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
         { type: "text", value: "item 1" },
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["unordered-list-item"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("unordered-list-item")],
             attrs: {},
           },
         },
@@ -2011,12 +2344,20 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { parents: [], type: "unordered-list-item", attrs: {} },
+          value: {
+            parents: [],
+            type: new am.RawString("unordered-list-item"),
+            attrs: {},
+          },
         },
         { type: "text", value: "item 1" },
         {
           type: "block",
-          value: { parents: [], type: "ordered-list-item", attrs: {} },
+          value: {
+            parents: [],
+            type: new am.RawString("ordered-list-item"),
+            attrs: {},
+          },
         },
         { type: "text", value: "item 2" },
       ]
@@ -2042,7 +2383,10 @@ describe("the traversal API", () => {
 
     it("constructs asides", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: "aside", parents: [], attrs: {} } },
+        {
+          type: "block",
+          value: { type: new am.RawString("aside"), parents: [], attrs: {} },
+        },
       ]
       const doc = docFromSpans(spans)
       assert.isTrue(
@@ -2058,10 +2402,27 @@ describe("the traversal API", () => {
 
     it("constructs asides with content", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { parents: [], type: "paragraph", attrs: {} } },
+        {
+          type: "block",
+          value: {
+            parents: [],
+            type: new am.RawString("paragraph"),
+            attrs: {},
+          },
+        },
         { type: "text", value: "hello world" },
-        { type: "block", value: { parents: [], type: "paragraph", attrs: {} } },
-        { type: "block", value: { parents: [], type: "aside", attrs: {} } },
+        {
+          type: "block",
+          value: {
+            parents: [],
+            type: new am.RawString("paragraph"),
+            attrs: {},
+          },
+        },
+        {
+          type: "block",
+          value: { parents: [], type: new am.RawString("aside"), attrs: {} },
+        },
         { type: "text", value: "next line" },
       ]
 
@@ -2085,12 +2446,20 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { parents: [], type: "heading", attrs: { level: 1 } },
+          value: {
+            parents: [],
+            type: new am.RawString("heading"),
+            attrs: { level: 1 },
+          },
         },
         { type: "text", value: "hello" },
         {
           type: "block",
-          value: { parents: [], type: "heading", attrs: { level: 2 } },
+          value: {
+            parents: [],
+            type: new am.RawString("heading"),
+            attrs: { level: 2 },
+          },
         },
         { type: "text", value: "world" },
       ]
@@ -2115,7 +2484,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
+            type: new am.RawString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -2123,14 +2492,14 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "image",
-            parents: ["paragraph"],
+            type: new am.RawString("image"),
+            parents: [new am.RawString("paragraph")],
             attrs: {
               alt: "image alt",
-              src: "image.png",
-              isEmbed: true,
+              src: new am.RawString("image.png"),
               title: "image title",
             },
+            isEmbed: true,
           },
         },
       ]
@@ -2161,8 +2530,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["blockquote"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("blockquote")],
             attrs: {},
           },
         },
@@ -2170,8 +2539,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["blockquote"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("blockquote")],
             attrs: {},
           },
         },
@@ -2200,7 +2569,10 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             type: "paragraph",
-            parents: ["blockquote", "unordered-list-item"],
+            parents: [
+              new am.RawString("blockquote"),
+              new am.RawString("unordered-list-item"),
+            ],
             attrs: {},
           },
         },
@@ -2208,8 +2580,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: "paragraph",
-            parents: ["blockquote"],
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("blockquote")],
             attrs: {},
           },
         },
@@ -2251,9 +2623,19 @@ describe("the traversal API", () => {
       ])
       const blocks = Array.from(blocksFromNode(doc))
       assert.deepStrictEqual(blocks, [
-        { type: "paragraph", parents: ["unordered-list-item"], attrs: {} },
-        "item 1",
-        { type: "unordered-list-item", parents: [], attrs: {} },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("unordered-list-item")],
+            attrs: {},
+          },
+        },
+        { type: "text", value: "item 1" },
+        {
+          type: "block",
+          value: { type: new am.RawString("unordered-list-item"), parents: [], attrs: {} },
+        },
       ])
     })
   })
@@ -2271,9 +2653,23 @@ describe("the traversal API", () => {
     ])
     const blocks = Array.from(blocksFromNode(doc))
     assert.deepStrictEqual(blocks, [
-      { type: "paragraph", parents: ["unordered-list-item"], attrs: {} },
-      "item 1",
-      { type: "paragraph", parents: ["unordered-list-item"], attrs: {} },
+      {
+        type: "block",
+        value: {
+          type: new am.RawString("paragraph"),
+          parents: [new am.RawString("unordered-list-item")],
+          attrs: {},
+        },
+      },
+      { type: "text", value: "item 1" },
+      {
+        type: "block",
+        value: {
+          type: new am.RawString("paragraph"),
+          parents: [new am.RawString("unordered-list-item")],
+          attrs: {},
+        },
+      },
     ])
   })
 
@@ -2284,8 +2680,8 @@ describe("the traversal API", () => {
         previous: null,
         following: null,
         block: {
-          type: "ordered-list-item",
-          parents: ["unordered-list-item"],
+          type: new am.RawString("ordered-list-item"),
+          parents: [new am.RawString("unordered-list-item")],
           attrs: {},
         },
       })
@@ -2317,8 +2713,16 @@ describe("the traversal API", () => {
       const diff = blockDiff({
         enclosing: null,
         previous: null,
-        following: { type: "ordered-list-item", parents: [], attrs: {} },
-        block: { type: "ordered-list-item", parents: [], attrs: {} },
+        following: {
+          type: new am.RawString("ordered-list-item"),
+          parents: [],
+          attrs: {},
+        },
+        block: {
+          type: new am.RawString("ordered-list-item"),
+          parents: [],
+          attrs: {},
+        },
       })
       assert.deepStrictEqual(diff, {
         toOpen: [
@@ -2343,9 +2747,14 @@ function assertTraversalEqual(
 ) {
   if (actual.length === expected.length) {
     if (
-      actual.every(
-        (event, i) => JSON.stringify(event) === JSON.stringify(expected[i]),
-      )
+      actual.every((event, i) => {
+        try {
+          assert.deepStrictEqual(event, expected[i])
+          return true
+        } catch (e) {
+          return false
+        }
+      })
     ) {
       return true
     }

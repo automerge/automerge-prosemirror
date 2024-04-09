@@ -1,13 +1,13 @@
 import { assert } from "chai"
 import { default as amToPm } from "../src/amToPm"
 import { EditorState } from "prosemirror-state"
-import { BlockDef, makeDoc, printTree } from "./utils"
+import { BlockDef, makeDoc, printTree, splitBlock, updateBlockType } from "./utils"
 import { next as am } from "@automerge/automerge"
 import { schema } from "../src/schema"
 
 type PerformPatchArgs = {
   initialDoc: (string | BlockDef)[]
-  patches: am.Patch[]
+  patches: (((_: am.Prop[]) => am.Patch[]) | am.Patch)[]
   isLocal?: boolean
 }
 
@@ -17,7 +17,15 @@ function performPatch({
   isLocal,
 }: PerformPatchArgs): EditorState {
   const { editor, spans } = makeDoc(initialDoc)
-  const tx = amToPm(schema, spans, patches, ["text"], editor.tr, !!isLocal)
+  const amPatches: am.Patch[] = []
+  for (const patchOrFactory of patches) {
+    if (typeof patchOrFactory === "function") {
+      amPatches.push(...patchOrFactory(["text"]))
+    } else {
+      amPatches.push(patchOrFactory)
+    }
+  }
+  const tx = amToPm(schema, spans, amPatches, ["text"], editor.tr, !!isLocal)
   return editor.apply(tx)
 }
 
@@ -201,14 +209,7 @@ describe("the amToPm function", () => {
       const patched = performPatch({
         initialDoc: ["hello world"],
         patches: [
-          {
-            action: "splitBlock",
-            path: ["text", 6],
-            index: 6,
-            type: "paragraph",
-            parents: [],
-            attrs: {},
-          },
+          splitBlock(6, { type: "paragraph", parents: [], attrs: {} }),
         ],
       }).doc
 
@@ -230,14 +231,7 @@ describe("the amToPm function", () => {
       const patched = performPatch({
         initialDoc: ["hello world"],
         patches: [
-          {
-            action: "splitBlock",
-            path: ["text", 0],
-            index: 0,
-            type: "paragraph",
-            parents: [],
-            attrs: {},
-          },
+          splitBlock(0, { type: "paragraph", parents: [], attrs: {} }),
         ],
       }).doc
 
@@ -256,22 +250,8 @@ describe("the amToPm function", () => {
       const patched = performPatch({
         initialDoc: ["hello world"],
         patches: [
-          {
-            action: "splitBlock",
-            path: ["text", 0],
-            index: 0,
-            type: "paragraph",
-            parents: [],
-            attrs: {},
-          },
-          {
-            action: "splitBlock",
-            path: ["text", 1],
-            index: 1,
-            type: "paragraph",
-            parents: [],
-            attrs: {},
-          },
+          splitBlock(0, { type: "paragraph", parents: [], attrs: {} }),
+          splitBlock(1, { type: "paragraph", parents: [], attrs: {} }),
         ],
       }).doc
 
@@ -294,14 +274,7 @@ describe("the amToPm function", () => {
           "item 1",
         ],
         patches: [
-          {
-            action: "splitBlock",
-            path: ["text", 7],
-            index: 7,
-            type: "ordered-list-item",
-            parents: [],
-            attrs: {},
-          },
+          splitBlock(7, { type: "ordered-list-item", parents: [], attrs: {} }),
         ],
       }).doc
 
@@ -330,14 +303,7 @@ describe("the amToPm function", () => {
           "item 2",
         ],
         patches: [
-          {
-            action: "splitBlock",
-            path: ["text", 14],
-            index: 14,
-            type: "ordered-list-item",
-            parents: [],
-            attrs: {},
-          },
+          splitBlock(14, { type: "ordered-list-item", parents: [], attrs: {} }),
         ],
       }).doc
 
@@ -370,14 +336,7 @@ describe("the amToPm function", () => {
           { type: "ordered-list-item", parents: [], attrs: {} },
         ],
         patches: [
-          {
-            action: "splitBlock",
-            path: ["text", 15],
-            index: 15,
-            type: "paragraph",
-            parents: ["ordered-list-item"],
-            attrs: {},
-          },
+          splitBlock(15, { type: "paragraph", parents: ["ordered-list-item"], attrs: {} }),
         ],
       })
 
@@ -404,14 +363,7 @@ describe("the amToPm function", () => {
       const patched = performPatch({
         initialDoc: [{ type: "paragraph", parents: [], attrs: {} }, "item 1"],
         patches: [
-          {
-            action: "splitBlock",
-            path: ["text", 7],
-            index: 7,
-            type: "paragraph",
-            parents: [],
-            attrs: {},
-          },
+          splitBlock(7, { type: "paragraph", parents: [], attrs: {} }),
         ],
         isLocal: true,
       })
@@ -433,14 +385,7 @@ describe("the amToPm function", () => {
       const patched = performPatch({
         initialDoc: [{ type: "paragraph", parents: [], attrs: {} }, "item 1"],
         patches: [
-          {
-            action: "splitBlock",
-            path: ["text", 4],
-            index: 4,
-            type: "paragraph",
-            parents: [],
-            attrs: {},
-          },
+          splitBlock(4, { type: "paragraph", parents: [], attrs: {} }),
         ],
       }).doc
 
@@ -494,9 +439,8 @@ describe("the amToPm function", () => {
         ],
         patches: [
           {
-            action: "joinBlock",
+            action: "del",
             path: ["text", 7],
-            index: 7,
           },
         ],
       }).doc
@@ -512,7 +456,7 @@ describe("the amToPm function", () => {
       )
     })
 
-    it("should handle deletion of a range, followed by a joinBlock, followed by a deletion", () => {
+    it("should handle deletion of a range, followed by a deleted block, followed by a deletion", () => {
       const patched = performPatch({
         initialDoc: [
           { type: "paragraph", parents: [], attrs: {} },
@@ -529,9 +473,8 @@ describe("the amToPm function", () => {
             length: 3,
           },
           {
-            action: "joinBlock",
-            path: ["text"],
-            index: 6,
+            action: "del",
+            path: ["text", 6],
           },
           {
             action: "del",
@@ -564,14 +507,7 @@ describe("the amToPm function", () => {
           "item one",
         ],
         patches: [
-          {
-            action: "updateBlock",
-            path: ["text"],
-            index: 0,
-            new_type: "paragraph",
-            new_parents: null,
-            new_attrs: null,
-          },
+          updateBlockType(0, "paragraph"),
         ],
       }).doc
 
@@ -595,14 +531,7 @@ describe("the amToPm function", () => {
           "item two",
         ],
         patches: [
-          {
-            action: "updateBlock",
-            path: ["text"],
-            index: 9,
-            new_type: "paragraph",
-            new_parents: null,
-            new_attrs: null,
-          },
+          updateBlockType(9, "paragraph"),
         ],
       }).doc
 
@@ -629,14 +558,7 @@ describe("the amToPm function", () => {
       const patched = performPatch({
         initialDoc: [{ type: "paragraph", parents: [], attrs: {} }, "item one"],
         patches: [
-          {
-            action: "updateBlock",
-            path: ["text"],
-            index: 0,
-            new_type: "ordered-list-item",
-            new_parents: null,
-            new_attrs: null,
-          },
+          updateBlockType(0, "ordered-list-item"),
         ],
       }).doc
 

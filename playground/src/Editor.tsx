@@ -125,7 +125,7 @@ export function Editor({ name, handle, path }: EditorProps) {
     const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
-        console.log(`${name}: dispatchTransaction`, tx)
+        //console.log(`${name}: dispatchTransaction`, tx)
         const newState = semaphore.intercept(handle, tx, view.state)
         view.updateState(newState)
       },
@@ -136,7 +136,7 @@ export function Editor({ name, handle, path }: EditorProps) {
       patches,
       patchInfo,
     }) => {
-      console.log(`${name}: patch received`)
+      //console.log(`${name}: patch received`)
       const newState = semaphore.reconcilePatch(
         patchInfo.before,
         doc,

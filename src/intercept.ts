@@ -21,11 +21,11 @@ export function intercept<T>(
   handle.change(d => {
     const [subdoc, attr] = docAndAttr(d, path)
     for (let i = 0; i < intercepted.steps.length; i++) {
-      const spans = am.spans(handle.docSync()!, path)
+      const spans = am.spans(d!, path)
       const step = intercepted.steps[i]
       //console.log(step)
       const pmDoc = intercepted.docs[i]
-      pmToAm(spans, step, subdoc, pmDoc, attr)
+      pmToAm(spans, step, d, pmDoc, path)
     }
   })
 

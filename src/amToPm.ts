@@ -14,14 +14,11 @@ import {
   amSpliceIdxToPmIdx,
   docFromSpans,
 } from "./traversal"
-import { patchSpans } from "./maintainSpans"
+import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
+import {pathIsPrefixOf, pathsEqual} from "./pathUtils"
 
 type SpliceTextPatch = am.SpliceTextPatch
 type InsertPatch = am.InsertPatch
-
-type MarkSet = {
-  [name: string]: MarkValue
-}
 
 type MarkPatch = {
   action: "mark"
@@ -37,45 +34,33 @@ export default function (
   tx: Transaction,
   isLocal: boolean,
 ): Transaction {
+  const gathered = gatherPatches(path, patches)
   let result = tx
-  for (const patch of patches) {
-    //console.log(JSON.stringify(patch))
-    if (patch.action === "insert") {
-      result = handleInsert(schema, patch, path, result)
-      patchSpans(spansAtStart, patch)
-    } else if (patch.action === "splice") {
-      result = handleSplice(schema, spansAtStart, patch, path, result, isLocal)
-      patchSpans(spansAtStart, patch)
-    } else if (patch.action === "del") {
-      result = handleDelete(schema, spansAtStart, patch, path, result)
-      patchSpans(spansAtStart, patch)
-    } else if (patch.action === "mark") {
-      result = handleMark(spansAtStart, schema, patch, path, result)
-      patchSpans(spansAtStart, patch)
-    } else if (
-      patch.action === "splitBlock" ||
-      patch.action === "joinBlock" ||
-      patch.action === "updateBlock"
-    ) {
-      handleBlockChange(schema, spansAtStart, patch, tx, isLocal)
+  for (const patchGroup of gathered) {
+    if (patchGroup.type === "text") {
+      for (const patch of patchGroup.patches) {
+        if (patch.action === "splice") {
+          result = handleSplice(schema, spansAtStart, patch, path, result, isLocal)
+          patchSpans(path, spansAtStart, patch)
+        } else if (patch.action === "del") {
+          const patchIndex = patch.path[patch.path.length - 1] as number
+          const block = findBlockAtCharIdx(spansAtStart, patchIndex)
+          if (block != null) {
+            handleBlockChange(schema, path, spansAtStart, patchIndex, [patch], tx, isLocal)
+          } else {
+            handleDelete(schema, spansAtStart, patch, path, result)
+          }
+          patchSpans(path, spansAtStart, patch)
+        } else if (patch.action === "mark") {
+          result = handleMark(spansAtStart, schema, patch, path, result)
+          patchSpans(path, spansAtStart, patch)
+        }
+      }
+    } else {
+      handleBlockChange(schema, path, spansAtStart, patchGroup.index, patchGroup.patches, tx, isLocal)
     }
   }
   return result
-}
-
-function handleInsert(
-  schema: Schema,
-  patch: InsertPatch,
-  path: Prop[],
-  tx: Transaction,
-): Transaction {
-  //const index = charPath(path, patch.path)
-  //if (index === null) return tx
-  //const pmIdx = amIdxToPmIdx(tx.doc, index)
-  //if (pmIdx == null) throw new Error("Invalid index")
-  //const content = patchContentToSlice(schema, patch.values.join(""), patch.marks)
-  //return tx.replace(pmIdx, pmIdx, content)
-  return tx
 }
 
 export function handleSplice(
@@ -141,15 +126,17 @@ function handleMark(
 
 export function handleBlockChange(
   schema: Schema,
+  atPath: am.Prop[],
   spans: am.Span[],
-  patch: am.SplitBlockPatch | am.JoinBlockPatch | am.UpdateBlockPatch,
+  blockIdx: number,
+  patches: am.Patch[],
   tx: Transaction,
   isLocal: boolean,
 ): Transaction {
-  patchSpans(spans, patch)
-  //console.log(JSON.stringify(spans, null, 2))
+  for (const patch of patches) {
+    patchSpans(atPath, spans, patch)
+  }
   const docAfter = docFromSpans(spans)
-  //console.log(JSON.stringify(docAfter, null, 2))
   const change = findDiff(tx.doc.content, docAfter.content)
   if (change == null) return tx
 
@@ -187,9 +174,9 @@ export function handleBlockChange(
     tx = tx.replace(chFrom, chTo, docAfter.slice(change.start, change.endB))
   }
   if (isLocal) {
-    const blockIdx = amIdxToPmBlockIdx(spans, patch.index)
-    if (blockIdx == null) throw new Error("Invalid index")
-    tx = tx.setSelection(TextSelection.create(tx.doc, blockIdx))
+    const pmBlockIdx = amIdxToPmBlockIdx(spans, blockIdx)
+    if (pmBlockIdx == null) throw new Error("Invalid index")
+    tx = tx.setSelection(TextSelection.create(tx.doc, pmBlockIdx))
   }
 
   return tx
@@ -255,7 +242,7 @@ function pathEquals(path1: Prop[], path2: Prop[]): boolean {
 function patchContentToFragment(
   schema: Schema,
   patchContent: string,
-  marks?: MarkSet,
+  marks?: am.MarkSet,
 ): Fragment {
   let pmMarks: Array<Mark> | undefined = undefined
   if (marks != null) {
@@ -281,7 +268,7 @@ function patchContentToFragment(
   return Fragment.from(schema.text(patchContent, pmMarks))
 }
 
-export function attrsFromMark(mark: MarkValue): Attrs | null {
+export function attrsFromMark(mark: am.MarkValue): Attrs | null {
   let markAttrs = null
   if (typeof mark === "string") {
     try {
@@ -294,4 +281,77 @@ export function attrsFromMark(mark: MarkValue): Attrs | null {
     }
   }
   return markAttrs
+}
+
+type GatheredPatch = TextPatches | BlockPatches
+
+type TextPatches = {
+  type: "text",
+  patches: (am.SpliceTextPatch | am.DelPatch | am.MarkPatch)[]
+}
+
+type BlockPatches = {
+  type: "block",
+  index: number,
+  patches: am.Patch[]
+}
+
+function gatherPatches(textPath: am.Prop[], diff: am.Patch[]): GatheredPatch[] {
+  const result: GatheredPatch[] = []
+
+  type State = { type: "gatheringBlock", index: number, gathered: am.Patch[]}
+    | { type: "gatheringText", gathered: (am.SpliceTextPatch | am.DelPatch | am.MarkPatch)[] } 
+    | { type: "transitioning" }
+  let state: State = { type: "gatheringText", gathered: []  }
+
+  function flush() {
+    if (state.type === "gatheringBlock") {
+      result.push({ type: "block", index: state.index, patches: state.gathered })
+    } else if (state.type === "gatheringText"){
+      result.push({ type: "text", patches: state.gathered })
+    }
+    state = { type: "transitioning" }
+  }
+
+  for (const patch of diff) {
+    if (!pathIsPrefixOf(textPath, patch.path)) {
+      continue
+    }
+    if (pathsEqual(textPath, patch.path) && patch.action === "mark") {
+      if (state.type === "gatheringText") {
+        state.gathered.push(patch)
+      } else {
+        flush()
+        state = { type: "gatheringText", gathered: [patch] }
+      }
+    } else if (patch.path.length === textPath.length + 1) {
+      const lastElem = patch.path[patch.path.length - 1]
+      if (typeof lastElem === "number") {
+        if (patch.action === "splice" || patch.action === "del") {
+          if (state.type === "gatheringText") {
+            state.gathered.push(patch)
+          } else {
+            flush()
+            state = { type: "gatheringText", gathered: [patch] }
+          }
+        } else if (patch.action === "insert") {
+          flush()
+          state = { type: "gatheringBlock", index: lastElem, gathered: [patch] }
+        }
+      }
+    } else {
+      const index = patch.path[textPath.length]
+      if (typeof index !== "number") {
+        continue
+      }
+      if ((state.type === "gatheringBlock") && (state.index === index)) {
+        state.gathered.push(patch)
+      } else {
+        flush()
+        state = { type: "gatheringBlock", "index": index, "gathered": [patch] }
+      }
+    }
+  }
+  flush()
+  return result
 }

@@ -17,7 +17,7 @@ export default function (
   step: Step,
   doc: any,
   pmDoc: Node,
-  attr: Prop,
+  path: Prop[],
 ) {
   // This shenanigans with the constructor name is necessary for reasons I
   // don't really understand. I _think_ that the `*Step` classs we get
@@ -27,22 +27,22 @@ export default function (
     step.constructor.name === "ReplaceStep" ||
     step.constructor.name === "_ReplaceStep"
   ) {
-    replaceStep(spans, step as ReplaceStep, doc, attr, pmDoc)
+    replaceStep(spans, step as ReplaceStep, doc, path, pmDoc)
   } else if (
     step.constructor.name === "ReplaceAroundStep" ||
     step.constructor.name === "_ReplaceAroundStep"
   ) {
-    replaceAroundStep(step as ReplaceAroundStep, doc, pmDoc, attr)
+    replaceAroundStep(step as ReplaceAroundStep, doc, pmDoc, path)
   } else if (
     step.constructor.name === "AddMarkStep" ||
     step.constructor.name === "_AddMarkStep"
   ) {
-    addMarkStep(spans, step as AddMarkStep, doc, attr)
+    addMarkStep(spans, step as AddMarkStep, doc, path)
   } else if (
     step.constructor.name === "RemoveMarkStep" ||
     step.constructor.name === "_RemoveMarkStep"
   ) {
-    removeMarkStep(spans, step as RemoveMarkStep, doc, attr)
+    removeMarkStep(spans, step as RemoveMarkStep, doc, path)
   }
 }
 
@@ -51,7 +51,7 @@ function replaceStep(
   spans: am.Span[],
   step: ReplaceStep,
   doc: automerge.Doc<unknown>,
-  field: Prop,
+  field: Prop[],
   pmDoc: Node,
 ) {
   if (
@@ -67,13 +67,13 @@ function replaceStep(
     }
     let { start, end } = amRange
     if (start > end) {
-      ;[start, end] = [end, start]
+      [start, end] = [end, start]
     }
 
     const toDelete = end - start
     automerge.splice(
       doc,
-      [field],
+      field,
       start,
       toDelete,
       step.slice.content.firstChild.text,
@@ -87,30 +87,30 @@ function replaceStep(
   //console.log(JSON.stringify(applied, null, 2))
   const newBlocks = blocksFromNode(applied)
   //console.log(JSON.stringify(newBlocks, null, 2))
-  automerge.updateBlocks(doc, [field], newBlocks)
+  automerge.updateSpans(doc, field, newBlocks)
 }
 
 function replaceAroundStep(
   step: ReplaceAroundStep,
   doc: any,
   pmDoc: Node,
-  field: Prop,
+  field: Prop[],
 ) {
   const applied = step.apply(pmDoc).doc
   if (applied == null) {
     throw new Error("Could not apply step to document")
   }
-  //console.log(JSON.stringify(applied, null, 2))
+  //console.log(applied)
   const newBlocks = blocksFromNode(applied)
-  //console.log(JSON.stringify(newBlocks, null, 2))
-  automerge.updateBlocks(doc, [field], newBlocks)
+  //console.log(newBlocks)
+  automerge.updateSpans(doc, field, newBlocks)
 }
 
 function addMarkStep(
   spans: am.Span[],
   step: AddMarkStep,
   doc: automerge.Doc<unknown>,
-  field: Prop,
+  field: Prop[],
 ) {
   const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
   if (amRange == null) {
@@ -126,14 +126,14 @@ function addMarkStep(
     value = JSON.stringify(step.mark.attrs)
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  automerge.mark(doc as any, [field], { start, end, expand }, markName, value)
+  automerge.mark(doc as any, field, { start, end, expand }, markName, value)
 }
 
 function removeMarkStep(
   spans: am.Span[],
   step: RemoveMarkStep,
   doc: automerge.Doc<unknown>,
-  field: Prop,
+  field: Prop[],
 ) {
   const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
   if (amRange == null) {
@@ -150,5 +150,5 @@ function removeMarkStep(
   const markName = step.mark.type.name
   const expand = step.mark.type.spec.inclusive ? "both" : "none"
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  automerge.unmark(doc as any, [field], { start, end, expand }, markName)
+  automerge.unmark(doc as any, field, { start, end, expand }, markName)
 }

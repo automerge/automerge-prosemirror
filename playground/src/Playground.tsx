@@ -22,19 +22,25 @@ const rightRepo = new Repo({
 const leftHandle = leftRepo.create()
 leftHandle.change(d => {
   d.text = ""
-  //let index = 0
-  //for(let i = 0; i < 100; i++) {
-  //am.splitBlock(d, ["text"], index, {type: "paragraph", parents: [], attrs: {}})
-  //am.splice(d, ["text"], index, 0, "world ".repeat(100))
-  //index += 601
-  //}
-
   am.splitBlock(d, ["text"], 0, {
-    type: "paragraph",
-    parents: ["blockquote", "unordered-list-item"],
+    type: new am.RawString("heading"),
+    parents: [],
+    attrs: { level: 1 },
+  })
+  am.splice(d, ["text"], 1, 0, "Heading")
+  am.splitBlock(d, ["text"], 8, {
+    type: new am.RawString("paragraph"),
+    parents: [],
     attrs: {},
   })
-  am.splice(d, ["text"], 1, 0, "some quote")
+  am.splice(d, ["text"], 9, 0, "some text")
+
+  //am.splitBlock(d, ["text"], 0, {
+  //type: "paragraph",
+  //parents: ["blockquote", "unordered-list-item"],
+  //attrs: {},
+  //})
+  //am.splice(d, ["text"], 1, 0, "some quote")
   //am.splitBlock(d, ["text"], 11, {type: "paragraph", parents: ["blockquote"], attrs: {}})
   //am.splice(d, ["text"], 12, 0, "middle")
   //am.splitBlock(d, ["text"], 18, {type: "unordered-list-item", parents: ["blockquote"], attrs: {}})

@@ -13,7 +13,7 @@
   "type": "module",
   "main": "dist/index.js",
   "dependencies": {
-    "@automerge/automerge": "^2.1.11-richtext-alpha.1",
+    "@automerge/automerge": "2.2.0-rc.2",
     "ordered-map": "^0.1.0",
     "prosemirror-model": "^1.19.4",
     "prosemirror-schema-basic": "^1.2.2",
@@ -23,14 +23,13 @@
     "prosemirror-view": "^1.33.1"
   },
   "overrides": {
-    "@automerge/automerge": "^2.1.11-richtext-alpha.1",
     "@automerge/automerge-repo": {
-      "@automerge/automerge": "^2.1.11-richtext-alpha.1"
+      "@automerge/automerge": "2.2.0-rc.2"
     }
   },
   "devDependencies": {
-    "@automerge/automerge-repo": "^1.1.1",
-    "@automerge/automerge-repo-network-messagechannel": "^1.1.1",
+    "@automerge/automerge-repo": "^1.1.5",
+    "@automerge/automerge-repo-network-messagechannel": "^1.1.5",
     "@types/debug": "^4.1.12",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.24",

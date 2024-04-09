@@ -1,6 +1,6 @@
 import { assert } from "chai"
 import { Fragment, Slice, Node } from "prosemirror-model"
-import { makeDoc, printTree } from "./utils"
+import { assertSplitBlock, makeDoc, printTree, splitBlock } from "./utils"
 import { ReplaceStep, Step } from "prosemirror-transform"
 import { default as pmToAm } from "../src/pmToAm"
 import { next as am } from "@automerge/automerge"
@@ -15,7 +15,7 @@ describe("when converting a ReplaceStep to a change", () => {
     const heads = am.getHeads(amDoc)
     const spans = am.spans(amDoc, ["text"])
     const updatedDoc = am.change(amDoc, d => {
-      pmToAm(spans, step, d, pmDoc, "text")
+      pmToAm(spans, step, d, pmDoc, ["text"])
     })
     return am.diff(amDoc, heads, am.getHeads(updatedDoc))
   }
@@ -48,12 +48,10 @@ describe("when converting a ReplaceStep to a change", () => {
         ),
       ),
     )
-    assert.deepOwnInclude(diff[0], {
-      action: "splitBlock",
-      index: 7,
+    assertSplitBlock(diff, ["text", 7], {
       type: "ordered-list-item",
       parents: [],
-      path: ["text", 7],
+      attrs: {},
     })
   })
 
@@ -79,12 +77,10 @@ describe("when converting a ReplaceStep to a change", () => {
         ),
       ),
     )
-    assert.deepOwnInclude(diff[0], {
-      action: "splitBlock",
-      index: 7,
+    assertSplitBlock(diff, ["text", 7], {
       type: "ordered-list-item",
       parents: [],
-      path: ["text", 7],
+      attrs: {},
     })
   })
 
@@ -109,21 +105,21 @@ describe("when converting a ReplaceStep to a change", () => {
         ),
       ),
     )
-    assert.equal(diff.length, 1)
-    assert.deepOwnInclude(diff[0], {
-      action: "splitBlock",
-      index: 7,
+    assertSplitBlock(diff, ["text", 7], {
       type: "paragraph",
       parents: ["ordered-list-item"],
-      path: ["text", 7],
+      attrs: {},
     })
   })
 
-  it("should emit a joinBlock when a ReplaceStep closes an ordered list", () => {
+  it("should emit a splitBlock when a ReplaceStep inserts a list element", () => {
     const { editor, doc } = makeDoc([
       { type: "ordered-list-item", parents: [], attrs: {} },
       "item 1",
     ])
+    //am:              0       1 2 3 4  5  6
+    //     <doc> <ol> <li> <p> i t e m ' ' 1 </p> </li> </ol> </doc>
+    //pm: 0     0    1    2   3 4 5 6 7   8 9   10     11    12     13
     const diff = updateDoc(
       doc,
       editor.doc,
@@ -141,13 +137,10 @@ describe("when converting a ReplaceStep to a change", () => {
         ),
       ),
     )
-    console.log(diff)
-    assert.deepOwnInclude(diff[0], {
-      action: "splitBlock",
-      index: 7,
+    assertSplitBlock(diff, ["text", 7], {
       type: "ordered-list-item",
       parents: [],
-      path: ["text", 7],
+      attrs: {},
     })
   })
 })

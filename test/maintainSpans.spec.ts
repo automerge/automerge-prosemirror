@@ -1,6 +1,7 @@
 import { assert } from "chai"
 import { next as am } from "@automerge/automerge"
 import { patchSpans } from "../src/maintainSpans"
+import {splitBlock} from "./utils"
 
 describe("the patchSpans function", () => {
   it("should update the spans after a delete", () => {
@@ -12,7 +13,7 @@ describe("the patchSpans function", () => {
       { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
       { type: "text", value: "line three" },
     ]
-    patchSpans(spans, {
+    patchSpans(["text"], spans, {
       action: "del",
       path: ["text", 5],
       length: 4,
@@ -27,60 +28,45 @@ describe("the patchSpans function", () => {
     ])
   })
 
-  describe("when handling splitBlock", () => {
+  describe("when handling a block insertion", () => {
     it("should insert a new block after top level text", () => {
       const spans: am.Span[] = [{ type: "text", value: "hello world" }]
-      patchSpans(spans, {
-        action: "splitBlock",
-        path: ["text", 6],
-        index: 6,
-        type: "paragraph",
-        parents: [],
-        attrs: {},
-      })
+      for (const patch of splitBlock(6, { type: "paragraph", parents: [], attrs: {} })(["text"])) {
+        patchSpans(["text"], spans, patch)
+      }
       assert.deepStrictEqual(spans, [
         { type: "text", value: "hello " },
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
         { type: "text", value: "world" },
       ])
     })
 
     it("should break text into two nodes", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
         { type: "text", value: "item 1" },
       ]
-      patchSpans(spans, {
-        action: "splitBlock",
-        path: ["block", 4],
-        index: 4,
-        type: "paragraph",
-        parents: [],
-        attrs: {},
-      })
+      for (const patch of splitBlock(4, { type: "paragraph", parents: [], attrs: {} })(["text"])) {
+        patchSpans(["text"], spans, patch)
+      }
       assert.deepStrictEqual(spans, [
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
         { type: "text", value: "ite" },
-        { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
+        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
         { type: "text", value: "m 1" },
       ])
     })
 
     it("should set the attributes from the patch", () => {
       const spans: am.Span[] = [{ type: "text", value: "hello world" }]
-      patchSpans(spans, {
-        action: "splitBlock",
-        path: ["text", 6],
-        index: 6,
-        type: "paragraph",
-        parents: [],
-        attrs: { type: "todo" },
-      })
+      for (const patch of splitBlock(6, { type: "paragraph", parents: [], attrs: { type: new am.RawString("todo") } })(["text"])) {
+        patchSpans(["text"], spans, patch)
+      }
       assert.deepStrictEqual(spans, [
         { type: "text", value: "hello " },
         {
           type: "block",
-          value: { type: "paragraph", parents: [], attrs: { type: "todo" } },
+          value: { type: new am.RawString("paragraph"), parents: [], attrs: { type: new am.RawString("todo") } },
         },
         { type: "text", value: "world" },
       ])
@@ -88,25 +74,20 @@ describe("the patchSpans function", () => {
 
     it("should set the attributes from the patch when not splitting text", () => {
       const spans: am.Span[] = [{ type: "text", value: "hello world" }]
-      patchSpans(spans, {
-        action: "splitBlock",
-        path: ["text", 0],
-        index: 0,
-        type: "paragraph",
-        parents: [],
-        attrs: { type: "todo" },
-      })
+      for (const patch of splitBlock(0, { type: "paragraph", parents: [], attrs: { type: new am.RawString("todo") } })(["text"])) {
+        patchSpans(["text"], spans, patch)
+      }
       assert.deepStrictEqual(spans, [
         {
           type: "block",
-          value: { type: "paragraph", parents: [], attrs: { type: "todo" } },
+          value: { type: new am.RawString("paragraph"), parents: [], attrs: { type: new am.RawString("todo") } },
         },
         { type: "text", value: "hello world" },
       ])
     })
   })
 
-  describe("when handling joinBlock", () => {
+  describe("when deleting a block", () => {
     it("should join two sibling blocks", () => {
       const spans: am.Span[] = [
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
@@ -114,10 +95,9 @@ describe("the patchSpans function", () => {
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
         { type: "text", value: "world" },
       ]
-      patchSpans(spans, {
-        action: "joinBlock",
-        path: ["block", 7],
-        index: 7,
+      patchSpans(["text"], spans, {
+        action: "del",
+        path: ["text", 7],
       })
       assert.deepStrictEqual(spans, [
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
@@ -131,10 +111,9 @@ describe("the patchSpans function", () => {
         { type: "text", value: "hello world" },
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
       ]
-      patchSpans(spans, {
-        action: "joinBlock",
+      patchSpans(["text"], spans, {
+        action: "del",
         path: ["text", 12],
-        index: 12,
       })
       assert.deepStrictEqual(spans, [
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
@@ -150,10 +129,9 @@ describe("the patchSpans function", () => {
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
         { type: "text", value: "next line" },
       ]
-      patchSpans(spans, {
-        action: "joinBlock",
-        path: ["block", 13],
-        index: 13,
+      patchSpans(["text"], spans, {
+        action: "del",
+        path: ["text", 13],
       })
       assert.deepStrictEqual(spans, [
         { type: "block", value: { parents: [], type: "paragraph", attrs: {} } },
@@ -168,28 +146,24 @@ describe("the patchSpans function", () => {
         { type: "block", value: { type: "heading", parents: [], attrs: {} } },
         { type: "text", value: "heading one" },
       ]
-      patchSpans(spans, {
-        action: "joinBlock",
-        path: ["block", 0],
-        index: 0,
+      patchSpans(["text"], spans, {
+        action: "del",
+        path: ["text", 0],
       })
       assert.deepStrictEqual(spans, [{ type: "text", value: "heading one" }])
     })
   })
 
   describe("when handling updateBlock", () => {
-    it("should update the parents", () => {
+    it("should update block marker attributes", () => {
       const spans: am.Span[] = [
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
         { type: "text", value: "item one" },
       ]
-      patchSpans(spans, {
-        action: "updateBlock",
-        path: ["block", 0],
-        new_parents: ["ordered-list-item"],
-        index: 0,
-        new_type: null,
-        new_attrs: null,
+      patchSpans(["text"], spans, {
+        action: "insert",
+        path: ["text", 0, "parents", 0],
+        values: ["ordered-list-item"],
       })
       assert.deepStrictEqual(spans, [
         {
@@ -209,13 +183,10 @@ describe("the patchSpans function", () => {
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
         { type: "text", value: "item one" },
       ]
-      patchSpans(spans, {
-        action: "updateBlock",
-        path: ["block", 0],
-        new_parents: null,
-        index: 0,
-        new_type: "ordered-list-item",
-        new_attrs: null,
+      patchSpans(["text"], spans, {
+        action: "put",
+        path: ["text", 0, "type"],
+        value: "ordered-list-item",
       })
       assert.deepStrictEqual(spans, [
         {
@@ -231,13 +202,10 @@ describe("the patchSpans function", () => {
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
         { type: "text", value: "item one" },
       ]
-      patchSpans(spans, {
-        action: "updateBlock",
-        path: ["block", 0],
-        new_parents: null,
-        index: 0,
-        new_type: null,
-        new_attrs: { type: "todo" },
+      patchSpans(["text"], spans, {
+        action: "put",
+        path: ["text", 0, "attrs", "type"],
+        value: "todo"
       })
       assert.deepStrictEqual(spans, [
         {
@@ -268,8 +236,7 @@ describe("the patchSpans function", () => {
     ]
     const patches: am.Patch[] = [
       {
-        action: "joinBlock",
-        index: 0,
+        action: "del",
         path: ["text", 0],
       },
       {
@@ -278,9 +245,8 @@ describe("the patchSpans function", () => {
         length: 8,
       },
       {
-        action: "joinBlock",
+        action: "del",
         path: ["text", 0],
-        index: 0,
       },
       {
         action: "del",
@@ -289,7 +255,7 @@ describe("the patchSpans function", () => {
       },
     ]
     for (const patch of patches) {
-      patchSpans(spans, patch)
+      patchSpans(["text"], spans, patch)
     }
     assert.deepStrictEqual(spans, [])
   })
