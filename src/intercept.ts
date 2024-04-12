@@ -4,8 +4,10 @@ import { EditorState, Transaction, TextSelection } from "prosemirror-state"
 import pmToAm from "./pmToAm"
 import amToPm from "./amToPm"
 import { DocHandle } from "./DocHandle"
+import { SchemaAdapter } from "./schema"
 
 export function intercept<T>(
+  adapter: SchemaAdapter,
   path: am.Prop[],
   handle: DocHandle<T>,
   intercepted: Transaction,
@@ -25,7 +27,7 @@ export function intercept<T>(
       const step = intercepted.steps[i]
       //console.log(step)
       const pmDoc = intercepted.docs[i]
-      pmToAm(spans, step, d, pmDoc, path)
+      pmToAm(adapter, spans, step, d, pmDoc, path)
     }
   })
 
@@ -42,7 +44,7 @@ export function intercept<T>(
   //console.log(diff)
 
   // Create a transaction which applies the diff and updates the doc and heads
-  let tx = amToPm(state.schema, spansBefore, diff, path, state.tr, true)
+  let tx = amToPm(state.schema, adapter, spansBefore, diff, path, state.tr, true)
   const selectionAfter = state.apply(intercepted).selection
   const resolvedSelectionAfter = new TextSelection(
     tx.doc.resolve(selectionAfter.from),

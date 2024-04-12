@@ -10,11 +10,11 @@ import {
   toggleMark,
   wrapIn,
 } from "prosemirror-commands"
-import { MarkType } from "prosemirror-model"
+import { MarkType, Schema } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import "prosemirror-view/style/prosemirror.css"
 import { next as automerge, Prop } from "@automerge/automerge"
-import { PatchSemaphore, initialize } from "../../src"
+import { AutoMirror } from "../../src"
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo"
 import {
   wrapInList,
@@ -24,7 +24,6 @@ import {
 } from "prosemirror-schema-list"
 import { useHandleReady } from "./useHandleReady"
 //import { schema } from "../../src/schema"
-import { schema } from "../../src"
 import {
   Bold,
   Braces,
@@ -46,6 +45,9 @@ import {
 import Modal from "./Modal"
 import ImageForm from "./ImageForm"
 import LinkForm from "./LinkForm"
+import { basicAdapter } from "../../src/schema"
+
+const schema = basicAdapter.schema
 
 export type EditorProps = {
   name?: string
@@ -53,8 +55,8 @@ export type EditorProps = {
   path: Prop[]
 }
 
-const toggleBold = toggleMarkCommand(schema.marks.strong)
-const toggleItalic = toggleMarkCommand(schema.marks.em)
+const toggleBold = (schema: Schema) => toggleMarkCommand(schema.marks.strong)
+const toggleItalic = (schema: Schema) => toggleMarkCommand(schema.marks.em)
 
 function toggleMarkCommand(mark: MarkType): Command {
   return (
@@ -97,18 +99,23 @@ export function Editor({ name, handle, path }: EditorProps) {
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [linkModalOpen, setLinkModalOpen] = useState(false)
 
+
+  const schema = basicAdapter.schema
+
   useEffect(() => {
     if (!handleReady) {
       return
     }
-    const initialDoc = initialize(handle, path)
+    const autoMirror = new AutoMirror(path, basicAdapter)
+    const initialDoc = autoMirror.initialize(handle)
+
     const editorConfig = {
       schema,
       history,
       plugins: [
         keymap({
-          "Mod-b": toggleBold,
-          "Mod-i": toggleItalic,
+          "Mod-b": toggleBold(autoMirror.schema),
+          "Mod-i": toggleItalic(autoMirror.schema),
           "Mod-l": toggleMark(schema.marks.link, {
             href: "https://example.com",
             title: "example",
@@ -120,13 +127,12 @@ export function Editor({ name, handle, path }: EditorProps) {
       doc: initialDoc,
     }
 
-    const semaphore = new PatchSemaphore(path)
     const state = EditorState.create(editorConfig)
     const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
         //console.log(`${name}: dispatchTransaction`, tx)
-        const newState = semaphore.intercept(handle, tx, view.state)
+        const newState = autoMirror.intercept(handle, tx, view.state)
         view.updateState(newState)
       },
     })
@@ -137,7 +143,7 @@ export function Editor({ name, handle, path }: EditorProps) {
       patchInfo,
     }) => {
       //console.log(`${name}: patch received`)
-      const newState = semaphore.reconcilePatch(
+      const newState = autoMirror.reconcilePatch(
         patchInfo.before,
         doc,
         patches,
@@ -157,13 +163,13 @@ export function Editor({ name, handle, path }: EditorProps) {
 
   const onBoldClicked = () => {
     if (view) {
-      toggleBold(view.state, view.dispatch, view)
+      toggleBold(view.state.schema)(view.state, view.dispatch, view)
     }
   }
 
   const onItalicClicked = () => {
     if (view) {
-      toggleItalic(view.state, view.dispatch, view)
+      toggleItalic(view.state.schema)(view.state, view.dispatch, view)
     }
   }
 

@@ -4,7 +4,9 @@ import { assertSplitBlock, makeDoc, printTree, splitBlock } from "./utils"
 import { ReplaceStep, Step } from "prosemirror-transform"
 import { default as pmToAm } from "../src/pmToAm"
 import { next as am } from "@automerge/automerge"
-import { schema } from "../src/schema"
+import { basicAdapter as adapter } from "../src/schema"
+
+const schema = adapter.schema
 
 describe("when converting a ReplaceStep to a change", () => {
   function updateDoc(
@@ -15,7 +17,7 @@ describe("when converting a ReplaceStep to a change", () => {
     const heads = am.getHeads(amDoc)
     const spans = am.spans(amDoc, ["text"])
     const updatedDoc = am.change(amDoc, d => {
-      pmToAm(spans, step, d, pmDoc, ["text"])
+      pmToAm(adapter, spans, step, d, pmDoc, ["text"])
     })
     return am.diff(amDoc, heads, am.getHeads(updatedDoc))
   }

@@ -9,10 +9,12 @@ import { Node } from "prosemirror-model"
 import { Prop, next as automerge } from "@automerge/automerge"
 import { blocksFromNode, pmRangeToAmRange } from "./traversal"
 import { next as am } from "@automerge/automerge"
+import { SchemaAdapter } from "./schema"
 
 export type ChangeFn<T> = (doc: T, field: string) => void
 
 export default function (
+  adapter: SchemaAdapter,
   spans: am.Span[],
   step: Step,
   doc: any,
@@ -27,7 +29,7 @@ export default function (
     step.constructor.name === "ReplaceStep" ||
     step.constructor.name === "_ReplaceStep"
   ) {
-    replaceStep(spans, step as ReplaceStep, doc, path, pmDoc)
+    replaceStep(adapter, spans, step as ReplaceStep, doc, path, pmDoc)
   } else if (
     step.constructor.name === "ReplaceAroundStep" ||
     step.constructor.name === "_ReplaceAroundStep"
@@ -37,17 +39,18 @@ export default function (
     step.constructor.name === "AddMarkStep" ||
     step.constructor.name === "_AddMarkStep"
   ) {
-    addMarkStep(spans, step as AddMarkStep, doc, path)
+    addMarkStep(adapter, spans, step as AddMarkStep, doc, path)
   } else if (
     step.constructor.name === "RemoveMarkStep" ||
     step.constructor.name === "_RemoveMarkStep"
   ) {
-    removeMarkStep(spans, step as RemoveMarkStep, doc, path)
+    removeMarkStep(adapter, spans, step as RemoveMarkStep, doc, path)
   }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function replaceStep(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   step: ReplaceStep,
   doc: automerge.Doc<unknown>,
@@ -59,7 +62,7 @@ function replaceStep(
     step.slice.content.firstChild?.isText
   ) {
     // This is a text insertion or deletion
-    const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
+    const amRange = pmRangeToAmRange(adapter, spans, { from: step.from, to: step.to })
     if (amRange == null) {
       throw new Error(
         `Could not find range (${step.from}, ${step.to}) in render tree`,
@@ -107,12 +110,13 @@ function replaceAroundStep(
 }
 
 function addMarkStep(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   step: AddMarkStep,
   doc: automerge.Doc<unknown>,
   field: Prop[],
 ) {
-  const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
+  const amRange = pmRangeToAmRange(adapter, spans, { from: step.from, to: step.to })
   if (amRange == null) {
     throw new Error(
       `Could not find range (${step.from}, ${step.to}) in render tree`,
@@ -130,12 +134,13 @@ function addMarkStep(
 }
 
 function removeMarkStep(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   step: RemoveMarkStep,
   doc: automerge.Doc<unknown>,
   field: Prop[],
 ) {
-  const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
+  const amRange = pmRangeToAmRange(adapter, spans, { from: step.from, to: step.to })
   if (amRange == null) {
     throw new Error(
       `Could not find range (${step.from}, ${step.to}) in render tree`,

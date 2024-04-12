@@ -3,11 +3,11 @@ import { next as automerge } from "@automerge/automerge"
 import { EditorState } from "prosemirror-state"
 import { docFromSpans } from "../src/traversal"
 import { Node } from "prosemirror-model"
-import { schema } from "../src/schema"
+import { basicAdapter as adapter } from "../src/schema"
 import { AssertionError } from "assert"
-import {BlockMarker} from "../src/types"
 import {applyBlockPatch} from "../src/maintainSpans"
 import { next as am } from "@automerge/automerge"
+
 
 export type BlockDef = {
   type: string
@@ -46,8 +46,8 @@ export function makeDoc(defs: (string | BlockDef)[]): {
   editor: EditorState
 } {
   const { spans, doc } = docFromBlocksNotation(defs)
-  const pmDoc = docFromSpans(spans)
-  const editor = EditorState.create({ schema, doc: pmDoc })
+  const pmDoc = docFromSpans(adapter, spans)
+  const editor = EditorState.create({ schema: adapter.schema, doc: pmDoc })
   return { spans, doc, editor }
 }
 

@@ -16,6 +16,7 @@ import {
 } from "./traversal"
 import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
 import {pathIsPrefixOf, pathsEqual} from "./pathUtils"
+import { SchemaAdapter } from "./schema"
 
 type SpliceTextPatch = am.SpliceTextPatch
 type InsertPatch = am.InsertPatch
@@ -28,6 +29,7 @@ type MarkPatch = {
 
 export default function (
   schema: Schema,
+  adapter: SchemaAdapter,
   spansAtStart: am.Span[],
   patches: Array<Patch>,
   path: Prop[],
@@ -40,24 +42,24 @@ export default function (
     if (patchGroup.type === "text") {
       for (const patch of patchGroup.patches) {
         if (patch.action === "splice") {
-          result = handleSplice(schema, spansAtStart, patch, path, result, isLocal)
+          result = handleSplice(schema, adapter, spansAtStart, patch, path, result, isLocal)
           patchSpans(path, spansAtStart, patch)
         } else if (patch.action === "del") {
           const patchIndex = patch.path[patch.path.length - 1] as number
           const block = findBlockAtCharIdx(spansAtStart, patchIndex)
           if (block != null) {
-            handleBlockChange(schema, path, spansAtStart, patchIndex, [patch], tx, isLocal)
+            handleBlockChange(schema, adapter, path, spansAtStart, patchIndex, [patch], tx, isLocal)
           } else {
-            handleDelete(schema, spansAtStart, patch, path, result)
+            handleDelete(schema, adapter, spansAtStart, patch, path, result)
           }
           patchSpans(path, spansAtStart, patch)
         } else if (patch.action === "mark") {
-          result = handleMark(spansAtStart, schema, patch, path, result)
+          result = handleMark(spansAtStart, schema, adapter, patch, path, result)
           patchSpans(path, spansAtStart, patch)
         }
       }
     } else {
-      handleBlockChange(schema, path, spansAtStart, patchGroup.index, patchGroup.patches, tx, isLocal)
+      handleBlockChange(schema, adapter, path, spansAtStart, patchGroup.index, patchGroup.patches, tx, isLocal)
     }
   }
   return result
@@ -65,6 +67,7 @@ export default function (
 
 export function handleSplice(
   schema: Schema,
+  adapter: SchemaAdapter,
   spans: am.Span[],
   patch: SpliceTextPatch,
   path: Prop[],
@@ -73,7 +76,7 @@ export function handleSplice(
 ): Transaction {
   const index = charPath(path, patch.path)
   if (index === null) return tx
-  const pmIdx = amSpliceIdxToPmIdx(spans, index)
+  const pmIdx = amSpliceIdxToPmIdx(adapter, spans, index)
   if (pmIdx == null) throw new Error("Invalid index")
   const content = patchContentToFragment(schema, patch.value, patch.marks)
   tx = tx.replace(pmIdx, pmIdx, new Slice(content, 0, 0))
@@ -86,6 +89,7 @@ export function handleSplice(
 
 function handleDelete(
   schema: Schema,
+  adapter: SchemaAdapter,
   spans: am.Span[],
   patch: DelPatch,
   path: Prop[],
@@ -93,7 +97,7 @@ function handleDelete(
 ): Transaction {
   const index = charPath(path, patch.path)
   if (index === null) return tx
-  const start = amSpliceIdxToPmIdx(spans, index)
+  const start = amSpliceIdxToPmIdx(adapter, spans, index)
   if (start == null) throw new Error("Invalid index")
   const end = start + (patch.length || 1)
   return tx.delete(start, end)
@@ -102,14 +106,15 @@ function handleDelete(
 function handleMark(
   spans: am.Span[],
   schema: Schema,
+  adapter: SchemaAdapter,
   patch: MarkPatch,
   path: Prop[],
   tx: Transaction,
 ) {
   if (pathEquals(patch.path, path)) {
     for (const mark of patch.marks) {
-      const pmStart = amSpliceIdxToPmIdx(spans, mark.start)
-      const pmEnd = amSpliceIdxToPmIdx(spans, mark.end)
+      const pmStart = amSpliceIdxToPmIdx(adapter, spans, mark.start)
+      const pmEnd = amSpliceIdxToPmIdx(adapter, spans, mark.end)
       if (pmStart == null || pmEnd == null) throw new Error("Invalid index")
       const markType = schema.marks[mark.name]
       if (markType == null) continue
@@ -126,6 +131,7 @@ function handleMark(
 
 export function handleBlockChange(
   schema: Schema,
+  adapter: SchemaAdapter,
   atPath: am.Prop[],
   spans: am.Span[],
   blockIdx: number,
@@ -136,7 +142,7 @@ export function handleBlockChange(
   for (const patch of patches) {
     patchSpans(atPath, spans, patch)
   }
-  const docAfter = docFromSpans(spans)
+  const docAfter = docFromSpans(adapter, spans)
   const change = findDiff(tx.doc.content, docAfter.content)
   if (change == null) return tx
 
@@ -174,7 +180,7 @@ export function handleBlockChange(
     tx = tx.replace(chFrom, chTo, docAfter.slice(change.start, change.endB))
   }
   if (isLocal) {
-    const pmBlockIdx = amIdxToPmBlockIdx(spans, blockIdx)
+    const pmBlockIdx = amIdxToPmBlockIdx(adapter, spans, blockIdx)
     if (pmBlockIdx == null) throw new Error("Invalid index")
     tx = tx.setSelection(TextSelection.create(tx.doc, pmBlockIdx))
   }

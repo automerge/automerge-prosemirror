@@ -3,7 +3,10 @@ import { default as amToPm } from "../src/amToPm"
 import { EditorState } from "prosemirror-state"
 import { BlockDef, makeDoc, printTree, splitBlock, updateBlockType } from "./utils"
 import { next as am } from "@automerge/automerge"
-import { schema } from "../src/schema"
+import {basicAdapter as adapter} from "../src/schema"
+
+const schema = adapter.schema
+
 
 type PerformPatchArgs = {
   initialDoc: (string | BlockDef)[]
@@ -25,7 +28,7 @@ function performPatch({
       amPatches.push(patchOrFactory)
     }
   }
-  const tx = amToPm(schema, spans, amPatches, ["text"], editor.tr, !!isLocal)
+  const tx = amToPm(schema, adapter, spans, amPatches, ["text"], editor.tr, !!isLocal)
   return editor.apply(tx)
 }
 

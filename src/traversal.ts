@@ -1,5 +1,5 @@
 import { next as am } from "@automerge/automerge"
-import { Mark, Node, Schema } from "prosemirror-model"
+import { Mark, Node, NodeType, Schema } from "prosemirror-model"
 import {
   isBlockMarker,
   BlockType,
@@ -7,8 +7,10 @@ import {
   Span,
   amSpanToSpan,
 } from "./types"
-import { schema } from "./schema"
+import { basicAdapter as adapter, SchemaAdapter } from "./schema"
 import { attrsFromMark } from "./amToPm"
+
+const schema = adapter.schema
 
 type RenderRole = "explicit" | "render-only"
 
@@ -30,8 +32,8 @@ export type TraversalEvent =
       }
     }
 
-export function docFromSpans(spans: am.Span[]): Node {
-  const events = traverseSpans(spans)
+export function docFromSpans(adapter: SchemaAdapter, spans: am.Span[]): Node {
+  const events = traverseSpans(adapter, spans)
   type StackItem = {
     tag: string
     attrs: { [key: string]: any }
@@ -111,10 +113,11 @@ function constructNode(
 }
 
 export function amSpliceIdxToPmIdx(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   target: number,
 ): number | null {
-  const events = eventsWithIndexChanges(traverseSpans(spans))
+  const events = eventsWithIndexChanges(traverseSpans(adapter, spans))
   let maxInsertableIndex = null
 
   for (const state of events) {
@@ -141,10 +144,11 @@ export function amSpliceIdxToPmIdx(
 }
 
 export function amIdxToPmBlockIdx(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   target: number,
 ): number | null {
-  const events = eventsWithIndexChanges(traverseSpans(spans))
+  const events = eventsWithIndexChanges(traverseSpans(adapter, spans))
   let lastBlockStart = null
   let isFirstTag = true
 
@@ -387,6 +391,7 @@ function findParents(parentNodes: Node[]): string[] {
 }
 
 export function* traverseSpans(
+  adapter: SchemaAdapter,
   amSpans: am.Span[],
 ): IterableIterator<TraversalEvent> {
   const blockSpans = amSpans.map(amSpanToSpan)
@@ -402,25 +407,31 @@ export function* traverseSpans(
   function* inner(
     spans: Span[],
     enclosingBlock: BlockMarker | null = null,
+    enclosingNode: NodeType,
   ): IterableIterator<TraversalEvent> {
     let lastBlock: BlockMarker | null = null
+    let lastNode: NodeType | null = null
 
     while (spans.length > 0) {
       //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const span = spans.shift()!
       if (span.type === "text") {
+        const wrappers = enclosingNode.contentMatch.findWrapping(adapter.schema.nodes.text)
+        if (wrappers == null) {
+          throw new Error("unable to insert text node")
+        }
         const textSpans = [
           { value: span.value, marks: span.marks },
           ...popTextSpans(spans),
         ]
-        if (enclosingBlock == null) {
-          yield { type: "openTag", tag: "paragraph", role: "render-only" }
+        for (const wrapper of wrappers) {
+          yield { type: "openTag", tag: wrapper.name, role: "render-only" }
         }
         for (const text of textSpans) {
           yield { type: "text", text: text.value, marks: text.marks || {} }
         }
-        if (enclosingBlock == null) {
-          yield { type: "closeTag", tag: "paragraph", role: "render-only" }
+        for (const wrapper of wrappers.toReversed()) {
+          yield { type: "closeTag", tag: wrapper.name, role: "render-only" }
         }
       } else if (span.type === "block") {
         let subSpans: Span[] = []
@@ -490,7 +501,7 @@ export function* traverseSpans(
                   `wrapping not found for ${subNext.value.type} inside ${span.value.type} following ${lastBlock}`,
                 )
               yield* wrapping.before
-              yield* inner(subSpans, span.value)
+              yield* inner(subSpans, span.value, enclosingNode)
               yield* wrapping.after
             }
             lastBlock = subNext
@@ -513,7 +524,7 @@ export function* traverseSpans(
       }
     }
   }
-  yield* inner(spanQueue, null)
+  yield* inner(spanQueue, null, adapter.schema.nodes.doc)
 }
 
 function blockEvent(block: BlockMarker): TraversalEvent {
@@ -861,10 +872,11 @@ function openInnerWrappers(
 }
 
 export function pmRangeToAmRange(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   { from, to }: { from: number; to: number },
 ): { start: number; end: number } | null {
-  const events = eventsWithIndexChanges(traverseSpans(spans))
+  const events = eventsWithIndexChanges(traverseSpans(adapter, spans))
   let amStart = null
   let amEnd = null
   let maxPmIdxSeen = null

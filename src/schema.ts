@@ -1,17 +1,6 @@
-import { NodeSpec, Schema, DOMOutputSpec, MarkSpec } from "prosemirror-model"
-
-function addIsAmgBlockAttr(nodes: { [key: string]: NodeSpec }): {
-  [key: string]: NodeSpec
-} {
-  for (const [_, node] of Object.entries(nodes)) {
-    if (node.content) {
-      node.attrs
-        ? (node.attrs.isAmgBlock = { default: false })
-        : (node.attrs = { isAmgBlock: { default: false } })
-    }
-  }
-  return nodes
-}
+import { NodeSpec, Schema, DOMOutputSpec, MarkSpec, Node, NodeType } from "prosemirror-model"
+import { BlockMarker } from "./types"
+import { next as am } from "@automerge/automerge"
 
 // basics
 const pDOM: DOMOutputSpec = ["p", 0]
@@ -29,8 +18,8 @@ const olDOM: DOMOutputSpec = ["ol", 0]
 const ulDOM: DOMOutputSpec = ["ul", 0]
 const liDOM: DOMOutputSpec = ["li", 0]
 
-export const schema = new Schema({
-  nodes: addIsAmgBlockAttr({
+const schema = new Schema({
+  nodes: {
     /// NodeSpec The top level document node.
     doc: {
       content: "block+",
@@ -189,7 +178,7 @@ export const schema = new Schema({
         return ["aside", 0]
       },
     },
-  }),
+  },
   marks: {
     /// A link. Has `href` and `title` attributes. `title`
     /// defaults to the empty string. Rendered and parsed as an `<a>`
@@ -265,3 +254,181 @@ export const schema = new Schema({
     } as MarkSpec,
   },
 })
+
+
+type NodeTemplate = {
+  type: NodeType,
+  attrs: { [key: string]: am.MaterializeValue }
+  isEmbed?: boolean
+  requiredParents?: NodeType[]
+}
+
+type BlockParser = (schema: Schema, block: BlockMarker) => NodeTemplate | undefined
+
+export type SchemaAdapterConfig = {
+  original: Schema,
+  blockParsers: { [key: string]: BlockParser }
+  unknownParser: (schema: Schema, block: BlockMarker) => NodeTemplate,
+  renderNode: (schema: Schema, node: Node) => { type: string, attrs: { [key: string]: am.MaterializeValue } },
+}
+
+export class SchemaAdapter {
+  #originalSchema: Schema
+  #adaptedSchema: Schema
+  #blockParsers: { [key: string]: BlockParser }
+  #unknownParser: BlockParser
+
+  constructor(config: SchemaAdapterConfig) {
+    this.#originalSchema = config.original
+    this.#blockParsers = config.blockParsers
+    this.#unknownParser = config.unknownParser
+    const markSpecs: { [key: string]: MarkSpec } = {}
+    for (const [key, mark] of Object.entries(config.original.marks)) {
+      markSpecs[key] = mark.spec
+    }
+    this.#adaptedSchema = new Schema({
+      nodes: addIsAmgBlockAttr(config.original.spec.nodes.toObject()),
+      marks: config.original.spec.marks,
+    })
+  }
+
+  get schema() {
+    return this.#adaptedSchema
+  }
+}
+
+function addIsAmgBlockAttr(nodes: { [key: string]: NodeSpec }): {
+  [key: string]: NodeSpec
+} {
+  for (const [_, node] of Object.entries(nodes)) {
+    if (node.content) {
+      node.attrs
+        ? (node.attrs.isAmgBlock = { default: false })
+        : (node.attrs = { isAmgBlock: { default: false } })
+    }
+  }
+  return nodes
+}
+
+const basicAdapterConfig: SchemaAdapterConfig = {
+  original: schema,
+  blockParsers: {
+    "paragraph": (schema: Schema, block) => {
+      return {
+        type: schema.nodes.paragraph,
+        attrs: {}
+      }
+    },
+    "heading": (schema: Schema, block) => {
+      let level = 1
+      if (block.attrs.level && (typeof block.attrs.level === "number")) {
+        level = block.attrs.level
+      }
+      return {
+        type: schema.nodes.heading,
+        attrs: { level }
+      }
+    },
+    "blockquote": (schema: Schema, block) => {
+      return {
+        type: schema.nodes.blockquote,
+        attrs: {}
+      }
+    },
+    "horizontal_rule": (schema: Schema, block) => {
+      return {
+        type: schema.nodes.horizontal_rule,
+        attrs: {},
+        isEmbed: true,
+      }
+    },
+    "code_block": (schema: Schema, block) => {
+      return {
+        type: schema.nodes.code_block,
+        attrs: {},
+      }
+    },
+    "image": (schema: Schema, block) => {
+      let src = ""
+      let alt = ""
+      let title = ""
+
+      if (block.attrs.src && (block.attrs.src instanceof am.RawString)) {
+        src = block.attrs.src.val
+      }
+
+      if (block.attrs.alt && (block.attrs.alt instanceof am.RawString)) {
+        alt = block.attrs.alt.val
+      }
+
+      if (block.attrs.title && (typeof block.attrs.title === "string")) {
+        title = block.attrs.title
+      }
+
+      return {
+        type: schema.nodes.image,
+        attrs: {
+          src,
+          alt,
+          title,
+        }
+      }
+    },
+    "ordered-list-item": (schema: Schema, block) => {
+      return {
+        type: schema.nodes.list_item,
+        attrs: {},
+        requiredParents: [schema.nodes.ordered_list]
+      }
+    },
+    "unordered-list-item": (schema: Schema, block) => {
+      return {
+        type: schema.nodes.list_item,
+        attrs: {},
+        requiredParents: [schema.nodes.bullet_list]
+      }
+    },
+  },
+  unknownParser(schema, block) {
+    return {
+      type: schema.nodes.paragraph,
+      attrs: {}
+    }
+  },
+  renderNode: (schema: Schema, node: Node) => {
+    switch (node.type.name) {
+      case "paragraph":
+        return { type: "paragraph", attrs: {} }
+      case "heading":
+        //return { type: "heading", attrs: { level: (typeof node.attrs.level === "number")? node.attrs.level : 1 } }
+        return { type: "heading", attrs: {} }
+      case "blockquote":
+        return { type: "blockquote", attrs: {} }
+      case "horizontal_rule":
+        return { type: "horizontal_rule", attrs: {} }
+      case "code_block":
+        return { type: "code_block", attrs: {} }
+      case "image": {
+        const attrs: { [key: string]: am.MaterializeValue } = {
+          src: new am.RawString(node.attrs.src as string),
+          alt: new am.RawString(node.attrs.alt as string),
+          title: node.attrs.title as string
+        }
+        return {
+          type: "image",
+          attrs,
+        }
+      }
+      case "ordered_list":
+        return { type: "ordered_list", attrs: {} }
+      case "bullet_list":
+        return { type: "bullet_list", attrs: {} }
+      case "list_item":
+        return { type: "list_item", attrs: {} }
+      default:
+        return { type: "paragraph", attrs: {} }
+    }
+  }
+}
+
+export const basicAdapter = new SchemaAdapter(basicAdapterConfig)
