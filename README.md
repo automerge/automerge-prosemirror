@@ -22,7 +22,6 @@ This work is based on the `@automerge/automerge@2.2.0-rc.2` package, so you'll n
 
 There is a fully functional editor in this repository, you can play with that by running `yarn playground` and then visiting `http://localhost:5173`.
 
-
 ## Example
 
 The API for this library is based around a (slightly misnamed) object called a `PatchSemaphore`. This object is used to intercept transactions from Prosemirror and to handle changes received over the network. This is best used in tandem with `@automerge/automerge-repo`. See the `playground/src/Editor.tsx` file for a fully featured example.
@@ -30,7 +29,6 @@ The API for this library is based around a (slightly misnamed) object called a `
 The workflow when using this plugin is to first initialize the document using `initialize` and then use `PatchSemaphore.intercept` to intercept local transactions and `PatchSemaphore.reconcilePatch` to handle changes received from the network.
 
 For example
-
 
 ```javascript
 import {initialize, PatchSemaphore} from "@automerge/prosemirror"

@@ -193,7 +193,9 @@ describe("the traversal API", () => {
             parents: [new am.RawString("paragraph")],
             attrs: {
               alt: "Andromeda Galaxy",
-              src: new am.RawString("https://archive.org/services/img/Hubble_Andromeda_Galaxy_"),
+              src: new am.RawString(
+                "https://archive.org/services/img/Hubble_Andromeda_Galaxy_",
+              ),
               title: "Andromeda Galaxy",
             },
             isEmbed: true,
@@ -765,7 +767,14 @@ describe("the traversal API", () => {
 
     it("should return the correct events for a paragraph followed by a nested list item", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+          },
+        },
         { type: "text", value: "paragraph" },
         {
           type: "block",
@@ -817,7 +826,14 @@ describe("the traversal API", () => {
 
     it("a list item between two paragraphs", () => {
       const spans: am.Span[] = [
-        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+          },
+        },
         { type: "text", value: "item 1" },
         {
           type: "block",
@@ -828,7 +844,14 @@ describe("the traversal API", () => {
           },
         },
         { type: "text", value: "item 2" },
-        { type: "block", value: { type: new am.RawString("paragraph"), parents: [], attrs: {} } },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+          },
+        },
         { type: "text", value: "item 3" },
       ]
       const events = Array.from(traverseSpans(spans))
@@ -976,7 +999,11 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: new am.RawString("ordered-list-item"), parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("ordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
         {
           type: "block",
@@ -1041,7 +1068,11 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: new am.RawString("unordered-list-item"), parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("unordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
         { type: "text", value: "item 1" },
         {
@@ -1106,7 +1137,11 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: new am.RawString("unordered-list-item"), parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("unordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
         { type: "text", value: "hello " },
         { type: "text", value: "world" },
@@ -1137,7 +1172,12 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: new am.RawString("aside"), parents: [], attrs: {}, isEmbed: false },
+          value: {
+            type: new am.RawString("aside"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
       ]
       const events = Array.from(traverseSpans(spans))
@@ -1340,7 +1380,12 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: new am.RawString("paragraph"), parents: [], attrs: {}, isEmbed: false },
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         {
           type: "block",
@@ -1394,13 +1439,20 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             type: new am.RawString("paragraph"),
-            parents: [new am.RawString("blockquote"), new am.RawString("unordered-list-item")],
+            parents: [
+              new am.RawString("blockquote"),
+              new am.RawString("unordered-list-item"),
+            ],
             attrs: {},
           },
         },
         {
           type: "block",
-          value: { type: new am.RawString("paragraph"), parents: [new am.RawString("blockquote")], attrs: {} },
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("blockquote")],
+            attrs: {},
+          },
         },
         { type: "text", value: "hello" },
       ]
@@ -1442,7 +1494,12 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: new am.RawString("code-block"), parents: [], attrs: {}, isEmbed: false },
+          value: {
+            type: new am.RawString("code-block"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
         },
         { type: "text", value: "var x" },
       ]
@@ -1467,12 +1524,21 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: new am.RawString("heading"), parents: [], attrs: { level: 1 }, isEmbed: false },
+          value: {
+            type: new am.RawString("heading"),
+            parents: [],
+            attrs: { level: 1 },
+            isEmbed: false,
+          },
         },
         { type: "text", value: "heading" },
         {
           type: "block",
-          value: { type: new am.RawString("paragraph"), parents: [new am.RawString("ordered-list-item")], attrs: {} },
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("ordered-list-item")],
+            attrs: {},
+          },
         },
         { type: "text", value: "some text" },
       ]
@@ -2634,7 +2700,11 @@ describe("the traversal API", () => {
         { type: "text", value: "item 1" },
         {
           type: "block",
-          value: { type: new am.RawString("unordered-list-item"), parents: [], attrs: {} },
+          value: {
+            type: new am.RawString("unordered-list-item"),
+            parents: [],
+            attrs: {},
+          },
         },
       ])
     })

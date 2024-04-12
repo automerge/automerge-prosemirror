@@ -1,7 +1,13 @@
 import { assert } from "chai"
 import { default as amToPm } from "../src/amToPm"
 import { EditorState } from "prosemirror-state"
-import { BlockDef, makeDoc, printTree, splitBlock, updateBlockType } from "./utils"
+import {
+  BlockDef,
+  makeDoc,
+  printTree,
+  splitBlock,
+  updateBlockType,
+} from "./utils"
 import { next as am } from "@automerge/automerge"
 import { schema } from "../src/schema"
 
@@ -149,21 +155,21 @@ describe("the amToPm function", () => {
     it("should calculate the correct index when deleting the first block", () => {
       const patched = performPatch({
         initialDoc: [
-          { type: "heading", parents: [], attrs: {level: 1} },
+          { type: "heading", parents: [], attrs: { level: 1 } },
           "Untitled",
         ],
         patches: [
           {
             action: "del",
             path: ["text", 1],
-            length: 8
+            length: 8,
           },
           {
             action: "splice",
             path: ["text", 1],
             value: "a",
-          }
-        ]
+          },
+        ],
       }).doc
       assert.isTrue(
         patched.eq(
@@ -208,9 +214,7 @@ describe("the amToPm function", () => {
     it("should insert new paragraphs at the top level", () => {
       const patched = performPatch({
         initialDoc: ["hello world"],
-        patches: [
-          splitBlock(6, { type: "paragraph", parents: [], attrs: {} }),
-        ],
+        patches: [splitBlock(6, { type: "paragraph", parents: [], attrs: {} })],
       }).doc
 
       assert.isTrue(
@@ -230,9 +234,7 @@ describe("the amToPm function", () => {
     it("should convert a top level inferred para to explicit if a splitblock arrives at the top level", () => {
       const patched = performPatch({
         initialDoc: ["hello world"],
-        patches: [
-          splitBlock(0, { type: "paragraph", parents: [], attrs: {} }),
-        ],
+        patches: [splitBlock(0, { type: "paragraph", parents: [], attrs: {} })],
       }).doc
 
       assert.isTrue(
@@ -336,7 +338,11 @@ describe("the amToPm function", () => {
           { type: "ordered-list-item", parents: [], attrs: {} },
         ],
         patches: [
-          splitBlock(15, { type: "paragraph", parents: ["ordered-list-item"], attrs: {} }),
+          splitBlock(15, {
+            type: "paragraph",
+            parents: ["ordered-list-item"],
+            attrs: {},
+          }),
         ],
       })
 
@@ -362,9 +368,7 @@ describe("the amToPm function", () => {
     it("should update selection to point at the newly inserted block when local", () => {
       const patched = performPatch({
         initialDoc: [{ type: "paragraph", parents: [], attrs: {} }, "item 1"],
-        patches: [
-          splitBlock(7, { type: "paragraph", parents: [], attrs: {} }),
-        ],
+        patches: [splitBlock(7, { type: "paragraph", parents: [], attrs: {} })],
         isLocal: true,
       })
 
@@ -384,9 +388,7 @@ describe("the amToPm function", () => {
     it("should split the text in a paragraph", () => {
       const patched = performPatch({
         initialDoc: [{ type: "paragraph", parents: [], attrs: {} }, "item 1"],
-        patches: [
-          splitBlock(4, { type: "paragraph", parents: [], attrs: {} }),
-        ],
+        patches: [splitBlock(4, { type: "paragraph", parents: [], attrs: {} })],
       }).doc
 
       assert.isTrue(
@@ -506,9 +508,7 @@ describe("the amToPm function", () => {
           { type: "ordered-list-item", parents: [], attrs: {} },
           "item one",
         ],
-        patches: [
-          updateBlockType(0, "paragraph"),
-        ],
+        patches: [updateBlockType(0, "paragraph")],
       }).doc
 
       assert.isTrue(
@@ -530,9 +530,7 @@ describe("the amToPm function", () => {
           { type: "ordered-list-item", parents: [], attrs: {} },
           "item two",
         ],
-        patches: [
-          updateBlockType(9, "paragraph"),
-        ],
+        patches: [updateBlockType(9, "paragraph")],
       }).doc
 
       //
@@ -557,9 +555,7 @@ describe("the amToPm function", () => {
     it("should convert a sole paragraph into a list item", () => {
       const patched = performPatch({
         initialDoc: [{ type: "paragraph", parents: [], attrs: {} }, "item one"],
-        patches: [
-          updateBlockType(0, "ordered-list-item"),
-        ],
+        patches: [updateBlockType(0, "ordered-list-item")],
       }).doc
 
       assert.isTrue(

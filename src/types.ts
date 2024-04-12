@@ -37,7 +37,7 @@ export function validBlockType(type: unknown): type is BlockType {
     "heading",
     "aside",
     "image",
-    "blockquote"
+    "blockquote",
   ].includes(type.val)
 }
 
@@ -48,15 +48,22 @@ export type BlockMarker = {
   isEmbed?: boolean
 }
 
-export function blockSpanToBlockMarker(span: {[key: string]: am.MaterializeValue}): BlockMarker {
-  const { type: spanType, parents: spanParents, attrs: spanAttrs, isEmbed: spanIsEmbed } = span
+export function blockSpanToBlockMarker(span: {
+  [key: string]: am.MaterializeValue
+}): BlockMarker {
+  const {
+    type: spanType,
+    parents: spanParents,
+    attrs: spanAttrs,
+    isEmbed: spanIsEmbed,
+  } = span
   let type
   if (!(spanType instanceof am.RawString)) {
     type = new am.RawString("paragraph")
   } else {
     type = spanType
   }
-  const attrs: {[key: string]: am.MaterializeValue} = {}
+  const attrs: { [key: string]: am.MaterializeValue } = {}
   if (spanAttrs && typeof spanAttrs == "object") {
     for (const [key, value] of Object.entries(spanAttrs)) {
       attrs[key] = value
@@ -84,12 +91,14 @@ function isArrayOfRawString(obj: unknown): obj is am.RawString[] {
   return true
 }
 
-export type Span = { type: "text", value: string, marks?: am.MarkSet } | {type: "block", value: BlockMarker}
+export type Span =
+  | { type: "text"; value: string; marks?: am.MarkSet }
+  | { type: "block"; value: BlockMarker }
 
 export function amSpanToSpan(span: am.Span): Span {
   if (span.type === "text") {
     return { type: "text", value: span.value, marks: span.marks }
   } else {
-    return {type: "block", value: blockSpanToBlockMarker(span.value)}
+    return { type: "block", value: blockSpanToBlockMarker(span.value) }
   }
 }

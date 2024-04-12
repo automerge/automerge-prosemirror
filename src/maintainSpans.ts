@@ -1,5 +1,5 @@
 import { next as am } from "@automerge/automerge"
-import {pathIsPrefixOf, pathsEqual} from "./pathUtils"
+import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
 
 export function patchSpans(
   atPath: am.Prop[],
@@ -17,7 +17,7 @@ export function patchSpans(
         insertBlock(spans, patch)
       } else if (patch.action === "del") {
         deleteSpans(spans, patch)
-      } 
+      }
     } else {
       const index = patch.path[atPath.length]
       if (typeof index !== "number") {

@@ -23,4 +23,3 @@ export function pathIsPrefixOf(prefix: am.Prop[], path: am.Prop[]): boolean {
   }
   return true
 }
-

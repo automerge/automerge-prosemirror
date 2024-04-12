@@ -67,7 +67,7 @@ function replaceStep(
     }
     let { start, end } = amRange
     if (start > end) {
-      [start, end] = [end, start]
+      ;[start, end] = [end, start]
     }
 
     const toDelete = end - start

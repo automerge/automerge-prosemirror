@@ -5,8 +5,8 @@ import { docFromSpans } from "../src/traversal"
 import { Node } from "prosemirror-model"
 import { schema } from "../src/schema"
 import { AssertionError } from "assert"
-import {BlockMarker} from "../src/types"
-import {applyBlockPatch} from "../src/maintainSpans"
+import { BlockMarker } from "../src/types"
+import { applyBlockPatch } from "../src/maintainSpans"
 import { next as am } from "@automerge/automerge"
 
 export type BlockDef = {
@@ -80,7 +80,10 @@ export function printTree(
   }
 }
 
-export function splitBlock(index: number, block: BlockDef): ((_: automerge.Prop[]) => automerge.Patch[]) {
+export function splitBlock(
+  index: number,
+  block: BlockDef,
+): (_: automerge.Prop[]) => automerge.Patch[] {
   return (path: automerge.Prop[]): automerge.Patch[] => {
     const patches: automerge.Patch[] = [
       {
@@ -102,14 +105,14 @@ export function splitBlock(index: number, block: BlockDef): ((_: automerge.Prop[
         action: "put",
         path: path.concat([index, "attrs"]),
         value: {},
-      }
+      },
     ]
 
     for (const [key, value] of Object.entries(block.attrs)) {
       patches.push({
         action: "put",
         path: path.concat([index, "attrs", key]),
-        value: value
+        value: value,
       })
     }
 
@@ -125,21 +128,29 @@ export function splitBlock(index: number, block: BlockDef): ((_: automerge.Prop[
   }
 }
 
-export function updateBlockType(index: number, newType: string): ((_: automerge.Prop[]) => automerge.Patch[]) {
+export function updateBlockType(
+  index: number,
+  newType: string,
+): (_: automerge.Prop[]) => automerge.Patch[] {
   return (path: automerge.Prop[]): automerge.Patch[] => {
     return [
       {
         action: "put",
         path: path.concat([index, "type"]),
         value: new am.RawString(newType),
-      }
+      },
     ]
   }
 }
 
-
-export function assertSplitBlock(diff: automerge.Patch[], path: automerge.Prop[], expected: BlockDef) {
-  const start = diff.findIndex(patch => patch.action === "insert" && pathEquals(patch.path, path))
+export function assertSplitBlock(
+  diff: automerge.Patch[],
+  path: automerge.Prop[],
+  expected: BlockDef,
+) {
+  const start = diff.findIndex(
+    patch => patch.action === "insert" && pathEquals(patch.path, path),
+  )
   if (start === -1) {
     throw new AssertionError({
       message: "no insert patch found for path: " + path,
@@ -161,7 +172,10 @@ export function assertSplitBlock(diff: automerge.Patch[], path: automerge.Prop[]
   assert.deepStrictEqual(block, expectedSpan)
 }
 
-function interpretPatch(diff: automerge.Patch[], path: automerge.Prop[]): {[key: string]: automerge.MaterializeValue} {
+function interpretPatch(
+  diff: automerge.Patch[],
+  path: automerge.Prop[],
+): { [key: string]: automerge.MaterializeValue } {
   const block = {}
   const blockPatches = diff.filter(p => pathIsPrefixOf(path, p.path))
 
@@ -179,7 +193,10 @@ function pathEquals(left: automerge.Prop[], right: automerge.Prop[]): boolean {
   return true
 }
 
-function pathIsPrefixOf(prefix: automerge.Prop[], path: automerge.Prop[]): boolean {
+function pathIsPrefixOf(
+  prefix: automerge.Prop[],
+  path: automerge.Prop[],
+): boolean {
   if (prefix.length > path.length) return false
   for (let i = 0; i < prefix.length; i++) {
     if (prefix[i] !== path[i]) return false

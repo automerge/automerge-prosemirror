@@ -789,11 +789,17 @@ function findWrapping(
     } else if (block.type === "block") {
       let lastBlockType = null
       if (lastBlock != null) {
-        if (lastBlock.type == "block" && lastBlock.value.type instanceof am.RawString) {
+        if (
+          lastBlock.type == "block" &&
+          lastBlock.value.type instanceof am.RawString
+        ) {
           lastBlockType = lastBlock.value.type.val
         }
       }
-      const blockType = block.value.type instanceof am.RawString ? block.value.type.val : "paragraph"
+      const blockType =
+        block.value.type instanceof am.RawString
+          ? block.value.type.val
+          : "paragraph"
       if (blockType === "paragraph") {
         return {
           before: [],
@@ -978,7 +984,7 @@ export function blocksFromNode(node: Node): (
   | {
       type: "block"
       value: {
-        type: am.RawString,
+        type: am.RawString
         parents: am.RawString[]
         attrs: { [key: string]: BlockAttrValue }
       }

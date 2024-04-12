@@ -40,7 +40,10 @@ export default class PatchSemaphore<T> {
     //console.log(patches)
     const headsBefore = automerge.getHeads(docBefore)
 
-    const spans = automerge.spans(automerge.view(docAfter, headsBefore), this.path)
+    const spans = automerge.spans(
+      automerge.view(docAfter, headsBefore),
+      this.path,
+    )
     const tx = amToPm(state.schema, spans, patches, this.path, state.tr, false)
     return state.apply(tx)
   }

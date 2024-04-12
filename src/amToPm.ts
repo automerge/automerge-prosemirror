@@ -15,7 +15,7 @@ import {
   docFromSpans,
 } from "./traversal"
 import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
-import {pathIsPrefixOf, pathsEqual} from "./pathUtils"
+import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
 
 type SpliceTextPatch = am.SpliceTextPatch
 type InsertPatch = am.InsertPatch
@@ -40,13 +40,28 @@ export default function (
     if (patchGroup.type === "text") {
       for (const patch of patchGroup.patches) {
         if (patch.action === "splice") {
-          result = handleSplice(schema, spansAtStart, patch, path, result, isLocal)
+          result = handleSplice(
+            schema,
+            spansAtStart,
+            patch,
+            path,
+            result,
+            isLocal,
+          )
           patchSpans(path, spansAtStart, patch)
         } else if (patch.action === "del") {
           const patchIndex = patch.path[patch.path.length - 1] as number
           const block = findBlockAtCharIdx(spansAtStart, patchIndex)
           if (block != null) {
-            handleBlockChange(schema, path, spansAtStart, patchIndex, [patch], tx, isLocal)
+            handleBlockChange(
+              schema,
+              path,
+              spansAtStart,
+              patchIndex,
+              [patch],
+              tx,
+              isLocal,
+            )
           } else {
             handleDelete(schema, spansAtStart, patch, path, result)
           }
@@ -57,7 +72,15 @@ export default function (
         }
       }
     } else {
-      handleBlockChange(schema, path, spansAtStart, patchGroup.index, patchGroup.patches, tx, isLocal)
+      handleBlockChange(
+        schema,
+        path,
+        spansAtStart,
+        patchGroup.index,
+        patchGroup.patches,
+        tx,
+        isLocal,
+      )
     }
   }
   return result
@@ -286,28 +309,36 @@ export function attrsFromMark(mark: am.MarkValue): Attrs | null {
 type GatheredPatch = TextPatches | BlockPatches
 
 type TextPatches = {
-  type: "text",
+  type: "text"
   patches: (am.SpliceTextPatch | am.DelPatch | am.MarkPatch)[]
 }
 
 type BlockPatches = {
-  type: "block",
-  index: number,
+  type: "block"
+  index: number
   patches: am.Patch[]
 }
 
 function gatherPatches(textPath: am.Prop[], diff: am.Patch[]): GatheredPatch[] {
   const result: GatheredPatch[] = []
 
-  type State = { type: "gatheringBlock", index: number, gathered: am.Patch[]}
-    | { type: "gatheringText", gathered: (am.SpliceTextPatch | am.DelPatch | am.MarkPatch)[] } 
+  type State =
+    | { type: "gatheringBlock"; index: number; gathered: am.Patch[] }
+    | {
+        type: "gatheringText"
+        gathered: (am.SpliceTextPatch | am.DelPatch | am.MarkPatch)[]
+      }
     | { type: "transitioning" }
-  let state: State = { type: "gatheringText", gathered: []  }
+  let state: State = { type: "gatheringText", gathered: [] }
 
   function flush() {
     if (state.type === "gatheringBlock") {
-      result.push({ type: "block", index: state.index, patches: state.gathered })
-    } else if (state.type === "gatheringText"){
+      result.push({
+        type: "block",
+        index: state.index,
+        patches: state.gathered,
+      })
+    } else if (state.type === "gatheringText") {
       result.push({ type: "text", patches: state.gathered })
     }
     state = { type: "transitioning" }
@@ -344,11 +375,11 @@ function gatherPatches(textPath: am.Prop[], diff: am.Patch[]): GatheredPatch[] {
       if (typeof index !== "number") {
         continue
       }
-      if ((state.type === "gatheringBlock") && (state.index === index)) {
+      if (state.type === "gatheringBlock" && state.index === index) {
         state.gathered.push(patch)
       } else {
         flush()
-        state = { type: "gatheringBlock", "index": index, "gathered": [patch] }
+        state = { type: "gatheringBlock", index: index, gathered: [patch] }
       }
     }
   }
