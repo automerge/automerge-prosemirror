@@ -1,4 +1,3 @@
-import { Prop } from "@automerge/automerge"
 import { next as am } from "@automerge/automerge"
 import { EditorState, Transaction, TextSelection } from "prosemirror-state"
 import pmToAm from "./pmToAm"
@@ -18,8 +17,8 @@ export function intercept<T>(
 
   // Apply the incoming transaction to the automerge doc
   handle.change(d => {
-    const [subdoc, attr] = docAndAttr(d, path)
     for (let i = 0; i < intercepted.steps.length; i++) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const spans = am.spans(d!, path)
       const step = intercepted.steps[i]
       //console.log(step)
@@ -50,16 +49,6 @@ export function intercept<T>(
   tx = tx.setSelection(resolvedSelectionAfter)
 
   return state.apply(tx)
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function docAndAttr(doc: any, path: Prop[]): [any, Prop] {
-  const result_path = path.slice()
-  while (result_path.length > 1) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    doc = doc[result_path.shift()!]
-  }
-  return [doc, path[0]]
 }
 
 function headsEqual(headsBefore: am.Heads, headsAfter: am.Heads): boolean {

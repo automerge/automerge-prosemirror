@@ -34,6 +34,7 @@ export function docFromSpans(spans: am.Span[]): Node {
   const events = traverseSpans(spans)
   type StackItem = {
     tag: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     attrs: { [key: string]: any }
     children: Node[]
   }
@@ -96,6 +97,7 @@ export function docFromSpans(spans: am.Span[]): Node {
 function constructNode(
   schema: Schema,
   nodeName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   attrs: { [key: string]: any },
   children: Node[],
 ): Node {
@@ -233,6 +235,7 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
     if (next.type === "node") {
       const cur = next.node
       if (cur.isText) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         yield { type: "text", text: cur.text!, marks: {} }
       } else {
         let blockType: BlockType | null = null

@@ -1,6 +1,5 @@
-import { assert } from "chai"
 import { Fragment, Slice, Node } from "prosemirror-model"
-import { assertSplitBlock, makeDoc, printTree, splitBlock } from "./utils"
+import { assertSplitBlock, makeDoc } from "./utils"
 import { ReplaceStep, Step } from "prosemirror-transform"
 import { default as pmToAm } from "../src/pmToAm"
 import { next as am } from "@automerge/automerge"

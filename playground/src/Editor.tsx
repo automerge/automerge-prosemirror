@@ -5,7 +5,6 @@ import { keymap } from "prosemirror-keymap"
 import {
   baseKeymap,
   chainCommands,
-  lift,
   setBlockType,
   toggleMark,
   wrapIn,
@@ -13,7 +12,7 @@ import {
 import { MarkType } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import "prosemirror-view/style/prosemirror.css"
-import { next as automerge, Prop } from "@automerge/automerge"
+import { Prop } from "@automerge/automerge"
 import { PatchSemaphore, initialize } from "../../src"
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo"
 import {
@@ -90,7 +89,7 @@ function turnSelectionIntoBlockquote(
   return true
 }
 
-export function Editor({ name, handle, path }: EditorProps) {
+export function Editor({ handle, path }: EditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<EditorView | null>(null)
   const handleReady = useHandleReady(handle)
@@ -191,15 +190,6 @@ export function Editor({ name, handle, path }: EditorProps) {
   const onDecreaseIndent = () => {
     if (view) {
       liftListItem(schema.nodes.list_item)(view.state, view.dispatch, view)
-    }
-  }
-
-  const toggleLink = () => {
-    if (view) {
-      toggleMark(schema.marks.link, {
-        href: "https://example.com",
-        title: "example",
-      })(view.state, view.dispatch, view)
     }
   }
 

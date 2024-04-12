@@ -13,7 +13,7 @@ import {
   eventsWithIndexChanges,
 } from "../src/traversal"
 import { next as am } from "@automerge/automerge"
-import { docFromBlocksNotation, makeDoc, printTree } from "./utils"
+import { docFromBlocksNotation, makeDoc } from "./utils"
 import { schema } from "../src/schema"
 import { AssertionError } from "assert"
 

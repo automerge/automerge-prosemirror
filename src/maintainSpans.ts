@@ -110,7 +110,9 @@ export function applyBlockPatch(
     target[key] = patch.value
   } else if (patch.action === "insert") {
     const target = resolveTarget(block, pathInBlock.slice(0, -2))
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const insertAt = pathInBlock.pop()! as number
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const prop = pathInBlock.pop()!
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
@@ -123,6 +125,7 @@ export function applyBlockPatch(
     const target = resolveTarget(block, pathInBlock.slice(0, -2))
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const insertAt = pathInBlock.pop()! as number
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const prop = pathInBlock.pop()!
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
@@ -196,22 +199,6 @@ function insertBlock(spans: am.Span[], patch: am.InsertPatch) {
     type: "block",
     value: {},
   })
-}
-
-function findBlockSpanIdx(spans: am.Span[], blockIdx: number): number | null {
-  let idx = 0
-  for (let i = 0; i < spans.length; i++) {
-    const span = spans[i]
-    if (span.type === "block") {
-      if (idx === blockIdx) {
-        return i
-      }
-      idx += 1
-    } else if (span.type === "text") {
-      idx += span.value.length
-    }
-  }
-  return null
 }
 
 export function findBlockAtCharIdx(

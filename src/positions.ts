@@ -1,5 +1,5 @@
 import { BLOCK_MARKER } from "./constants"
-import { Node, NodeType } from "prosemirror-model"
+import { Node } from "prosemirror-model"
 
 export function amIdxToPmIdx(amIdx: number, amText: string): number {
   // first, count how many paragraphs we have

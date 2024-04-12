@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 import { next as am } from "@automerge/automerge"
 import { Editor } from "./Editor"
-import { DocHandle, Repo } from "@automerge/automerge-repo"
+import { Repo } from "@automerge/automerge-repo"
 //import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 import { PausableNetworkAdapter } from "./PausableNetworkAdapter"
 

@@ -5,7 +5,6 @@ import { docFromSpans } from "../src/traversal"
 import { Node } from "prosemirror-model"
 import { schema } from "../src/schema"
 import { AssertionError } from "assert"
-import { BlockMarker } from "../src/types"
 import { applyBlockPatch } from "../src/maintainSpans"
 import { next as am } from "@automerge/automerge"
 

@@ -4,7 +4,6 @@ import { EditorState } from "prosemirror-state"
 import {
   BlockDef,
   makeDoc,
-  printTree,
   splitBlock,
   updateBlockType,
 } from "./utils"

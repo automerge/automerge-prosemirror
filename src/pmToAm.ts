@@ -15,6 +15,7 @@ export type ChangeFn<T> = (doc: T, field: string) => void
 export default function (
   spans: am.Span[],
   step: Step,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   doc: any,
   pmDoc: Node,
   path: Prop[],
@@ -67,7 +68,7 @@ function replaceStep(
     }
     let { start, end } = amRange
     if (start > end) {
-      ;[start, end] = [end, start]
+      [start, end] = [end, start]
     }
 
     const toDelete = end - start
@@ -92,6 +93,7 @@ function replaceStep(
 
 function replaceAroundStep(
   step: ReplaceAroundStep,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   doc: any,
   pmDoc: Node,
   field: Prop[],

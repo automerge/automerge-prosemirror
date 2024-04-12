@@ -59,31 +59,10 @@ describe("<Editor />", () => {
       cy.wait(100)
         .then(() => automerge.spans(handle.docSync(), ["text"]))
         .should("deep.equal", [
-          {
-            type: "block",
-            value: {
-              type: new automerge.RawString("paragraph"),
-              parents: [],
-              attrs: {},
-            },
-          },
+          { type: "block", value: { type: new automerge.RawString("paragraph"), parents: [], attrs: {} }},
           { type: "text", value: "Hello World" },
-          {
-            type: "block",
-            value: {
-              type: new automerge.RawString("paragraph"),
-              parents: [],
-              attrs: {},
-            },
-          },
-          {
-            type: "block",
-            value: {
-              type: new automerge.RawString("paragraph"),
-              parents: [],
-              attrs: {},
-            },
-          },
+          { type: "block", value: { type: new automerge.RawString("paragraph"), parents: [], attrs: {} }},
+          { type: "block", value: { type: new automerge.RawString("paragraph"), parents: [], attrs: {} }},
           { type: "text", value: "line two" },
         ])
     })
@@ -104,6 +83,7 @@ describe("<Editor />", () => {
         .then(() => handle.docSync().text)
         .should("equal", "Hello Happy World")
       cy.wait(100)
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         .then(() => automerge.marks(handle.docSync()!, ["text"]))
         .should("deep.equal", [
           { name: "strong", value: true, start: 6, end: 11 },
@@ -128,6 +108,7 @@ describe("<Editor />", () => {
       )
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         .then(() => automerge.marks(handle.docSync()!, ["text"]))
         .should("deep.equal", [
           {
@@ -198,10 +179,6 @@ function editorContents(): Cypress.Chainable<JQuery<HTMLDivElement>> {
 
 function boldButton(): Cypress.Chainable<JQuery<HTMLButtonElement>> {
   return cy.get("div#prosemirror button#bold")
-}
-
-function italicButton(): Cypress.Chainable<JQuery<HTMLButtonElement>> {
-  return cy.get("div#prosemirror button#italic")
 }
 
 function linkButton(): Cypress.Chainable<JQuery<HTMLButtonElement>> {

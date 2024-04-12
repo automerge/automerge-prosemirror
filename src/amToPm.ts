@@ -5,7 +5,6 @@ import {
   Mark,
   Attrs,
   Schema,
-  NodeType,
 } from "prosemirror-model"
 import { TextSelection, Transaction } from "prosemirror-state"
 import { MarkValue } from "./marks"
@@ -18,7 +17,6 @@ import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
 import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
 
 type SpliceTextPatch = am.SpliceTextPatch
-type InsertPatch = am.InsertPatch
 
 type MarkPatch = {
   action: "mark"

@@ -148,6 +148,7 @@ export const schema = new Schema({
           getAttrs(dom: HTMLElement) {
             return {
               order: dom.hasAttribute("start")
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 ? +dom.getAttribute("start")!
                 : 1,
             }
