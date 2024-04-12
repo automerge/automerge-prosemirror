@@ -23,6 +23,8 @@ jobs:
         run: yarn tsc
       - name: lint
         run: yarn lint
+      - name: test
+        run: yarn mocha
 
   cypress-run:
     runs-on: ubuntu-22.04

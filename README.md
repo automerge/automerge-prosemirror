@@ -24,14 +24,14 @@ There is a fully functional editor in this repository, you can play with that by
 
 ## Example
 
-The API for this library is based around a (slightly misnamed) object called a `PatchSemaphore`. This object is used to intercept transactions from Prosemirror and to handle changes received over the network. This is best used in tandem with `@automerge/automerge-repo`. See the `playground/src/Editor.tsx` file for a fully featured example.
+The API for this library is based around an object called an `AutoMirror`. This object is used to intercept transactions from Prosemirror and to handle changes received over the network. This is best used in tandem with `@automerge/automerge-repo`. See the `playground/src/Editor.tsx` file for a fully featured example.
 
-The workflow when using this plugin is to first initialize the document using `initialize` and then use `PatchSemaphore.intercept` to intercept local transactions and `PatchSemaphore.reconcilePatch` to handle changes received from the network.
+The workflow when using this library is to first create an `AutoMirror` object, then use `AutoMirror.initialize` to create an initial prosemirror document and `AutoMirror.schema` to get a schema which you pass to prosemirror. Then, you intercept transactions from prosemirror using `AutoMirror.intercept` and you reconcile patches from the network using `AutoMirror.reconcilePatch`.
 
 For example
 
 ```javascript
-import {initialize, PatchSemaphore} from "@automerge/prosemirror"
+import {AutoMirror} from "@automerge/prosemirror"
 
 //
 
@@ -39,14 +39,12 @@ const handle = repo.find("some-doc-url")
 // somehow wait for the handle to be ready before continuing
 await handle.whenReady()
 
-// This is used to ensure patches and transactions don't trample on each other
-// create it and keep it around for the lifetime of your editor. The constructor
-// argument is the path to the text field we are editing in the automerge document
-const semaphore = new PatchSemaphore(["text"])
+// Create an AutoMirror
+const autoMirror = new AutoMirror(["text"])
 
 // Create your prosemirror state
 let editorConfig = {
-  schema: , //this should be the prosemirror-schema-basic schema
+  schema: autoMirror.schema, // This _must_ be the schema from the AutoMirror
   ..., // whatever other stuff
   plugins: [
     keymap({
@@ -58,7 +56,7 @@ let editorConfig = {
       "Mod-Shift-z": redo,
     }),
   ],
-  doc: initialize(handle.docSync(), ["text"])
+  doc: autoMirror.initialize(handle.docSync(), ["text"])
 }
 
 let state = EditorState.create(editorConfig)
@@ -68,7 +66,7 @@ const view = new EditorView(editorRoot.current, {
   state,
   dispatchTransaction: (tx: Transaction) => {
     // Here we intercept the transaction
-    let newState = semaphore.intercept(automerge.getHeads(handle.doc), doChange, tx, view.state)
+    let newState = autoMirror.intercept(automerge.getHeads(handle.doc), doChange, tx, view.state)
     view.updateState(newState)
   }
 })
@@ -77,7 +75,7 @@ const view = new EditorView(editorRoot.current, {
 // received from elsewhere. The type signature here assuems you're using
 // automerge-repo
 const onPatch = (p: DocHandlePatchPayload<any>) => {
-  const newState = semaphore.reconcilePatch(
+  const newState = autoMirror.reconcilePatch(
     patchInfo.before,
     doc,
     patches,

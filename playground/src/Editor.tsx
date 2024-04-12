@@ -9,11 +9,11 @@ import {
   toggleMark,
   wrapIn,
 } from "prosemirror-commands"
-import { MarkType } from "prosemirror-model"
+import { MarkType, Schema } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import "prosemirror-view/style/prosemirror.css"
 import { Prop } from "@automerge/automerge"
-import { PatchSemaphore, initialize } from "../../src"
+import { AutoMirror } from "../../src"
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo"
 import {
   wrapInList,
@@ -23,7 +23,6 @@ import {
 } from "prosemirror-schema-list"
 import { useHandleReady } from "./useHandleReady"
 //import { schema } from "../../src/schema"
-import { schema } from "../../src"
 import {
   Bold,
   Braces,
@@ -52,8 +51,8 @@ export type EditorProps = {
   path: Prop[]
 }
 
-const toggleBold = toggleMarkCommand(schema.marks.strong)
-const toggleItalic = toggleMarkCommand(schema.marks.em)
+const toggleBold = (schema: Schema) => toggleMarkCommand(schema.marks.strong)
+const toggleItalic = (schema: Schema) => toggleMarkCommand(schema.marks.em)
 
 function toggleMarkCommand(mark: MarkType): Command {
   return (
@@ -78,13 +77,13 @@ function turnSelectionIntoBlockquote(
   }
 
   // Check if we can wrap the selection in a blockquote
-  if (!wrapIn(schema.nodes.blockquote)(state, undefined, view)) {
+  if (!wrapIn(state.schema.nodes.blockquote)(state, undefined, view)) {
     return false
   }
 
   // Apply the blockquote transformation
   if (dispatch) {
-    wrapIn(schema.nodes.blockquote)(state, dispatch, view)
+    wrapIn(state.schema.nodes.blockquote)(state, dispatch, view)
   }
   return true
 }
@@ -100,32 +99,33 @@ export function Editor({ handle, path }: EditorProps) {
     if (!handleReady) {
       return
     }
-    const initialDoc = initialize(handle, path)
+    const autoMirror = new AutoMirror(path)
+
+    const initialDoc = autoMirror.initialize(handle, path)
     const editorConfig = {
-      schema,
+      schema: autoMirror.schema,
       history,
       plugins: [
         keymap({
-          "Mod-b": toggleBold,
-          "Mod-i": toggleItalic,
-          "Mod-l": toggleMark(schema.marks.link, {
+          "Mod-b": toggleBold(autoMirror.schema),
+          "Mod-i": toggleItalic(autoMirror.schema),
+          "Mod-l": toggleMark(autoMirror.schema.marks.link, {
             href: "https://example.com",
             title: "example",
           }),
-          Enter: splitListItem(schema.nodes.list_item),
+          Enter: splitListItem(autoMirror.schema.nodes.list_item),
         }),
         keymap(baseKeymap),
       ],
       doc: initialDoc,
     }
 
-    const semaphore = new PatchSemaphore(path)
     const state = EditorState.create(editorConfig)
     const view = new EditorView(editorRoot.current, {
       state,
       dispatchTransaction: (tx: Transaction) => {
         //console.log(`${name}: dispatchTransaction`, tx)
-        const newState = semaphore.intercept(handle, tx, view.state)
+        const newState = autoMirror.intercept(handle, tx, view.state)
         view.updateState(newState)
       },
     })
@@ -136,7 +136,7 @@ export function Editor({ handle, path }: EditorProps) {
       patchInfo,
     }) => {
       //console.log(`${name}: patch received`)
-      const newState = semaphore.reconcilePatch(
+      const newState = autoMirror.reconcilePatch(
         patchInfo.before,
         doc,
         patches,
@@ -156,13 +156,13 @@ export function Editor({ handle, path }: EditorProps) {
 
   const onBoldClicked = () => {
     if (view) {
-      toggleBold(view.state, view.dispatch, view)
+      toggleBold(view.state.schema)(view.state, view.dispatch, view)
     }
   }
 
   const onItalicClicked = () => {
     if (view) {
-      toggleItalic(view.state, view.dispatch, view)
+      toggleItalic(view.state.schema)(view.state, view.dispatch, view)
     }
   }
 
@@ -177,10 +177,12 @@ export function Editor({ handle, path }: EditorProps) {
           break
         }
       }
-      const listType = listNode ? listNode.type : schema.nodes.bullet_list
+      const listType = listNode
+        ? listNode.type
+        : view.state.schema.nodes.bullet_list
       if (listNode) {
         chainCommands(
-          sinkListItem(schema.nodes.list_item),
+          sinkListItem(view.state.schema.nodes.list_item),
           wrapInList(listType),
         )(view.state, view.dispatch, view)
       }
@@ -189,7 +191,11 @@ export function Editor({ handle, path }: EditorProps) {
 
   const onDecreaseIndent = () => {
     if (view) {
-      liftListItem(schema.nodes.list_item)(view.state, view.dispatch, view)
+      liftListItem(view.state.schema.nodes.list_item)(
+        view.state,
+        view.dispatch,
+        view,
+      )
     }
   }
 
@@ -252,7 +258,7 @@ export function Editor({ handle, path }: EditorProps) {
       tr.replaceRangeWith(
         from,
         to,
-        schema.nodes.image.create({ src: url, title: "", alt: "" }),
+        view.state.schema.nodes.image.create({ src: url, title: "", alt: "" }),
       )
       view.dispatch(tr)
     }
@@ -266,14 +272,22 @@ export function Editor({ handle, path }: EditorProps) {
     if (view) {
       const { from, to } = view.state.selection
       const tr = view.state.tr
-      tr.addMark(from, to, schema.marks.link.create({ href: url, title: "" }))
+      tr.addMark(
+        from,
+        to,
+        view.state.schema.marks.link.create({ href: url, title: "" }),
+      )
       view.dispatch(tr)
     }
   }
 
   const onCodeClicked = () => {
     if (view) {
-      setBlockType(schema.nodes.code_block)(view.state, view.dispatch, view)
+      setBlockType(view.state.schema.nodes.code_block)(
+        view.state,
+        view.dispatch,
+        view,
+      )
     }
   }
 
