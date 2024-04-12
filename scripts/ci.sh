@@ -1,5 +1,5 @@
 #! /usr/bin/env bash
-yarn prettier
-yarn lint
-yarn tsc
-yarn cypress run --component
+npm run prettier
+npm run lint
+npx tsc --noEmit
+npx cypress run --component

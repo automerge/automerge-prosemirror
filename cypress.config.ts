@@ -5,6 +5,7 @@ import topLevelAwait from "vite-plugin-top-level-await"
 
 export default defineConfig({
   component: {
+    excludeSpecPattern: ["dist"],
     devServer: {
       framework: "react",
       bundler: "vite",
