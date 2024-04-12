@@ -311,4 +311,107 @@ describe("the patchSpans function", () => {
     }
     assert.deepStrictEqual(spans, [])
   })
+
+  describe("when handling splice patches", () => {
+    it.only("should not remove text blocks", () => {
+      const spans: am.Span[] = [
+        {
+          "type": "block",
+          "value": {
+            "attrs": {
+              "level": 1
+            },
+            "parents": [],
+            "type": "heading"
+          }
+        },
+        {
+          "type": "text",
+          "value": "Heading"
+        },
+        {
+          "type": "block",
+          "value": {
+            "type": "paragraph",
+            "attrs": {},
+            "parents": []
+          }
+        },
+        {
+          "type": "text",
+          "value": "some text"
+        },
+        {
+          "type": "block",
+          "value": {
+            "attrs": {},
+            "type": "paragraph",
+            "parents": []
+          }
+        },
+        {
+          "type": "text",
+          "value": "b"
+        },
+        {
+          "type": "block",
+          "value": {}
+        }
+      ]
+      const patches: am.Patch[] = [
+        {"action":"splice","path":["text",21],"value":"a"}
+      ]
+      for (const patch of patches) {
+        patchSpans(["text"], spans, patch)
+      }
+      assert.deepStrictEqual(spans, [
+        {
+          "type": "block",
+          "value": {
+            "attrs": {
+              "level": 1
+            },
+            "parents": [],
+            "type": "heading"
+          }
+        },
+        {
+          "type": "text",
+          "value": "Heading"
+        },
+        {
+          "type": "block",
+          "value": {
+            "type": "paragraph",
+            "attrs": {},
+            "parents": []
+          }
+        },
+        {
+          "type": "text",
+          "value": "some text"
+        },
+        {
+          "type": "block",
+          "value": {
+            "attrs": {},
+            "type": "paragraph",
+            "parents": []
+          }
+        },
+        {
+          "type": "text",
+          "value": "b"
+        },
+        {
+          "type": "block",
+          "value": {}
+        },
+        {
+          "type": "text",
+          "value": "a"
+        },
+      ])
+    })
+  })
 })

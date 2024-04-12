@@ -39,7 +39,7 @@ function spliceSpans(spans: am.Span[], patch: am.SpliceTextPatch) {
     return
   }
 
-  for (const span of spans) {
+  for (const [spanIdx, span] of spans.entries()) {
     if (span.type === "text") {
       if (idx + span.value.length < patchIndex) {
         const offset = patchIndex - idx
@@ -51,6 +51,25 @@ function spliceSpans(spans: am.Span[], patch: am.SpliceTextPatch) {
         idx += span.value.length
       }
     } else {
+      if (idx === patchIndex) {
+        if (spanIdx === spans.length - 1) {
+          spans.push({
+            type: "text",
+            value: patch.value,
+          })
+        } else {
+          const nextSpan = spans[spanIdx + 1]
+          if (nextSpan.type === "text") {
+            nextSpan.value = patch.value + nextSpan.value
+          } else {
+            spans.splice(spanIdx + 1, 0, {
+              type: "text",
+              value: patch.value,
+            })
+          }
+        }
+        return
+      }
       idx += 1
     }
   }

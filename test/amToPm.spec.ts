@@ -1,7 +1,7 @@
 import { assert } from "chai"
 import { default as amToPm } from "../src/amToPm"
 import { EditorState } from "prosemirror-state"
-import { BlockDef, makeDoc, splitBlock, updateBlockType } from "./utils"
+import { BlockDef, makeDoc, printTree, splitBlock, updateBlockType } from "./utils"
 import { next as am } from "@automerge/automerge"
 import { schema } from "../src/schema"
 
@@ -397,6 +397,88 @@ describe("the amToPm function", () => {
           ]),
         ),
       )
+    })
+
+    it("should correctly handle a splitblock which is separated by a text insert", () => {
+      const patched = performPatch({
+        initialDoc: [
+          { type: "heading", parents: [], attrs: { level: 1 } },
+          "Heading",
+          { type: "paragraph", parents: [], attrs: {} },
+          "some text",
+          { type: "paragraph", parents: [], attrs: {} },
+          "b"
+        ],
+        patches: [
+          {
+            "action": "insert",
+            "path": [
+              "text",
+              20
+            ],
+            "values": [
+              {}
+            ]
+          },
+          {
+            "action": "splice",
+            "path": [
+              "text",
+              21
+            ],
+            "value": "a"
+          },
+          {
+            "action": "put",
+            "path": [
+              "text",
+              20,
+              "attrs"
+            ],
+            "value": {}
+          },
+          {
+            "action": "put",
+            "path": [
+              "text",
+              20,
+              "type"
+            ],
+            "value": "paragraph"
+          },
+          {
+            "action": "put",
+            "path": [
+              "text",
+              20,
+              "parents"
+            ],
+            "value": []
+          }
+        ]
+      })
+
+      // am:        0        1 2 3 4 5 6 7             8          9  10 11 12 13  14 15 16 17              18         19 
+      //     <doc> <heading> H e a d i n g </heading> <paragraph> s  o  m  e  ' ' t  e  x  t </paragraph> <paragraph> b </paragraph> <paragraph> </paragraph> </doc>
+      // pm: 0              1 2 3 4 5 6 7 8          9          10 11 12 13 14  15 16 17 18 19          20          21 22          23           24           25 
+
+      console.log(JSON.stringify(printTree(patched.doc), null, 2))
+      assert.isTrue(patched.doc.eq(
+        schema.node("doc", null, [
+          schema.node("heading", { isAmgBlock: true }, [
+            schema.text("Heading"),
+          ]),
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("some text"),
+          ]),
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("b"),
+          ]),
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("a"),
+          ]),
+        ]),
+      ))
     })
   })
 
