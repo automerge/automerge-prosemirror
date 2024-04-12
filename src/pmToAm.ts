@@ -14,6 +14,36 @@ export type ChangeFn<T> = (doc: T, field: string) => void
 
 export default function (
   spans: am.Span[],
+  steps: Step[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  doc: any,
+  pmDoc: Node,
+  path: Prop[],
+) {
+  const unappliedMarks: AddMarkStep[] = []
+
+  function flushMarks() {
+    if (unappliedMarks.length > 0) {
+      applyAddMarkSteps(spans, unappliedMarks, doc, path)
+      unappliedMarks.length = 0
+    }
+  }
+
+  for (const step of steps) {
+    if (isAddMarkStep(step)) {
+      unappliedMarks.push(step)
+      continue
+    } else {
+      flushMarks()
+    }
+    oneStep(spans, step, doc, pmDoc, path)
+    spans = automerge.spans(doc, path)
+  }
+  flushMarks()
+}
+
+function oneStep(
+  spans: am.Span[],
   step: Step,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   doc: any,
@@ -35,16 +65,18 @@ export default function (
   ) {
     replaceAroundStep(step as ReplaceAroundStep, doc, pmDoc, path)
   } else if (
-    step.constructor.name === "AddMarkStep" ||
-    step.constructor.name === "_AddMarkStep"
-  ) {
-    addMarkStep(spans, step as AddMarkStep, doc, path)
-  } else if (
     step.constructor.name === "RemoveMarkStep" ||
     step.constructor.name === "_RemoveMarkStep"
   ) {
     removeMarkStep(spans, step as RemoveMarkStep, doc, path)
   }
+}
+
+function isAddMarkStep(step: Step): step is AddMarkStep {
+  return (
+    step.constructor.name === "AddMarkStep" ||
+    step.constructor.name === "_AddMarkStep"
+  )
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -109,27 +141,71 @@ function replaceAroundStep(
   automerge.updateSpans(doc, field, newBlocks)
 }
 
-function addMarkStep(
+function applyAddMarkSteps(
   spans: am.Span[],
-  step: AddMarkStep,
+  steps: AddMarkStep[],
   doc: automerge.Doc<unknown>,
   field: Prop[],
 ) {
-  const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
-  if (amRange == null) {
-    throw new Error(
-      `Could not find range (${step.from}, ${step.to}) in render tree`,
+  type Mark = {
+    range: { start: number; end: number }
+    markName: string
+    expand: "before" | "after" | "both" | "none"
+    value: string | boolean
+  }
+  const marks: Mark[] = steps.map(step => {
+    const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
+    if (amRange == null) {
+      throw new Error(
+        `Could not find range (${step.from}, ${step.to}) in render tree`,
+      )
+    }
+    const markName = step.mark.type.name
+    const expand = step.mark.type.spec.inclusive ? "both" : "none"
+    let value: string | boolean = true
+    if (step.mark.attrs != null && Object.keys(step.mark.attrs).length > 0) {
+      value = JSON.stringify(step.mark.attrs)
+    }
+    return { range: amRange, markName, expand, value }
+  })
+
+  const groupedMarks: Mark[] = marks.reduce((acc, mark) => {
+    const lastGroup = acc[acc.length - 1]
+    if (lastGroup == null) {
+      return [mark]
+    }
+    if (
+      lastGroup.markName === mark.markName &&
+      lastGroup.expand === mark.expand &&
+      lastGroup.value === mark.value
+    ) {
+      if (lastGroup.range.end === mark.range.start) {
+        lastGroup.range.end = mark.range.end
+        return acc
+      } else {
+        const spansBetween = spans.slice(lastGroup.range.end, mark.range.start)
+        if (spansBetween.every(s => s.type === "block")) {
+          lastGroup.range.end = mark.range.end
+          return acc
+        }
+      }
+    }
+    acc.push(mark)
+    return acc
+  }, [] as Mark[])
+
+  //console.log(groupedMarks)
+
+  for (const mark of groupedMarks) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    automerge.mark(
+      doc as any,
+      field,
+      { start: mark.range.start, end: mark.range.end, expand: mark.expand },
+      mark.markName,
+      mark.value,
     )
   }
-  const { start, end } = amRange
-  const markName = step.mark.type.name
-  const expand = step.mark.type.spec.inclusive ? "both" : "none"
-  let value: string | boolean = true
-  if (step.mark.attrs != null && Object.keys(step.mark.attrs).length > 0) {
-    value = JSON.stringify(step.mark.attrs)
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  automerge.mark(doc as any, field, { start, end, expand }, markName, value)
 }
 
 function removeMarkStep(

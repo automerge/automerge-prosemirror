@@ -1,6 +1,6 @@
 import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
 import { Fragment, Slice, Mark, Attrs, Schema } from "prosemirror-model"
-import { TextSelection, Transaction } from "prosemirror-state"
+import { Selection, TextSelection, Transaction } from "prosemirror-state"
 import { MarkValue } from "./marks"
 import {
   amIdxToPmBlockIdx,
@@ -9,6 +9,7 @@ import {
 } from "./traversal"
 import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
 import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
+import { ReplaceStep } from "prosemirror-transform"
 
 type SpliceTextPatch = am.SpliceTextPatch
 
@@ -40,22 +41,25 @@ export default function (
             result,
             isLocal,
           )
+          //console.log(`patch: ${JSON.stringify(patch)}`)
+          //console.log(`spans before patch: ${JSON.stringify(spansAtStart, null, 2)}`)
           patchSpans(path, spansAtStart, patch)
+          //console.log("patched spans", spansAtStart)
         } else if (patch.action === "del") {
           const patchIndex = patch.path[patch.path.length - 1] as number
           const block = findBlockAtCharIdx(spansAtStart, patchIndex)
           if (block != null) {
-            handleBlockChange(
+            result = handleBlockChange(
               schema,
               path,
               spansAtStart,
               patchIndex,
               [patch],
-              tx,
+              result,
               isLocal,
             )
           } else {
-            handleDelete(schema, spansAtStart, patch, path, result)
+            result = handleDelete(schema, spansAtStart, patch, path, result)
           }
           patchSpans(path, spansAtStart, patch)
         } else if (patch.action === "mark") {
@@ -64,13 +68,13 @@ export default function (
         }
       }
     } else {
-      handleBlockChange(
+      result = handleBlockChange(
         schema,
         path,
         spansAtStart,
         patchGroup.index,
         patchGroup.patches,
-        tx,
+        result,
         isLocal,
       )
     }
@@ -91,11 +95,11 @@ export function handleSplice(
   const pmIdx = amSpliceIdxToPmIdx(spans, index)
   if (pmIdx == null) throw new Error("Invalid index")
   const content = patchContentToFragment(schema, patch.value, patch.marks)
-  tx = tx.replace(pmIdx, pmIdx, new Slice(content, 0, 0))
-  if (isLocal) {
-    const sel = tx.doc.resolve(pmIdx + content.size)
-    tx = tx.setSelection(new TextSelection(sel, sel))
-  }
+  tx = tx.step(new ReplaceStep(pmIdx, pmIdx, new Slice(content, 0, 0)))
+  //if (isLocal) {
+  //const sel = tx.doc.resolve(pmIdx + content.size)
+  //tx = tx.setSelection(new TextSelection(sel, sel))
+  //}
   return tx
 }
 
@@ -151,7 +155,9 @@ export function handleBlockChange(
   for (const patch of patches) {
     patchSpans(atPath, spans, patch)
   }
+  //console.log("spans after block change", spans)
   const docAfter = docFromSpans(spans)
+  //console.log("doc after block change", docAfter)
   const change = findDiff(tx.doc.content, docAfter.content)
   if (change == null) return tx
 
@@ -188,11 +194,12 @@ export function handleBlockChange(
   if (!handledByInline) {
     tx = tx.replace(chFrom, chTo, docAfter.slice(change.start, change.endB))
   }
-  if (isLocal) {
-    const pmBlockIdx = amIdxToPmBlockIdx(spans, blockIdx)
-    if (pmBlockIdx == null) throw new Error("Invalid index")
-    tx = tx.setSelection(TextSelection.create(tx.doc, pmBlockIdx))
-  }
+  //if (isLocal && !handledByInline) {
+  //const pmBlockIdx = amIdxToPmBlockIdx(spans, blockIdx)
+  //if (pmBlockIdx == null) throw new Error("Invalid index")
+  ////tx = tx.setSelection(TextSelection.create(tx.doc, pmBlockIdx))
+  //tx = tx.setSelection(Selection.near(tx.doc.resolve(pmBlockIdx)))
+  //}
 
   return tx
 }

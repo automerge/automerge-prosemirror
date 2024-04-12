@@ -17,14 +17,8 @@ export function intercept<T>(
 
   // Apply the incoming transaction to the automerge doc
   handle.change(d => {
-    for (let i = 0; i < intercepted.steps.length; i++) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const spans = am.spans(d!, path)
-      const step = intercepted.steps[i]
-      //console.log(step)
-      const pmDoc = intercepted.docs[i]
-      pmToAm(spans, step, d, pmDoc, path)
-    }
+    const pmDoc = intercepted.docs[0]
+    pmToAm(spansBefore, intercepted.steps, d, pmDoc, path)
   })
 
   //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -42,11 +36,19 @@ export function intercept<T>(
   // Create a transaction which applies the diff and updates the doc and heads
   let tx = amToPm(state.schema, spansBefore, diff, path, state.tr, true)
   const selectionAfter = state.apply(intercepted).selection
-  const resolvedSelectionAfter = new TextSelection(
-    tx.doc.resolve(selectionAfter.from),
-    tx.doc.resolve(selectionAfter.to),
-  )
-  tx = tx.setSelection(resolvedSelectionAfter)
+  try {
+    const resolvedSelectionAfter = new TextSelection(
+      tx.doc.resolve(selectionAfter.from),
+      tx.doc.resolve(selectionAfter.to),
+    )
+    tx = tx.setSelection(resolvedSelectionAfter)
+  } catch (e) {
+    if (e instanceof RangeError) {
+      // Sometimes the selection can't be mapped for some reason so we just give up and hope for the best
+    } else {
+      throw e
+    }
+  }
 
   return state.apply(tx)
 }
