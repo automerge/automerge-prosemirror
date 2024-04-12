@@ -1,11 +1,5 @@
 import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
-import {
-  Fragment,
-  Slice,
-  Mark,
-  Attrs,
-  Schema,
-} from "prosemirror-model"
+import { Fragment, Slice, Mark, Attrs, Schema } from "prosemirror-model"
 import { TextSelection, Transaction } from "prosemirror-state"
 import { MarkValue } from "./marks"
 import {

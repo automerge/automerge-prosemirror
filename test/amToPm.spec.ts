@@ -1,12 +1,7 @@
 import { assert } from "chai"
 import { default as amToPm } from "../src/amToPm"
 import { EditorState } from "prosemirror-state"
-import {
-  BlockDef,
-  makeDoc,
-  splitBlock,
-  updateBlockType,
-} from "./utils"
+import { BlockDef, makeDoc, splitBlock, updateBlockType } from "./utils"
 import { next as am } from "@automerge/automerge"
 import { schema } from "../src/schema"
 

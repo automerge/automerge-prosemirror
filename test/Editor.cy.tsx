@@ -59,10 +59,31 @@ describe("<Editor />", () => {
       cy.wait(100)
         .then(() => automerge.spans(handle.docSync(), ["text"]))
         .should("deep.equal", [
-          { type: "block", value: { type: new automerge.RawString("paragraph"), parents: [], attrs: {} }},
+          {
+            type: "block",
+            value: {
+              type: new automerge.RawString("paragraph"),
+              parents: [],
+              attrs: {},
+            },
+          },
           { type: "text", value: "Hello World" },
-          { type: "block", value: { type: new automerge.RawString("paragraph"), parents: [], attrs: {} }},
-          { type: "block", value: { type: new automerge.RawString("paragraph"), parents: [], attrs: {} }},
+          {
+            type: "block",
+            value: {
+              type: new automerge.RawString("paragraph"),
+              parents: [],
+              attrs: {},
+            },
+          },
+          {
+            type: "block",
+            value: {
+              type: new automerge.RawString("paragraph"),
+              parents: [],
+              attrs: {},
+            },
+          },
           { type: "text", value: "line two" },
         ])
     })
