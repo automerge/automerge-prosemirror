@@ -1,4 +1,4 @@
-export { default as PatchSemaphore } from "./PatchSemaphore"
+export { default as AutoMirror } from "./PatchSemaphore"
 export { schema } from "./schema"
 export { type MarkMap } from "./marks"
 export { defaultMarkMap } from "./marks"

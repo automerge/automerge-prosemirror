@@ -68,6 +68,7 @@ function replaceStep(
     }
     let { start, end } = amRange
     if (start > end) {
+      // eslint-disable-next-line @typescript-eslint/no-extra-semi
       ;[start, end] = [end, start]
     }
 

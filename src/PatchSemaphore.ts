@@ -8,7 +8,7 @@ import { next as am } from "@automerge/automerge"
 type Doc<T> = automerge.Doc<T>
 type Patch = automerge.Patch
 
-export default class PatchSemaphore<T> {
+export default class AutoMirror<T> {
   _inLocalTransaction = false
   path: am.Prop[]
 
