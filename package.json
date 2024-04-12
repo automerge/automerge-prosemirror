@@ -12,6 +12,9 @@
   },
   "type": "module",
   "main": "dist/index.js",
+  "files": [
+    "dist/*"
+  ],
   "dependencies": {
     "@automerge/automerge": "2.2.0-rc.2",
     "ordered-map": "^0.1.0",
