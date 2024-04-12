@@ -18,13 +18,13 @@ jobs:
       - name: npm install
         run: npm install
       - name: prettier
-        run: npm prettier
+        run: npm run prettier
       - name: typecheck
-        run: npm tsc
+        run: npx tsc --noEmit
       - name: lint
-        run: npm lint
+        run: npm run lint
       - name: test
-        run: yarn mocha
+        run: npm run mocha
 
   cypress-run:
     runs-on: ubuntu-22.04
