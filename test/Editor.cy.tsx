@@ -57,8 +57,14 @@ describe("<Editor />", () => {
       )
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
-        .then(() => handle.docSync().text)
-        .should("equal", "Hello World\n\nline two")
+        .then(() => automerge.spans(handle.docSync(), ["text"]))
+        .should("deep.equal", [
+          { type: "block", value: { type: new automerge.RawString("paragraph"), parents: [], attrs: {} }},
+          { type: "text", value: "Hello World" },
+          { type: "block", value: { type: new automerge.RawString("paragraph"), parents: [], attrs: {} }},
+          { type: "block", value: { type: new automerge.RawString("paragraph"), parents: [], attrs: {} }},
+          { type: "text", value: "line two" },
+        ])
     })
 
     it("handles bold marks", () => {
@@ -77,7 +83,7 @@ describe("<Editor />", () => {
         .then(() => handle.docSync().text)
         .should("equal", "Hello Happy World")
       cy.wait(100)
-        .then(() => automerge.marks(handle.doc, ["text"]))
+        .then(() => automerge.marks(handle.docSync()!, ["text"]))
         .should("deep.equal", [
           { name: "strong", value: true, start: 6, end: 11 },
         ])
@@ -89,21 +95,25 @@ describe("<Editor />", () => {
 
       withSelection("homepage", () => linkButton().click())
 
+      // now insert the link text into the dialog and click OK
+      dialogInput().type("https://example.com")
+      dialogButton().click()
+
       editorContents().should(
         "have.html",
         expectedHtml([
-          'My <a href="https://example.com" title="example">homepage</a> is here',
+          'My <a href="https://example.com" title="">homepage</a> is here',
         ]),
       )
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
-        .then(() => automerge.marks(handle.doc, ["text"]))
+        .then(() => automerge.marks(handle.docSync()!, ["text"]))
         .should("deep.equal", [
           {
             name: "link",
             value: JSON.stringify({
               href: "https://example.com",
-              title: "example",
+              title: "",
             }),
             start: 3,
             end: 11,
@@ -175,6 +185,18 @@ function italicButton(): Cypress.Chainable<JQuery<HTMLButtonElement>> {
 
 function linkButton(): Cypress.Chainable<JQuery<HTMLButtonElement>> {
   return cy.get("div#prosemirror button#link")
+}
+
+function activeDialog(): Cypress.Chainable<JQuery<HTMLDialogElement>> {
+  return cy.get("dialog[open]")
+}
+
+function dialogInput(): Cypress.Chainable<JQuery<HTMLInputElement>> {
+  return activeDialog().find("input")
+}
+
+function dialogButton(): Cypress.Chainable<JQuery<HTMLButtonElement>> {
+  return activeDialog().find("button")
 }
 
 function withSelection(selection: string, action: () => void) {
