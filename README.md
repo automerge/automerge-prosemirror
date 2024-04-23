@@ -4,23 +4,13 @@
 
 Support for all elements in the `prosemirror-schema-basic` and `prosemirror-schema-list` except for the `hr` element is implemented. The next step is to generalize this to allow adapting user provided schemas.
 
+In general this is alpha quality software. There are still a fair number of bugs and the API will probably change, but the core functionality works most of the time.
+
 ## How to play
 
-This work is based on the `@automerge/automerge@2.2.0-rc.2` package, so you'll need to add an entry in your package.json `overrides` for that. E.g.:
+This work depends on the `@automerge/automerge >= 2.2.0` package, so you'll need to update your dependencies.
 
-```json
-{
-  ...
-  "overrides": {
-    "@automerge/automerge-repo": {
-      "@automerge/automerge": "2.2.0-rc.2"
-    }
-  },
-  ...
-}
-```
-
-There is a fully functional editor in this repository, you can play with that by running `yarn playground` and then visiting `http://localhost:5173`.
+There is a fully functional editor in this repository, you can play with that by running `npm run playground` and then visiting `http://localhost:5173`.
 
 ## Example
 
