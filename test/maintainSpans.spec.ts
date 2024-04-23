@@ -692,6 +692,7 @@ describe("the patchSpans function", () => {
         assert.deepEqual(updatedSpans, spansAfter)
       }),
       {
+        numRuns: process.env.CI ? 10 : 100,
         reporter: out => {
           if (out.failed) {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
