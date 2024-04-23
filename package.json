@@ -16,7 +16,7 @@
     "dist/*"
   ],
   "dependencies": {
-    "@automerge/automerge": "2.2.0-rc.2",
+    "@automerge/automerge": "2.2.0",
     "ordered-map": "^0.1.0",
     "prosemirror-model": "^1.19.4",
     "prosemirror-schema-basic": "^1.2.2",
@@ -27,7 +27,7 @@
   },
   "overrides": {
     "@automerge/automerge-repo": {
-      "@automerge/automerge": "2.2.0-rc.2"
+      "@automerge/automerge": "2.2.0"
     }
   },
   "devDependencies": {
