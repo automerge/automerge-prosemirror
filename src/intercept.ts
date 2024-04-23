@@ -34,7 +34,7 @@ export function intercept<T>(
   //console.log(diff)
 
   // Create a transaction which applies the diff and updates the doc and heads
-  let tx = amToPm(state.schema, spansBefore, diff, path, state.tr, true)
+  let tx = amToPm(state.schema, spansBefore, diff, path, state.tr)
   const selectionAfter = state.apply(intercepted).selection
   try {
     const resolvedSelectionAfter = new TextSelection(

@@ -199,6 +199,7 @@ function applyAddMarkSteps(
   for (const mark of groupedMarks) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     automerge.mark(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       doc as any,
       field,
       { start: mark.range.start, end: mark.range.end, expand: mark.expand },

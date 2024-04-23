@@ -3,7 +3,6 @@ import { next as am } from "@automerge/automerge"
 import { patchSpans } from "../src/maintainSpans"
 import { splitBlock } from "./utils"
 import * as fc from "fast-check"
-import { warn } from "console"
 
 describe("the patchSpans function", () => {
   it("should update the spans after a delete", () => {
@@ -695,21 +694,26 @@ describe("the patchSpans function", () => {
       {
         reporter: out => {
           if (out.failed) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             console.log(
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
               `action: ${JSON.stringify(out.counterexample![0].actions)}`,
             )
             console.log("reproducing test case: \n")
             console.log("const spansBefore: am.Span[] = [")
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             for (const span of out.counterexample![0].spansBefore) {
               console.log(JSON.stringify(span), ",")
             }
             console.log("]")
             console.log("const spansAfter: am.Span[] = [")
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             for (const span of out.counterexample![0].spansAfter) {
               console.log(JSON.stringify(span), ",")
             }
             console.log("]")
             console.log("const patches: am.Patch[] = [")
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             for (const patch of out.counterexample![0].patches) {
               console.log(JSON.stringify(patch), ",")
             }
@@ -755,7 +759,7 @@ function arbSpans(): fc.Arbitrary<am.Span[]> {
     )
     .map(spans => {
       //consolidate consecutive text spans
-      let result = []
+      const result = []
       let lastSpan: am.Span | null = null
       for (const span of spans) {
         if (
@@ -783,7 +787,7 @@ function scenario(): fc.Arbitrary<Scenario> {
   return arbSpans().chain(spansBefore => {
     let doc = am.from({ text: "" })
     doc = am.change(doc, d => am.updateSpans(d, ["text"], spansBefore))
-    let headsBefore = am.getHeads(doc)
+    const headsBefore = am.getHeads(doc)
 
     const doMoreModifications = (
       spansBefore: am.Span[],
@@ -848,7 +852,9 @@ type Action =
       name: string
       value: string | boolean
     }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   | { type: "splitBlock"; index: number; value: { [key: string]: any } }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   | { type: "updateBlock"; index: number; value: { [key: string]: any } }
 
 function arbAction(doc: am.Doc<{ text: string }>): fc.Arbitrary<Action> {
@@ -959,20 +965,16 @@ function applyAction(
   action: Action,
 ): am.Doc<{ text: string }> {
   return am.change(doc, d => {
-    try {
-      if (action.type === "insert") {
-        am.splice(d, ["text"], action.index, 0, action.chars)
-      } else if (action.type === "delete") {
-        am.splice(d, ["text"], action.index, action.length, "")
-      } else if (action.type === "splitBlock") {
-        am.splitBlock(d, ["text"], action.index, action.value)
-      } else if (action.type === "updateBlock") {
-        am.updateBlock(d, ["text"], action.index, action.value)
-      } else {
-        am.mark(d, ["text"], action.range, action.name, action.value)
-      }
-    } catch (e) {
-      throw e
+    if (action.type === "insert") {
+      am.splice(d, ["text"], action.index, 0, action.chars)
+    } else if (action.type === "delete") {
+      am.splice(d, ["text"], action.index, action.length, "")
+    } else if (action.type === "splitBlock") {
+      am.splitBlock(d, ["text"], action.index, action.value)
+    } else if (action.type === "updateBlock") {
+      am.updateBlock(d, ["text"], action.index, action.value)
+    } else {
+      am.mark(d, ["text"], action.range, action.name, action.value)
     }
   })
 }

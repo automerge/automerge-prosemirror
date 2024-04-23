@@ -217,7 +217,6 @@ function markSpans(spans: am.Span[], patch: am.Mark): void {
           thisSpan.type === "text" &&
           marksEqual(prevSpan.marks, thisSpan.marks)
         ) {
-          // @ts-ignore
           prevSpan.value += thisSpan.value
           spans.splice(i, 1)
         } else {
@@ -249,11 +248,11 @@ function markSpans(spans: am.Span[], patch: am.Mark): void {
 }
 
 function deleteSpans(spans: am.Span[], patch: am.DelPatch): void {
-  let start = patch.path[patch.path.length - 1]
+  const start = patch.path[patch.path.length - 1]
   if (typeof start !== "number") {
     throw new Error("Invalid path: expected number when deleting spans")
   }
-  let end = start + (patch.length || 1)
+  const end = start + (patch.length || 1)
   let deleteCount = 0
   // This is always the offset of the start of spans[i] in the _current_ spans
   // (i.e. not the original spans)
@@ -501,7 +500,9 @@ export function findBlockAtCharIdx(
 }
 
 function marksEqual(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   marks1: { [key: string]: any } | undefined,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   marks2: { [key: string]: any } | undefined,
 ): boolean {
   if (marks1 === marks2) {

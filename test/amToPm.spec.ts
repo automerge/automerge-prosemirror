@@ -1,13 +1,7 @@
 import { assert } from "chai"
 import { default as amToPm } from "../src/amToPm"
 import { EditorState } from "prosemirror-state"
-import {
-  BlockDef,
-  makeDoc,
-  printTree,
-  splitBlock,
-  updateBlockType,
-} from "./utils"
+import { BlockDef, makeDoc, splitBlock, updateBlockType } from "./utils"
 import { next as am } from "@automerge/automerge"
 import { schema } from "../src/schema"
 
@@ -20,6 +14,7 @@ type PerformPatchArgs = {
 function performPatch({
   initialDoc,
   patches,
+  //eslint-disable-next-line @typescript-eslint/no-unused-vars
   isLocal,
 }: PerformPatchArgs): EditorState {
   const { editor, spans } = makeDoc(initialDoc)
@@ -31,7 +26,7 @@ function performPatch({
       amPatches.push(patchOrFactory)
     }
   }
-  const tx = amToPm(schema, spans, amPatches, ["text"], editor.tr, !!isLocal)
+  const tx = amToPm(schema, spans, amPatches, ["text"], editor.tr)
   return editor.apply(tx)
 }
 
@@ -363,26 +358,6 @@ describe("the amToPm function", () => {
           ]),
         ),
       )
-    })
-
-    it("should update selection to point at the newly inserted block when local", () => {
-      const patched = performPatch({
-        initialDoc: [{ type: "paragraph", parents: [], attrs: {} }, "item 1"],
-        patches: [splitBlock(7, { type: "paragraph", parents: [], attrs: {} })],
-        isLocal: true,
-      })
-
-      assert.isTrue(
-        patched.doc.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("item 1"),
-            ]),
-            schema.node("paragraph", { isAmgBlock: true }, []),
-          ]),
-        ),
-      )
-      assert.equal(patched.selection.from, 9)
     })
 
     it("should split the text in a paragraph", () => {

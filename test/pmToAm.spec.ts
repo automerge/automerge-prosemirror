@@ -146,7 +146,7 @@ describe("when converting addMark steps to a change", () => {
       "item 2",
     ])
     // Add marks across the text of the two list items
-    const diff = updateDoc(doc, editor.doc, [
+    updateDoc(doc, editor.doc, [
       new AddMarkStep(3, 9, editor.schema.marks.strong.create()),
       new AddMarkStep(13, 19, editor.schema.marks.strong.create()),
     ])
@@ -155,6 +155,4 @@ describe("when converting addMark steps to a change", () => {
       { start: 1, end: 14, name: "strong", value: true },
     ])
   })
-
-  it("should add a new mark to an existing mark", () => {})
 })

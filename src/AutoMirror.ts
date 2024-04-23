@@ -58,7 +58,7 @@ export default class AutoMirror<T> {
       automerge.view(docAfter, headsBefore),
       this.path,
     )
-    const tx = amToPm(state.schema, spans, patches, this.path, state.tr, false)
+    const tx = amToPm(state.schema, spans, patches, this.path, state.tr)
     return state.apply(tx)
   }
 }
