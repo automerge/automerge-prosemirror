@@ -23,10 +23,10 @@ export default class AutoMirror<T> {
     return schema
   }
 
-  initialize = (handle: DocHandle<unknown>, path: am.Prop[]): Node => {
+  initialize = (handle: DocHandle<unknown>): Node => {
     const doc = handle.docSync()
     if (doc === undefined) throw new Error("Handle is not ready")
-    const spans = automerge.spans(doc, path)
+    const spans = automerge.spans(doc, this.path)
     return docFromSpans(spans)
   }
 

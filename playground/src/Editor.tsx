@@ -101,7 +101,7 @@ export function Editor({ handle, path }: EditorProps) {
     }
     const autoMirror = new AutoMirror(path)
 
-    const initialDoc = autoMirror.initialize(handle, path)
+    const initialDoc = autoMirror.initialize(handle)
     const editorConfig = {
       schema: autoMirror.schema,
       history,
