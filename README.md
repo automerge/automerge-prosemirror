@@ -46,7 +46,7 @@ let editorConfig = {
       "Mod-Shift-z": redo,
     }),
   ],
-  doc: autoMirror.initialize(handle.docSync(), ["text"])
+  doc: autoMirror.initialize(handle.docSync())
 }
 
 let state = EditorState.create(editorConfig)
