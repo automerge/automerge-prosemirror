@@ -582,6 +582,18 @@ describe("the traversal API", () => {
         end: 2,
       })
     })
+
+    it("should return the range around bare text", () => {
+      const { spans } = makeDoc(["a"])
+
+      // am:      0
+      //      <p> a </p>
+      // pm: 0   1 2     3
+      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 1, to: 2 }), {
+        start: 0,
+        end: 1,
+      })
+    })
   })
 
   describe("the blockAtIdx function", () => {
@@ -1821,8 +1833,7 @@ describe("the traversal API", () => {
             isEmbed: true,
           },
         },
-        { type: "openTag", tag: "image", role: "explicit" },
-        { type: "closeTag", tag: "image", role: "explicit" },
+        { type: "leafNode", tag: "image", role: "explicit" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ])
@@ -2695,6 +2706,7 @@ describe("the traversal API", () => {
             type: new am.RawString("paragraph"),
             parents: [new am.RawString("unordered-list-item")],
             attrs: {},
+            isEmbed: false,
           },
         },
         { type: "text", value: "item 1" },
@@ -2704,6 +2716,7 @@ describe("the traversal API", () => {
             type: new am.RawString("unordered-list-item"),
             parents: [],
             attrs: {},
+            isEmbed: false,
           },
         },
       ])
@@ -2729,6 +2742,7 @@ describe("the traversal API", () => {
           type: new am.RawString("paragraph"),
           parents: [new am.RawString("unordered-list-item")],
           attrs: {},
+          isEmbed: false,
         },
       },
       { type: "text", value: "item 1" },
@@ -2738,6 +2752,7 @@ describe("the traversal API", () => {
           type: new am.RawString("paragraph"),
           parents: [new am.RawString("unordered-list-item")],
           attrs: {},
+          isEmbed: false,
         },
       },
     ])

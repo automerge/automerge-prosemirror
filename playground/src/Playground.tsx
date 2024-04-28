@@ -22,53 +22,36 @@ const rightRepo = new Repo({
 const leftHandle = leftRepo.create()
 leftHandle.change(d => {
   d.text = ""
-  am.splitBlock(d, ["text"], 0, {
-    type: new am.RawString("heading"),
-    parents: [],
-    attrs: { level: 1 },
-  })
-  am.splice(d, ["text"], 1, 0, "Heading")
-  am.splitBlock(d, ["text"], 8, {
-    type: new am.RawString("paragraph"),
-    parents: [],
-    attrs: {},
-  })
-  am.splice(d, ["text"], 9, 0, "some text")
-
-  //am.splitBlock(d, ["text"], 0, {
-  //type: "paragraph",
-  //parents: ["blockquote", "unordered-list-item"],
-  //attrs: {},
-  //})
-  //am.splice(d, ["text"], 1, 0, "some quote")
-  //am.splitBlock(d, ["text"], 11, {type: "paragraph", parents: ["blockquote"], attrs: {}})
-  //am.splice(d, ["text"], 12, 0, "middle")
-  //am.splitBlock(d, ["text"], 18, {type: "unordered-list-item", parents: ["blockquote"], attrs: {}})
-
-  //am.splitBlock(d, ["text"], 0, {
-  //type: "ordered-list-item",
-  //parents: [],
-  //attrs: {},
-  //})
-  //am.splice(d, ["text"], 1, 0, "item one")
-  //am.splitBlock(d, ["text"], 9, {
-  //type: "ordered-list-item",
-  //parents: ["ordered-list-item"],
-  //attrs: {},
-  //})
-  //am.splice(d, ["text"], 10, 0, "item two")
-
-  //am.splitBlock(d, ["text"], 0, { type: "paragraph", parents: [], attrs: {} })
-  //am.splitBlock(d, ["text"], 1, {
-  //type: "image",
-  //parents: ["paragraph"],
-  //attrs: {
-  //src: "https://archive.org/services/img/Hubble_Andromeda_Galaxy_",
-  //alt: "Andromeda Galaxy",
-  //title: "Andromeda Galaxy",
-  //isEmbed: true,
-  //},
-  //})
+  am.updateSpans(
+    d,
+    ["text"],
+    [
+      {
+        type: "block",
+        value: {
+          type: new am.RawString("heading"),
+          parents: [],
+          attrs: {},
+        },
+      },
+      {
+        type: "text",
+        value: "Heading",
+      },
+      {
+        type: "block",
+        value: {
+          type: new am.RawString("paragraph"),
+          parents: [],
+          attrs: {},
+        },
+      },
+      {
+        type: "text",
+        value: "hello world",
+      },
+    ],
+  )
 })
 
 const rightHandle = rightRepo.find(leftHandle.url)

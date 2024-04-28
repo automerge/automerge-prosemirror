@@ -12,6 +12,7 @@ export type BlockDef = {
   type: string
   parents: string[]
   attrs: Record<string, automerge.MaterializeValue>
+  isEmbed?: boolean
 }
 
 export function docFromBlocksNotation(notation: (string | BlockDef)[]): {
@@ -159,10 +160,13 @@ export function assertSplitBlock(
   }
   const parentPath = path.slice(0, -1)
 
-  const expectedSpan = {
+  const expectedSpan: { [key: string]: automerge.MaterializeValue } = {
     type: new am.RawString(expected.type),
     parents: expected.parents.map(p => new am.RawString(p)),
     attrs: expected.attrs,
+  }
+  if (expected.isEmbed != null) {
+    expectedSpan.isEmbed = expected.isEmbed
   }
 
   // We skip the patch which creates the block

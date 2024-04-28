@@ -340,20 +340,24 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
             },
           }
         }
-        yield { type: "openTag", tag: cur.type.name, role }
-        nodePath.push(cur)
-        if (blockType != null && role === "explicit") {
-          path.push(blockType)
-        }
+        if (isEmbed) {
+          yield { type: "leafNode", tag: cur.type.name, role }
+        } else {
+          yield { type: "openTag", tag: cur.type.name, role }
+          nodePath.push(cur)
+          if (blockType != null && role === "explicit") {
+            path.push(blockType)
+          }
 
-        toProcess.push({ type: "closeTag", tag: cur.type.name, role })
-        for (let i = cur.childCount - 1; i >= 0; i--) {
-          toProcess.push({
-            parent: cur,
-            indexInParent: i,
-            type: "node",
-            node: cur.child(i),
-          })
+          toProcess.push({ type: "closeTag", tag: cur.type.name, role })
+          for (let i = cur.childCount - 1; i >= 0; i--) {
+            toProcess.push({
+              parent: cur,
+              indexInParent: i,
+              type: "node",
+              node: cur.child(i),
+            })
+          }
         }
       }
     } else {
@@ -932,7 +936,7 @@ export function pmRangeToAmRange(
           amEnd = state.before.amIdx + diff + 1
         }
       } else {
-        if (state.before.pmIdx > to) {
+        if (state.before.pmIdx >= to) {
           amEnd = state.before.amIdx + 1
         }
       }
@@ -990,6 +994,7 @@ export function blocksFromNode(node: Node): (
         type: am.RawString
         parents: am.RawString[]
         attrs: { [key: string]: BlockAttrValue }
+        isEmbed: boolean
       }
     }
   | { type: "text"; value: string }
@@ -1002,6 +1007,7 @@ export function blocksFromNode(node: Node): (
           type: am.RawString
           parents: am.RawString[]
           attrs: { [key: string]: BlockAttrValue }
+          isEmbed: boolean
         }
       }
     | { type: "text"; value: string }
@@ -1016,6 +1022,7 @@ export function blocksFromNode(node: Node): (
           type: new am.RawString(event.block.type),
           parents: event.block.parents.map(p => new am.RawString(p)),
           attrs,
+          isEmbed: event.block.isEmbed,
         },
       })
     } else if (event.type == "text") {

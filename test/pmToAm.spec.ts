@@ -50,6 +50,7 @@ describe("when converting a ReplaceStep to a change", () => {
       type: "ordered-list-item",
       parents: [],
       attrs: {},
+      isEmbed: false,
     })
   })
 
@@ -77,6 +78,7 @@ describe("when converting a ReplaceStep to a change", () => {
       type: "ordered-list-item",
       parents: [],
       attrs: {},
+      isEmbed: false,
     })
   })
 
@@ -103,6 +105,7 @@ describe("when converting a ReplaceStep to a change", () => {
       type: "paragraph",
       parents: ["ordered-list-item"],
       attrs: {},
+      isEmbed: false,
     })
   })
 
@@ -133,6 +136,7 @@ describe("when converting a ReplaceStep to a change", () => {
       type: "ordered-list-item",
       parents: [],
       attrs: {},
+      isEmbed: false,
     })
   })
 })

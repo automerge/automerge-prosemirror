@@ -20,16 +20,17 @@ export default function (
   pmDoc: Node,
   path: Prop[],
 ) {
-  const unappliedMarks: AddMarkStep[] = []
+  let unappliedMarks: AddMarkStep[] = []
 
   function flushMarks() {
     if (unappliedMarks.length > 0) {
       applyAddMarkSteps(spans, unappliedMarks, doc, path)
-      unappliedMarks.length = 0
+      unappliedMarks = []
     }
   }
 
   for (const step of steps) {
+    //console.log(step)
     if (isAddMarkStep(step)) {
       unappliedMarks.push(step)
       continue

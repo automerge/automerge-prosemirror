@@ -65,6 +65,7 @@ describe("<Editor />", () => {
               type: new automerge.RawString("paragraph"),
               parents: [],
               attrs: {},
+              isEmbed: false,
             },
           },
           { type: "text", value: "Hello World" },
@@ -74,6 +75,7 @@ describe("<Editor />", () => {
               type: new automerge.RawString("paragraph"),
               parents: [],
               attrs: {},
+              isEmbed: false,
             },
           },
           {
@@ -82,6 +84,7 @@ describe("<Editor />", () => {
               type: new automerge.RawString("paragraph"),
               parents: [],
               attrs: {},
+              isEmbed: false,
             },
           },
           { type: "text", value: "line two" },
