@@ -21,37 +21,8 @@ const rightRepo = new Repo({
 
 const leftHandle = leftRepo.create()
 leftHandle.change(d => {
-  d.text = ""
-  am.updateSpans(
-    d,
-    ["text"],
-    [
-      {
-        type: "block",
-        value: {
-          type: new am.RawString("heading"),
-          parents: [],
-          attrs: {},
-        },
-      },
-      {
-        type: "text",
-        value: "Heading",
-      },
-      {
-        type: "block",
-        value: {
-          type: new am.RawString("paragraph"),
-          parents: [],
-          attrs: {},
-        },
-      },
-      {
-        type: "text",
-        value: "hello world",
-      },
-    ],
-  )
+  d.text = "Heading"
+  am.splitBlock(d, ["text"], 0, { type: new am.RawString("heading"), attrs: {level: 1}, parents: []})
 })
 
 const rightHandle = rightRepo.find(leftHandle.url)

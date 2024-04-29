@@ -1,10 +1,16 @@
 import { next as am } from "@automerge/automerge"
-import { Mark, Node, Schema } from "prosemirror-model"
+import {
+  ContentMatch,
+  Fragment,
+  Mark,
+  Node,
+  NodeType,
+  Schema,
+} from "prosemirror-model"
 import {
   isBlockMarker,
   BlockType,
   BlockMarker,
-  Span,
   amSpanToSpan,
 } from "./types"
 import { schema } from "./schema"
@@ -101,15 +107,7 @@ function constructNode(
   attrs: { [key: string]: any },
   children: Node[],
 ): Node {
-  if (nodeName === "ordered-list") {
-    return schema.node("ordered_list", attrs, children)
-  } else if (nodeName === "unordered-list") {
-    return schema.node("bullet_list", attrs, children)
-  } else if (nodeName === "list-item") {
-    return schema.node("list_item", attrs, children)
-  } else {
-    return schema.node(nodeName, attrs, children)
-  }
+  return schema.node(nodeName, attrs, children)
 }
 
 export function amSpliceIdxToPmIdx(
@@ -403,124 +401,190 @@ export function* traverseSpans(
       { type: "closeTag", tag: "paragraph", role: "render-only" },
     ]
   }
+  const state = new TraverseState()
 
-  const spanQueue = blockSpans.slice()
+  for (const span of blockSpans) {
+    if (span.type === "block") {
+      yield* state.newBlock(span.value)
+    } else {
+      yield* state.newText(span.value, span.marks || {})
+    }
+  }
+  yield* state.finish()
+}
 
-  function* inner(
-    spans: Span[],
-    enclosingBlock: BlockMarker | null = null,
-  ): IterableIterator<TraversalEvent> {
-    let lastBlock: BlockMarker | null = null
+class TraverseState {
+  lastBlock: BlockMarker | null = null
+  stack: { node: NodeType; role: RenderRole; lastMatch: ContentMatch }[] = []
+  topMatch: ContentMatch
 
-    while (spans.length > 0) {
-      //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const span = spans.shift()!
-      if (span.type === "text") {
-        const textSpans = [
-          { value: span.value, marks: span.marks },
-          ...popTextSpans(spans),
-        ]
-        if (enclosingBlock == null) {
-          yield { type: "openTag", tag: "paragraph", role: "render-only" }
+  constructor() {
+    this.stack = []
+    this.topMatch = schema.nodes.doc.contentMatch
+  }
+
+  set currentMatch(match: ContentMatch) {
+    if (match === null) {
+      throw new Error("Match cannot be null")
+    }
+    if (this.stack.length > 0) {
+      this.stack[this.stack.length - 1].lastMatch = match
+    } else {
+      this.topMatch = match
+    }
+  }
+
+  get currentMatch(): ContentMatch {
+    if (this.stack.length > 0) {
+      return this.stack[this.stack.length - 1].lastMatch
+    } else {
+      return this.topMatch
+    }
+  }
+
+  *newBlock(block: BlockMarker): IterableIterator<TraversalEvent> {
+    if (block.isEmbed) {
+      const { content } = nodesForBlock(block.type.val)
+      const wrapping = this.currentMatch.findWrapping(content)
+      if (wrapping && wrapping.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        this.currentMatch = this.currentMatch.matchType(wrapping[0])!
+        for (let i = 0; i < wrapping.length; i++) {
+          yield { type: "openTag", tag: wrapping[i].name, role: "render-only" }
         }
-        for (const text of textSpans) {
-          yield { type: "text", text: text.value, marks: text.marks || {} }
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        this.currentMatch = this.currentMatch.matchType(content)!
+      }
+      yield blockEvent(block)
+      yield { type: "leafNode", tag: block.type.val, role: "explicit" }
+      if (wrapping) {
+        for (let i = wrapping.length - 1; i >= 0; i--) {
+          yield { type: "closeTag", tag: wrapping[i].name, role: "render-only" }
         }
-        if (enclosingBlock == null) {
-          yield { type: "closeTag", tag: "paragraph", role: "render-only" }
-        }
-      } else if (span.type === "block") {
-        let subSpans: Span[] = []
-        if (!span.value.isEmbed) {
-          subSpans = popSpansBelow(span.value, spans)
-        }
+      }
+      return
+    }
+    const newOuter = outerNodeTypes(block)
+    let i = 0
+    while (i < newOuter.length && i < this.stack.length) {
+      if (this.stack[i].node !== newOuter[i]) {
+        break
+      }
+      i++
+    }
+    const toClose = this.stack.splice(i)
+    for (const { node, role, lastMatch } of toClose.toReversed()) {
+      yield* this.finishStackFrame({ node, role, lastMatch })
+      yield { type: "closeTag", tag: node.name, role }
+    }
+    for (let j = i; j < newOuter.length; j++) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const next = newOuter[j]!
+      yield* this.fillBefore(next)
+      yield this.pushNode(newOuter[j], "render-only")
+    }
+    yield blockEvent(block)
+    const { content } = nodesForBlock(block.type.val)
+    yield this.pushNode(content, "explicit")
+  }
 
-        const newBlocks = blockDiff({
-          enclosing: enclosingBlock,
-          previous: lastBlock,
-          block: span.value,
-          following: peekNextBlock(spans),
-        })
+  pushNode(node: NodeType, role: RenderRole): TraversalEvent {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    this.currentMatch = this.currentMatch.matchType(node)!
+    this.stack.push({ node, role, lastMatch: node.contentMatch })
+    return { type: "openTag", tag: node.name, role }
+  }
 
-        for (const block of newBlocks.toOpen) {
-          if (block.openOuter) {
-            yield* openOuterWrappers(block.block)
+  *newText(text: string, marks: am.MarkSet): IterableIterator<TraversalEvent> {
+    const wrapping = this.currentMatch.findWrapping(schema.nodes.text)
+
+    if (wrapping) {
+      for (let i = 0; i < wrapping.length; i++) {
+        yield this.pushNode(wrapping[i], "render-only")
+      }
+    }
+    yield { type: "text", text, marks }
+  }
+
+  *finish(): IterableIterator<TraversalEvent> {
+    for (const { node, role, lastMatch } of this.stack.toReversed()) {
+      yield* this.finishStackFrame({ node, role, lastMatch })
+      yield { type: "closeTag", tag: node.name, role }
+    }
+  }
+
+  *fillBefore(node: NodeType): IterableIterator<TraversalEvent> {
+    const fill = this.currentMatch.fillBefore(Fragment.from(node.create()))
+    if (fill != null) {
+      yield* this.emitFragment(fill)
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.currentMatch = this.currentMatch.matchFragment(fill)!
+    }
+  }
+
+  *emitFragment(fragment: Fragment): IterableIterator<TraversalEvent> {
+    type Event =
+      | { type: "open"; node: Node }
+      | { type: "close"; node: NodeType }
+    const toProcess: Event[] = []
+    for (let i = fragment.childCount - 1; i >= 0; i--) {
+      toProcess.push({ type: "open", node: fragment.child(i) })
+    }
+    while (toProcess.length > 0) {
+      const next = toProcess.pop()
+      if (next == null) {
+        return
+      }
+      if (next.type === "open") {
+        yield { type: "openTag", tag: next.node.type.name, role: "render-only" }
+        if (next.node.isText) {
+          // TODO: Calculate marks
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          yield { type: "text", text: next.node.text!, marks: {} }
+          yield {
+            type: "closeTag",
+            tag: next.node.type.name,
+            role: "render-only",
           }
-          if (block.isParent) {
-            yield* openBlock(block.block, true)
-            // TODO: replace this with ContentMatch.fillBefore
-            yield* fillBefore(block.block, block.containedBlock)
-          } else {
-            yield blockEvent(span.value)
-            if (span.value.isEmbed) {
-              yield {
-                type: "leafNode",
-                tag: span.value.type.val,
-                role: "explicit",
-              }
-            } else {
-              yield* openBlock(block.block, false)
-            }
-          }
-        }
-
-        if (subSpans.length == 0) {
-          yield* openInnerWrappers(span.value.type.val, null)
-          yield* closeInnerWrappers(span.value.type.val, null)
         } else {
-          let lastBlock = null
-          while (subSpans.length > 0) {
-            const subNext = subSpans[0]
-            if (subNext.type === "text") {
-              const textSpans = popTextSpans(subSpans)
-              const wrapping = findWrapping(
-                span.value.type.val,
-                lastBlock,
-                subNext,
-              )
-              if (wrapping == null)
-                throw new Error(`wrapping not found for ${span.value.type}`)
-              yield* wrapping.before
-              for (const text of textSpans) {
-                yield { type: "text", text: text.value, marks: text.marks }
-              }
-              yield* wrapping.after
-            } else {
-              // TODO replace this with ContentMatch.findWrapping
-              const wrapping = findWrapping(
-                span.value.type.val,
-                lastBlock,
-                subNext,
-              )
-              if (wrapping == null)
-                throw new Error(
-                  `wrapping not found for ${subNext.value.type} inside ${span.value.type} following ${lastBlock}`,
-                )
-              yield* wrapping.before
-              yield* inner(subSpans, span.value)
-              yield* wrapping.after
-            }
-            lastBlock = subNext
+          toProcess.push({ type: "close", node: next.node.type })
+          for (let i = next.node.childCount - 1; i >= 0; i--) {
+            toProcess.push({ type: "open", node: next.node.child(i) })
           }
         }
-
-        for (const block of newBlocks.toClose) {
-          if (!block.isParent) {
-            if (!span.value.isEmbed) {
-              yield* closeBlock(block.block, false)
-            }
-          } else {
-            yield* closeBlock(block.block, true)
-          }
-          if (block.closeOuter) {
-            yield* closeOuterWrappers(block.block)
-          }
-        }
-        lastBlock = span.value
+      } else {
+        yield { type: "closeTag", tag: next.node.name, role: "render-only" }
       }
     }
   }
-  yield* inner(spanQueue, null)
+
+  *finishStackFrame(frame: {
+    node: NodeType
+    role: RenderRole
+    lastMatch: ContentMatch
+  }): IterableIterator<TraversalEvent> {
+    const fill = frame.lastMatch.fillBefore(Fragment.empty, true)
+    if (fill) {
+      yield* this.emitFragment(fill)
+    }
+  }
+}
+
+function outerNodeTypes(block: BlockMarker): NodeType[] {
+  const result = []
+  for (const parent of block.parents) {
+    const { outer, content } = nodesForBlock(parent.val)
+    if (outer != null) {
+      result.push(outer)
+    }
+    result.push(content)
+  }
+  const { outer } = nodesForBlock(block.type.val)
+  if (outer != null) {
+    result.push(outer)
+  }
+  return result
 }
 
 function blockEvent(block: BlockMarker): TraversalEvent {
@@ -539,338 +603,6 @@ function blockEvent(block: BlockMarker): TraversalEvent {
       isEmbed: block.isEmbed || false,
     },
   }
-}
-
-function peekNextBlock(spans: Span[]): BlockMarker | null {
-  for (const span of spans) {
-    if (span.type === "block") {
-      return span.value
-    }
-  }
-  return null
-}
-
-function popTextSpans(
-  spans: am.Span[],
-): { value: string; marks: am.MarkSet }[] {
-  const result = []
-  while (spans.length > 0) {
-    const next = spans[0]
-    if (next.type === "text") {
-      result.push({ value: next.value, marks: next.marks || {} })
-      spans.shift()
-    } else {
-      break
-    }
-  }
-  return result
-}
-
-function popSpansBelow(parent: BlockMarker, spans: Span[]): Span[] {
-  const result: Span[] = []
-  const parentPath = [...parent.parents.map(p => p.val), parent.type.val]
-  while (spans.length > 0) {
-    const next = spans[0]
-    if (next.type === "text") {
-      //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      result.push(spans.shift()!)
-    } else {
-      const nextPath = [
-        ...next.value.parents.map(p => p.val),
-        next.value.type.val,
-      ]
-      if (
-        commonPrefixLength(parentPath, nextPath) == parentPath.length &&
-        nextPath.length > parentPath.length
-      ) {
-        //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        result.push(spans.shift()!)
-      } else {
-        break
-      }
-    }
-  }
-  return result
-}
-
-type BlockDiffArgs = {
-  enclosing: BlockMarker | null
-  previous: BlockMarker | null
-  block: BlockMarker
-  following: BlockMarker | null
-}
-type BlockDiff = {
-  toOpen: {
-    block: string
-    isParent: boolean
-    openOuter: boolean
-    containedBlock: string | null
-  }[]
-  toClose: { block: string; isParent: boolean; closeOuter: boolean }[]
-}
-export function blockDiff({
-  enclosing,
-  previous,
-  block,
-  following,
-}: BlockDiffArgs): BlockDiff {
-  const enclosingPath = enclosing
-    ? [...enclosing.parents.map(p => p.val), enclosing.type.val]
-    : []
-  const blockPath = [...block.parents.map(p => p.val), block.type.val]
-  const previousPath = previous
-    ? [...previous.parents.map(p => p.val), previous.type.val]
-    : []
-  const nextPath = following
-    ? [...following.parents.map(p => p.val), following.type.val]
-    : []
-
-  const commonPrefix = commonPrefixLength(enclosingPath, blockPath)
-
-  const previousToOpen = previousPath.slice(commonPrefix)
-  const thisBlockToOpen = blockPath.slice(commonPrefix)
-
-  let toOpenPrefix = commonPrefixLength(previousToOpen, thisBlockToOpen)
-  const openingSibling =
-    toOpenPrefix > 0 && thisBlockToOpen[toOpenPrefix - 1] !== "blockquote"
-  if (openingSibling) {
-    // we want to open sibling blocks, e.g.
-    // {type: "paragraph", parents: []}
-    // {type: "paragraph", parents: []}
-    // should result in opening one <paragraph>
-    //
-    // However
-    // {type: "heading", parents: ["blockquote"]}
-    // {type: "paragraph", parents: ["blockquote"]}
-    //
-    // should _not_ result in two blockquote blocks a sibling block
-    toOpenPrefix -= 1
-  }
-  const blocksToOpen = thisBlockToOpen
-    .slice(toOpenPrefix)
-    .map(block => ({ block, isParent: true, openOuter: true }))
-
-  if (blocksToOpen.length > 0) {
-    blocksToOpen[blocksToOpen.length - 1].isParent = false
-  }
-  if (openingSibling) {
-    // We don't want to open the outer wrapper if we're opening a sibling block
-    blocksToOpen[0].openOuter = false
-  }
-
-  const toOpen = []
-  for (const [index, block] of blocksToOpen.entries()) {
-    toOpen.push({
-      ...block,
-      containedBlock: blocksToOpen[index + 1]?.block || null,
-    })
-  }
-
-  const nextToClose = nextPath.slice(commonPrefix)
-  const thisBlockToClose = blockPath.slice(commonPrefix)
-  let toClosePrefix = commonPrefixLength(nextToClose, thisBlockToClose)
-  const closingSibling =
-    toClosePrefix > 0 && thisBlockToClose[toClosePrefix - 1] !== "blockquote"
-  //if (toClosePrefix > 0) {
-  if (closingSibling) {
-    // we want to close sibling blocks, e.g.
-    //
-    // block: {type: "paragraph", parents: []}
-    // next: {type: "paragraph", parents: []}
-    //
-    // should result in closing one </paragraph>
-    toClosePrefix -= 1
-  }
-  const toClose = thisBlockToClose
-    .slice(toClosePrefix)
-    .map(block => ({ block, isParent: true, closeOuter: true }))
-  if (toClose.length > 0) {
-    toClose[toClose.length - 1].isParent = false
-  }
-  if (closingSibling) {
-    toClose[0].closeOuter = false
-  }
-  return { toOpen: toOpen, toClose: toClose.toReversed() }
-}
-
-function closeBlock(blockType: string, isParent: boolean): TraversalEvent[] {
-  const role = isParent ? "render-only" : "explicit"
-  if (
-    blockType === "ordered-list-item" ||
-    blockType === "unordered-list-item"
-  ) {
-    return [{ type: "closeTag", tag: "list-item", role }]
-  } else if (blockType === "code-block") {
-    return [{ type: "closeTag", tag: "code_block", role }]
-  } else {
-    return [{ type: "closeTag", tag: blockType, role }]
-  }
-}
-
-function closeInnerWrappers(
-  blockType: string,
-  containedBlock: am.Span | null,
-): TraversalEvent[] {
-  if (
-    blockType === "ordered-list-item" ||
-    blockType === "unordered-list-item"
-  ) {
-    if (containedBlock == null || containedBlock.type === "text") {
-      return [{ type: "closeTag", tag: "paragraph", role: "render-only" }]
-    }
-  }
-  if (blockType === "aside") {
-    if (containedBlock == null) {
-      return [{ type: "closeTag", tag: "paragraph", role: "render-only" }]
-    }
-  }
-  return []
-}
-
-function closeOuterWrappers(blockType: string): TraversalEvent[] {
-  if (blockType === "ordered-list-item") {
-    return [{ type: "closeTag", tag: "ordered-list", role: "render-only" }]
-  } else if (blockType === "unordered-list-item") {
-    return [{ type: "closeTag", tag: "unordered-list", role: "render-only" }]
-  } else {
-    return []
-  }
-}
-
-function openOuterWrappers(blockType: string): TraversalEvent[] {
-  if (blockType === "ordered-list-item") {
-    return [{ type: "openTag", tag: "ordered-list", role: "render-only" }]
-  } else if (blockType === "unordered-list-item") {
-    return [{ type: "openTag", tag: "unordered-list", role: "render-only" }]
-  } else {
-    return []
-  }
-}
-
-function openBlock(blockType: string, isParent: boolean): TraversalEvent[] {
-  const role = isParent ? "render-only" : "explicit"
-  if (
-    blockType === "ordered-list-item" ||
-    blockType === "unordered-list-item"
-  ) {
-    return [{ type: "openTag", tag: "list-item", role }]
-  } else if (blockType === "code-block") {
-    return [{ type: "openTag", tag: "code_block", role }]
-  } else {
-    return [{ type: "openTag", tag: blockType, role }]
-  }
-}
-
-function fillBefore(
-  containerType: string,
-  containedBlockType: string | null,
-): TraversalEvent[] {
-  if (
-    containerType === "ordered-list-item" ||
-    containerType === "unordered-list-item"
-  ) {
-    if (containedBlockType == null || containedBlockType !== "paragraph") {
-      return [
-        { type: "openTag", tag: "paragraph", role: "render-only" },
-        { type: "closeTag", tag: "paragraph", role: "render-only" },
-      ]
-    }
-  }
-  return []
-}
-
-function findWrapping(
-  containerType: string,
-  lastBlock: am.Span | null,
-  block: am.Span,
-): { before: TraversalEvent[]; after: TraversalEvent[] } | null {
-  if (
-    containerType === "ordered-list-item" ||
-    containerType === "unordered-list-item"
-  ) {
-    if (block.type === "text") {
-      return {
-        before: [{ type: "openTag", tag: "paragraph", role: "render-only" }],
-        after: [{ type: "closeTag", tag: "paragraph", role: "render-only" }],
-      }
-    } else if (block.type === "block") {
-      let lastBlockType = null
-      if (lastBlock != null) {
-        if (
-          lastBlock.type == "block" &&
-          lastBlock.value.type instanceof am.RawString
-        ) {
-          lastBlockType = lastBlock.value.type.val
-        }
-      }
-      const blockType =
-        block.value.type instanceof am.RawString
-          ? block.value.type.val
-          : "paragraph"
-      if (blockType === "paragraph") {
-        return {
-          before: [],
-          after: [],
-        }
-      }
-      if (
-        lastBlock != null &&
-        ((lastBlock.type === "block" && lastBlockType === "paragraph") ||
-          lastBlock.type === "text")
-      ) {
-        return {
-          before: [],
-          after: [],
-        }
-      } else {
-        return {
-          before: [
-            { type: "openTag", tag: "paragraph", role: "render-only" },
-            { type: "closeTag", tag: "paragraph", role: "render-only" },
-          ],
-          after: [],
-        }
-      }
-    }
-  } else if (containerType === "aside") {
-    if (block.type === "text") {
-      return {
-        before: [{ type: "openTag", tag: "paragraph", role: "render-only" }],
-        after: [{ type: "closeTag", tag: "paragraph", role: "render-only" }],
-      }
-    } else {
-      return {
-        before: [],
-        after: [],
-      }
-    }
-  } else {
-    return {
-      before: [],
-      after: [],
-    }
-  }
-  return null
-}
-
-function openInnerWrappers(
-  blockType: string,
-  containedBlock: am.Span | null,
-): TraversalEvent[] {
-  if (
-    blockType === "ordered-list-item" ||
-    blockType === "unordered-list-item"
-  ) {
-    if (containedBlock == null || containedBlock.type === "text") {
-      return [{ type: "openTag", tag: "paragraph", role: "render-only" }]
-    }
-  }
-  if (blockType === "aside") {
-    if (containedBlock == null) {
-      return [{ type: "openTag", tag: "paragraph", role: "render-only" }]
-    }
-  }
-  return []
 }
 
 export function pmRangeToAmRange(
@@ -954,14 +686,6 @@ export function pmRangeToAmRange(
   }
 }
 
-function commonPrefixLength(a: string[], b: string[]): number {
-  let i = 0
-  while (i < a.length && i < b.length && a[i] === b[i]) {
-    i++
-  }
-  return i
-}
-
 export function blockAtIdx(
   spans: am.Span[],
   target: number,
@@ -1030,4 +754,42 @@ export function blocksFromNode(node: Node): (
     }
   }
   return result
+}
+
+function nodesForBlock(blockType: string): {
+  outer: NodeType | null
+  content: NodeType
+  inner: NodeType | null
+} {
+  if (blockType === "paragraph") {
+    return { outer: null, content: schema.nodes.paragraph, inner: null }
+  } else if (blockType === "heading") {
+    return { outer: null, content: schema.nodes.heading, inner: null }
+  } else if (blockType === "aside") {
+    return {
+      outer: null,
+      content: schema.nodes.aside,
+      inner: schema.nodes.paragraph,
+    }
+  } else if (blockType === "blockquote") {
+    return { outer: null, content: schema.nodes.blockquote, inner: null }
+  } else if (blockType === "ordered-list-item") {
+    return {
+      outer: schema.nodes.ordered_list,
+      content: schema.nodes.list_item,
+      inner: schema.nodes.paragraph,
+    }
+  } else if (blockType === "unordered-list-item") {
+    return {
+      outer: schema.nodes.bullet_list,
+      content: schema.nodes.list_item,
+      inner: schema.nodes.paragraph,
+    }
+  } else if (blockType === "code-block") {
+    return { outer: null, content: schema.nodes.code_block, inner: null }
+  } else if (blockType === "image") {
+    return { outer: null, content: schema.nodes.image, inner: null }
+  } else {
+    throw new Error(`Unknown block type: ${blockType}`)
+  }
 }

@@ -8,7 +8,6 @@ import {
   amIdxToPmBlockIdx,
   docFromSpans,
   blocksFromNode,
-  blockDiff,
   traverseNode,
   eventsWithIndexChanges,
 } from "../src/traversal"
@@ -680,11 +679,11 @@ describe("the traversal API", () => {
       ]
       const events = Array.from(traverseSpans(spans))
       const expected: TraversalEvent[] = [
-        { type: "openTag", tag: "unordered-list", role: "render-only" },
-        { type: "openTag", tag: "list-item", role: "render-only" },
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "openTag", tag: "ordered-list", role: "render-only" },
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
           block: {
@@ -694,14 +693,14 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "text", text: "item 1", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
-        { type: "closeTag", tag: "ordered-list", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "render-only" },
-        { type: "closeTag", tag: "unordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
       ]
       assert.deepStrictEqual(events, expected)
     })
@@ -757,8 +756,8 @@ describe("the traversal API", () => {
       ]
       const events = Array.from(traverseSpans(spans))
       const expected: TraversalEvent[] = [
-        { type: "openTag", tag: "ordered-list", role: "render-only" },
-        { type: "openTag", tag: "list-item", role: "render-only" },
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
           block: {
@@ -771,10 +770,10 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "hello", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "list-item", role: "render-only" },
-        { type: "closeTag", tag: "ordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
       ]
-      assert.deepStrictEqual(events, expected)
+      assertTraversalEqual(events, expected)
     })
 
     it("should return the correct events for a paragraph followed by a nested list item", () => {
@@ -811,11 +810,11 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "paragraph", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "openTag", tag: "unordered-list", role: "render-only" },
-        { type: "openTag", tag: "list-item", role: "render-only" },
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "openTag", tag: "ordered-list", role: "render-only" },
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
           block: {
@@ -825,15 +824,15 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
-        { type: "closeTag", tag: "ordered-list", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "render-only" },
-        { type: "closeTag", tag: "unordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
       ]
-      assert.deepStrictEqual(events, expected)
+      assertTraversalEqual(events, expected)
     })
 
     it("a list item between two paragraphs", () => {
@@ -867,7 +866,7 @@ describe("the traversal API", () => {
         { type: "text", value: "item 3" },
       ]
       const events = Array.from(traverseSpans(spans))
-      assert.deepStrictEqual(events, [
+      assertTraversalEqual(events, [
         {
           type: "block",
           block: {
@@ -880,8 +879,8 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "item 1", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "openTag", tag: "ordered-list", role: "render-only" },
-        { type: "openTag", tag: "list-item", role: "render-only" },
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
           block: {
@@ -894,8 +893,8 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "item 2", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "list-item", role: "render-only" },
-        { type: "closeTag", tag: "ordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
           block: {
@@ -949,7 +948,7 @@ describe("the traversal API", () => {
         },
       ]
       const events = Array.from(traverseSpans(spans))
-      assert.deepStrictEqual(events, [
+      assertTraversalEqual(events, [
         {
           type: "block",
           block: {
@@ -962,8 +961,8 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "item 1", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "openTag", tag: "ordered-list", role: "render-only" },
-        { type: "openTag", tag: "list-item", role: "render-only" },
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
           block: {
@@ -976,7 +975,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "item 2", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "list-item", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
           block: {
@@ -986,10 +985,10 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
         {
           type: "block",
           block: {
@@ -999,11 +998,11 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
-        { type: "closeTag", tag: "ordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
       ])
     })
 
@@ -1036,8 +1035,8 @@ describe("the traversal API", () => {
         },
       ]
       const events = Array.from(traverseSpans(spans))
-      assert.deepStrictEqual(events, [
-        { type: "openTag", tag: "ordered-list", role: "render-only" },
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
           block: {
@@ -1047,7 +1046,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         {
           type: "block",
           block: {
@@ -1071,8 +1070,8 @@ describe("the traversal API", () => {
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
-        { type: "closeTag", tag: "ordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
       ])
     })
 
@@ -1099,8 +1098,8 @@ describe("the traversal API", () => {
         { type: "text", value: "item 2" },
       ]
       const events = Array.from(traverseSpans(spans))
-      assert.deepStrictEqual(events, [
-        { type: "openTag", tag: "unordered-list", role: "render-only" },
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
           block: {
@@ -1110,7 +1109,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "text", text: "item 1", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
@@ -1126,8 +1125,8 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "item 2", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
-        { type: "closeTag", tag: "unordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
       ])
     })
 
@@ -1137,7 +1136,7 @@ describe("the traversal API", () => {
         { type: "text", value: "world" },
       ]
       const events = Array.from(traverseSpans(spans))
-      assert.deepStrictEqual(events, [
+      assertTraversalEqual(events, [
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "text", text: "hello ", marks: {} },
         { type: "text", text: "world", marks: {} },
@@ -1159,8 +1158,8 @@ describe("the traversal API", () => {
         { type: "text", value: "world" },
       ]
       const events = Array.from(traverseSpans(spans))
-      assert.deepStrictEqual(events, [
-        { type: "openTag", tag: "unordered-list", role: "render-only" },
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
           block: {
@@ -1170,13 +1169,13 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "text", text: "hello ", marks: {} },
         { type: "text", text: "world", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
-        { type: "closeTag", tag: "unordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
       ])
     })
 
@@ -1193,7 +1192,7 @@ describe("the traversal API", () => {
         },
       ]
       const events = Array.from(traverseSpans(spans))
-      assert.deepStrictEqual(events, [
+      assertTraversalEqual(events, [
         {
           type: "block",
           block: {
@@ -1234,7 +1233,7 @@ describe("the traversal API", () => {
         { type: "text", value: "world" },
       ]
       const events = Array.from(traverseSpans(spans))
-      assert.deepStrictEqual(events, [
+      assertTraversalEqual(events, [
         {
           type: "block",
           block: {
@@ -1295,8 +1294,8 @@ describe("the traversal API", () => {
       ]
 
       const events = Array.from(traverseSpans(spans))
-      assert.deepStrictEqual(events, [
-        { type: "openTag", tag: "ordered-list", role: "render-only" },
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
 
         // First block
         {
@@ -1308,11 +1307,11 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "text", text: "item 1", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
 
         // Second block
         {
@@ -1324,11 +1323,11 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
 
-        { type: "openTag", tag: "ordered-list", role: "render-only" },
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
         // Third block
         {
           type: "block",
@@ -1339,15 +1338,15 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "text", text: "item 2", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
 
-        { type: "closeTag", tag: "ordered-list", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
-        { type: "closeTag", tag: "ordered-list", role: "render-only" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
       ])
     })
 
@@ -1471,8 +1470,8 @@ describe("the traversal API", () => {
       const events = Array.from(traverseSpans(spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "blockquote", role: "render-only" },
-        { type: "openTag", tag: "unordered-list", role: "render-only" },
-        { type: "openTag", tag: "list-item", role: "render-only" },
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
           block: {
@@ -1484,8 +1483,8 @@ describe("the traversal API", () => {
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "list-item", role: "render-only" },
-        { type: "closeTag", tag: "unordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
           block: {
@@ -1568,8 +1567,8 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "heading", role: "explicit" },
         { type: "text", text: "heading", marks: {} },
         { type: "closeTag", tag: "heading", role: "explicit" },
-        { type: "openTag", tag: "ordered-list", role: "render-only" },
-        { type: "openTag", tag: "list-item", role: "render-only" },
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
           block: {
@@ -1582,8 +1581,88 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "some text", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "list-item", role: "render-only" },
-        { type: "closeTag", tag: "ordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
+      ])
+    })
+
+    it("should generate a nested list following a paragraph", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "hello world" },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("unordered-list-item")],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "item one" },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("unordered-list-item"),
+            parents: [new am.RawString("unordered-list-item")],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+      ]
+      const events = Array.from(traverseSpans(spans))
+      assertTraversalEqual(events, [
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "paragraph", role: "explicit" },
+        { type: "text", text: "hello world", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "explicit" },
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: ["unordered-list-item"],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "paragraph", role: "explicit" },
+        { type: "text", text: "item one", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "explicit" },
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
+        {
+          type: "block",
+          block: {
+            type: "unordered-list-item",
+            parents: ["unordered-list-item"],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "list_item", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
       ])
     })
   })
@@ -2019,8 +2098,8 @@ describe("the traversal API", () => {
       const events = Array.from(traverseSpans(spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "blockquote", role: "render-only" },
-        { type: "openTag", tag: "unordered-list", role: "render-only" },
-        { type: "openTag", tag: "list-item", role: "render-only" },
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
           block: {
@@ -2033,8 +2112,8 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "some quote", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "list-item", role: "render-only" },
-        { type: "closeTag", tag: "unordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
           block: {
@@ -2047,7 +2126,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "middle", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "openTag", tag: "unordered-list", role: "render-only" },
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
           block: {
@@ -2057,11 +2136,11 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "list-item", role: "explicit" },
+        { type: "openTag", tag: "list_item", role: "explicit" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
-        { type: "closeTag", tag: "list-item", role: "explicit" },
-        { type: "closeTag", tag: "unordered-list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
         { type: "closeTag", tag: "blockquote", role: "render-only" },
       ])
     })
@@ -2085,6 +2164,74 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "code_block", role: "explicit" },
         { type: "text", text: "var x", marks: {} },
         { type: "closeTag", tag: "code_block", role: "explicit" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should recognise a nested list following a paragraph", () => {
+      const node = schema.node("doc", null, [
+        schema.node("paragraph", { isAmgBlock: true }, [
+          schema.text("hello world"),
+        ]),
+        schema.node("bullet_list", null, [
+          schema.node("list_item", null, [
+            schema.node("paragraph", { isAmgBlock: true }, [
+              schema.text("item one"),
+            ]),
+            schema.node("bullet_list", null, [
+              schema.node("list_item", { isAmgBlock: true }, [
+                schema.node("paragraph", null, []),
+              ]),
+            ]),
+          ]),
+        ]),
+      ])
+      const events = Array.from(traverseNode(node))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "paragraph", role: "explicit" },
+        { type: "text", text: "hello world", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "explicit" },
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
+        { type: "openTag", tag: "list_item", role: "render-only" },
+        {
+          type: "block",
+          block: {
+            type: "paragraph",
+            parents: ["unordered-list-item"],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "paragraph", role: "explicit" },
+        { type: "text", text: "item one", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "explicit" },
+        { type: "openTag", tag: "bullet_list", role: "render-only" },
+        {
+          type: "block",
+          block: {
+            type: "unordered-list-item",
+            parents: ["unordered-list-item"],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "list_item", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "bullet_list", role: "render-only" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ])
     })
@@ -2684,6 +2831,63 @@ describe("the traversal API", () => {
         ),
       )
     })
+
+    it("should construct a nested list following a paragraph", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "hello world" },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("unordered-list-item")],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "item one" },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("unordered-list-item"),
+            parents: [new am.RawString("unordered-list-item")],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+      ]
+
+      const doc = docFromSpans(spans)
+      assert.isTrue(
+        doc.eq(
+          schema.node("doc", null, [
+            schema.node("paragraph", { isAmgBlock: true }, [
+              schema.text("hello world"),
+            ]),
+            schema.node("bullet_list", null, [
+              schema.node("list_item", null, [
+                schema.node("paragraph", { isAmgBlock: true }, [
+                  schema.text("item one"),
+                ]),
+                schema.node("bullet_list", null, [
+                  schema.node("list_item", { isAmgBlock: true }, [
+                    schema.node("paragraph", null, []),
+                  ]),
+                ]),
+              ]),
+            ]),
+          ]),
+        ),
+      )
+    })
   })
 
   describe("the blocksFromNode function", () => {
@@ -2715,6 +2919,58 @@ describe("the traversal API", () => {
           value: {
             type: new am.RawString("unordered-list-item"),
             parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+      ])
+    })
+
+    it("should construct a nested list following a paragraph", () => {
+      const doc = schema.node("doc", null, [
+        schema.node("paragraph", { isAmgBlock: true }, [
+          schema.text("hello world"),
+        ]),
+        schema.node("bullet_list", null, [
+          schema.node("list_item", null, [
+            schema.node("paragraph", { isAmgBlock: true }, [
+              schema.text("item one"),
+            ]),
+            schema.node("bullet_list", null, [
+              schema.node("list_item", { isAmgBlock: true }, [
+                schema.node("paragraph", null, []),
+              ]),
+            ]),
+          ]),
+        ]),
+      ])
+      const blocks = Array.from(blocksFromNode(doc))
+      assert.deepStrictEqual(blocks, [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "hello world" },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [new am.RawString("unordered-list-item")],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "item one" },
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("unordered-list-item"),
+            parents: [new am.RawString("unordered-list-item")],
             attrs: {},
             isEmbed: false,
           },
@@ -2756,73 +3012,6 @@ describe("the traversal API", () => {
         },
       },
     ])
-  })
-
-  describe("the blockDiff function", () => {
-    it("nested list items", () => {
-      const diff = blockDiff({
-        enclosing: null,
-        previous: null,
-        following: null,
-        block: {
-          type: new am.RawString("ordered-list-item"),
-          parents: [new am.RawString("unordered-list-item")],
-          attrs: {},
-        },
-      })
-      assert.deepStrictEqual(diff, {
-        toOpen: [
-          {
-            block: "unordered-list-item",
-            isParent: true,
-            containedBlock: "ordered-list-item",
-            openOuter: true,
-          },
-          {
-            block: "ordered-list-item",
-            isParent: false,
-            containedBlock: null,
-            openOuter: true,
-          },
-        ],
-        toClose: [
-          { block: "ordered-list-item", isParent: false, closeOuter: true },
-          { block: "unordered-list-item", isParent: true, closeOuter: true },
-        ],
-      })
-    })
-
-    it("consecutive list items", () => {
-      //{ type: "block", value: { type: "ordered-list-item", parents: [] } },
-      //{ type: "block", value: { type: "ordered-list-item", parents: [] } }
-      const diff = blockDiff({
-        enclosing: null,
-        previous: null,
-        following: {
-          type: new am.RawString("ordered-list-item"),
-          parents: [],
-          attrs: {},
-        },
-        block: {
-          type: new am.RawString("ordered-list-item"),
-          parents: [],
-          attrs: {},
-        },
-      })
-      assert.deepStrictEqual(diff, {
-        toOpen: [
-          {
-            block: "ordered-list-item",
-            isParent: false,
-            containedBlock: null,
-            openOuter: true,
-          },
-        ],
-        toClose: [
-          { block: "ordered-list-item", isParent: false, closeOuter: false },
-        ],
-      })
-    })
   })
 })
 
