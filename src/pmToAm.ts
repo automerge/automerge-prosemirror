@@ -38,6 +38,11 @@ export default function (
       flushMarks()
     }
     oneStep(spans, step, doc, pmDoc, path)
+    const nextDoc = step.apply(pmDoc).doc
+    if (nextDoc == null) {
+      throw new Error("Could not apply step to document")
+    }
+    pmDoc = nextDoc
     spans = automerge.spans(doc, path)
   }
   flushMarks()
@@ -139,6 +144,7 @@ function replaceAroundStep(
 ) {
   const applied = step.apply(pmDoc).doc
   if (applied == null) {
+    console.log(step)
     throw new Error("Could not apply step to document")
   }
   //console.log(applied)
