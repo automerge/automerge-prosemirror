@@ -11,7 +11,14 @@ import {
 } from "prosemirror-commands"
 import { MarkType, NodeType, Schema } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
-import { inputRules, wrappingInputRule } from "prosemirror-inputrules"
+import {
+  inputRules,
+  wrappingInputRule,
+  textblockTypeInputRule,
+  smartQuotes,
+  ellipsis,
+  emDash,
+} from "prosemirror-inputrules"
 import "prosemirror-view/style/prosemirror.css"
 import { Prop } from "@automerge/automerge"
 import { AutoMirror } from "../../src"
@@ -110,9 +117,7 @@ export function Editor({ handle, path }: EditorProps) {
       schema: autoMirror.schema,
       history,
       plugins: [
-        inputRules({
-          rules: [blockQuoteRule(autoMirror.schema.nodes.blockquote)],
-        }),
+        buildInputRules(autoMirror.schema),
         keymap({
           "Mod-b": toggleBold(autoMirror.schema),
           "Mod-i": toggleItalic(autoMirror.schema),
@@ -476,4 +481,40 @@ function markActive(state: EditorState, type: MarkType) {
 
 function blockQuoteRule(nodeType: NodeType) {
   return wrappingInputRule(/^\s*>\s$/, nodeType)
+}
+
+function orderedListRule(nodeType: NodeType) {
+  return wrappingInputRule(
+    /^(\d+)\.\s$/,
+    nodeType,
+    match => ({ order: +match[1] }),
+    (match, node) => node.childCount + node.attrs.order == +match[1],
+  )
+}
+
+function bulletListRule(nodeType: NodeType) {
+  return wrappingInputRule(/^\s*([-+*])\s$/, nodeType)
+}
+
+function codeBlockRule(nodeType: NodeType) {
+  return textblockTypeInputRule(/^```$/, nodeType)
+}
+
+function headingRule(nodeType: NodeType, maxLevel: number) {
+  return textblockTypeInputRule(
+    new RegExp("^(#{1," + maxLevel + "})\\s$"),
+    nodeType,
+    match => ({ level: match[1].length }),
+  )
+}
+
+function buildInputRules(schema: Schema) {
+  let rules = smartQuotes.concat(ellipsis, emDash),
+    type
+  if ((type = schema.nodes.blockquote)) rules.push(blockQuoteRule(type))
+  if ((type = schema.nodes.ordered_list)) rules.push(orderedListRule(type))
+  if ((type = schema.nodes.bullet_list)) rules.push(bulletListRule(type))
+  if ((type = schema.nodes.code_block)) rules.push(codeBlockRule(type))
+  if ((type = schema.nodes.heading)) rules.push(headingRule(type, 6))
+  return inputRules({ rules })
 }
