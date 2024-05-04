@@ -9,8 +9,9 @@ import {
   toggleMark,
   wrapIn,
 } from "prosemirror-commands"
-import { MarkType, Schema } from "prosemirror-model"
+import { MarkType, NodeType, Schema } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
+import { inputRules, wrappingInputRule } from "prosemirror-inputrules"
 import "prosemirror-view/style/prosemirror.css"
 import { Prop } from "@automerge/automerge"
 import { AutoMirror } from "../../src"
@@ -109,6 +110,9 @@ export function Editor({ handle, path }: EditorProps) {
       schema: autoMirror.schema,
       history,
       plugins: [
+        inputRules({
+          rules: [blockQuoteRule(autoMirror.schema.nodes.blockquote)],
+        }),
         keymap({
           "Mod-b": toggleBold(autoMirror.schema),
           "Mod-i": toggleItalic(autoMirror.schema),
@@ -468,4 +472,8 @@ function markActive(state: EditorState, type: MarkType) {
   const { from, $from, to, empty } = state.selection
   if (empty) return !!type.isInSet(state.storedMarks || $from.marks())
   else return state.doc.rangeHasMark(from, to, type)
+}
+
+function blockQuoteRule(nodeType: NodeType) {
+  return wrappingInputRule(/^\s*>\s$/, nodeType)
 }

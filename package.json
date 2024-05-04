@@ -50,6 +50,7 @@
     "mocha": "^10.2.0",
     "prettier": "^3.2.5",
     "prosemirror-commands": "^1.5.2",
+    "prosemirror-inputrules": "^1.4.0",
     "prosemirror-keymap": "^1.2.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
