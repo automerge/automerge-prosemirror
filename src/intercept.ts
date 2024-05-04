@@ -10,15 +10,16 @@ export function intercept<T>(
   intercepted: Transaction,
   state: EditorState,
 ): EditorState {
+  console.log(intercepted)
   const docBefore = handle.docSync()
   if (docBefore === undefined) throw new Error("handle is not ready")
   const headsBefore = am.getHeads(docBefore)
-  const spansBefore = am.spans(docBefore, path)
+  const materializedSpans = am.spans(docBefore, path)
 
   // Apply the incoming transaction to the automerge doc
   handle.change(d => {
     const pmDoc = intercepted.docs[0]
-    pmToAm(spansBefore, intercepted.steps, d, pmDoc, path)
+    pmToAm(materializedSpans, intercepted.steps, d, pmDoc, path)
   })
 
   //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -34,8 +35,9 @@ export function intercept<T>(
   //console.log(diff)
 
   // Create a transaction which applies the diff and updates the doc and heads
-  let tx = amToPm(state.schema, spansBefore, diff, path, state.tr)
-  const selectionAfter = state.apply(intercepted).selection
+  let tx = amToPm(state.schema, materializedSpans, diff, path, state.tr)
+  const nonInterceptedAfter = state.apply(intercepted)
+  const selectionAfter = nonInterceptedAfter.selection
   try {
     const resolvedSelectionAfter = new TextSelection(
       tx.doc.resolve(selectionAfter.from),
@@ -49,6 +51,8 @@ export function intercept<T>(
       throw e
     }
   }
+
+  tx = tx.setStoredMarks(nonInterceptedAfter.storedMarks)
 
   return state.apply(tx)
 }

@@ -22,7 +22,6 @@ import {
   liftListItem,
 } from "prosemirror-schema-list"
 import { useHandleReady } from "./useHandleReady"
-//import { schema } from "../../src/schema"
 import {
   Bold,
   Braces,
@@ -94,6 +93,10 @@ export function Editor({ handle, path }: EditorProps) {
   const handleReady = useHandleReady(handle)
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [linkModalOpen, setLinkModalOpen] = useState(false)
+  const [{ boldActive, emActive }, setMarkState] = useState({
+    boldActive: false,
+    emActive: false,
+  })
 
   useEffect(() => {
     if (!handleReady) {
@@ -127,6 +130,10 @@ export function Editor({ handle, path }: EditorProps) {
         //console.log(`${name}: dispatchTransaction`, tx)
         const newState = autoMirror.intercept(handle, tx, view.state)
         view.updateState(newState)
+        setMarkState({
+          boldActive: markActive(newState, autoMirror.schema.marks.strong),
+          emActive: markActive(newState, autoMirror.schema.marks.em),
+        })
       },
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -309,6 +316,8 @@ export function Editor({ handle, path }: EditorProps) {
         onHeadingClicked={onHeadingClicked}
         onImageClicked={showImageDialog}
         onCodeClicked={onCodeClicked}
+        isBoldActive={boldActive}
+        isEmActive={emActive}
       />
       <div id="editor" ref={editorRoot} />
       <Modal
@@ -353,6 +362,8 @@ type MenuBarProps = {
   onHeadingClicked: (level: number) => void
   onImageClicked: () => void
   onCodeClicked: () => void
+  isBoldActive: boolean
+  isEmActive: boolean
 }
 
 function MenuBar({
@@ -367,14 +378,24 @@ function MenuBar({
   onHeadingClicked,
   onImageClicked,
   onCodeClicked,
+  isBoldActive,
+  isEmActive,
 }: MenuBarProps) {
   return (
     <div id="menubar" className="menubar">
       <div className="row">
-        <button id="bold" onClick={onBoldClicked}>
+        <button
+          id="bold"
+          onClick={onBoldClicked}
+          className={isBoldActive ? "active" : ""}
+        >
           <Bold />
         </button>
-        <button id="italic" onClick={onItalicClicked}>
+        <button
+          id="italic"
+          onClick={onItalicClicked}
+          className={isEmActive ? "active" : ""}
+        >
           <Italic />
         </button>
         <button id="link" onClick={onLinkClicked}>
@@ -441,4 +462,10 @@ function CaptionedButton({
       <p>{caption}</p>
     </div>
   )
+}
+
+function markActive(state: EditorState, type: MarkType) {
+  const { from, $from, to, empty } = state.selection
+  if (empty) return !!type.isInSet(state.storedMarks || $from.marks())
+  else return state.doc.rangeHasMark(from, to, type)
 }

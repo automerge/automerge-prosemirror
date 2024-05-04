@@ -139,6 +139,53 @@ describe("when converting a ReplaceStep to a change", () => {
       isEmbed: false,
     })
   })
+
+  it("should add a mark if the replace step does not match the text at the insertion point", () => {
+    const { editor, doc } = makeDoc(["item "])
+    updateDoc(doc, editor.doc, [
+      new ReplaceStep(
+        6,
+        6,
+        new Slice(
+          Fragment.from(schema.text("1", [schema.marks.strong.create()])),
+          0,
+          0,
+        ),
+      ),
+    ])
+    const marks = am.marks(doc, ["text"])
+    assert.deepStrictEqual(marks, [
+      { start: 5, end: 6, name: "strong", value: true },
+    ])
+  })
+
+  it("should add link marks with serialized attributes", () => {
+    const { editor, doc } = makeDoc(["item "])
+    updateDoc(doc, editor.doc, [
+      new ReplaceStep(
+        6,
+        6,
+        new Slice(
+          Fragment.from(
+            schema.text("1", [
+              schema.marks.link.create({ href: "http://example.com" }),
+            ]),
+          ),
+          0,
+          0,
+        ),
+      ),
+    ])
+    const marks = am.marks(doc, ["text"])
+    assert.deepStrictEqual(marks, [
+      {
+        start: 5,
+        end: 6,
+        name: "link",
+        value: JSON.stringify({ href: "http://example.com", title: null }),
+      },
+    ])
+  })
 })
 
 describe("when converting addMark steps to a change", () => {

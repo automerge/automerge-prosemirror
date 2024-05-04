@@ -27,6 +27,10 @@
   cursor: pointer;
 }
 
+.menubar button.active {
+  background-color: #ccc;
+}
+
 .menubar .row {
   display: flex;
   flex-direction: row;

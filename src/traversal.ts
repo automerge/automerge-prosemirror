@@ -7,12 +7,7 @@ import {
   NodeType,
   Schema,
 } from "prosemirror-model"
-import {
-  isBlockMarker,
-  BlockType,
-  BlockMarker,
-  amSpanToSpan,
-} from "./types"
+import { isBlockMarker, BlockType, BlockMarker, amSpanToSpan } from "./types"
 import { schema } from "./schema"
 import { attrsFromMark } from "./amToPm"
 
@@ -75,7 +70,7 @@ export function docFromSpans(spans: am.Span[]): Node {
         pmMarks = Object.entries(event.marks).reduce(
           (acc: Mark[], [name, value]: [string, am.MarkValue]) => {
             if (value != null) {
-              const markAttrs = attrsFromMark(value)
+              const markAttrs = attrsFromMark(name, value)
               acc.push(schema.mark(name, markAttrs))
             }
             return acc

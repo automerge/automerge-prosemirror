@@ -5,7 +5,7 @@ import {
   ReplaceAroundStep,
   Step,
 } from "prosemirror-transform"
-import { Node } from "prosemirror-model"
+import { Mark, MarkType, Node } from "prosemirror-model"
 import { Prop, next as automerge } from "@automerge/automerge"
 import { blocksFromNode, pmRangeToAmRange } from "./traversal"
 import { next as am } from "@automerge/automerge"
@@ -113,6 +113,11 @@ function replaceStep(
       toDelete,
       step.slice.content.firstChild.text,
     )
+
+    const marks = step.slice.content.firstChild.marks
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const length = step.slice.content.firstChild.text!.length
+    reconcileMarks(doc, field, start, length, marks)
     return
   }
   const applied = step.apply(pmDoc).doc
@@ -152,7 +157,7 @@ function applyAddMarkSteps(
     range: { start: number; end: number }
     markName: string
     expand: "before" | "after" | "both" | "none"
-    value: string | boolean
+    value: am.MarkValue
   }
   const marks: Mark[] = steps.map(step => {
     const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
@@ -163,10 +168,7 @@ function applyAddMarkSteps(
     }
     const markName = step.mark.type.name
     const expand = step.mark.type.spec.inclusive ? "both" : "none"
-    let value: string | boolean = true
-    if (step.mark.attrs != null && Object.keys(step.mark.attrs).length > 0) {
-      value = JSON.stringify(step.mark.attrs)
-    }
+    const value = markAttrsToMarkValue(step.mark.type, step.mark.attrs)
     return { range: amRange, markName, expand, value }
   })
 
@@ -232,4 +234,67 @@ function removeMarkStep(
   const expand = step.mark.type.spec.inclusive ? "both" : "none"
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   automerge.unmark(doc as any, field, { start, end, expand }, markName)
+}
+
+function reconcileMarks(
+  doc: am.Doc<unknown>,
+  path: am.Prop[],
+  index: number,
+  length: number,
+  marks: readonly Mark[],
+) {
+  const currentMarks = automerge.marksAt(doc, path, index)
+  const newMarks: { [key: string]: am.MarkValue } = marks.reduce(
+    (acc, mark) => {
+      acc[mark.type.name] = markAttrsToMarkValue(mark.type, mark.attrs)
+      return acc
+    },
+    {} as { [key: string]: am.MarkValue },
+  )
+
+  const newMarkNames = new Set(Object.keys(newMarks))
+  const currentMarkNames = new Set(Object.keys(currentMarks))
+
+  for (const markName of newMarkNames) {
+    if (
+      !currentMarkNames.has(markName) ||
+      newMarks[markName] !== currentMarks[markName]
+    ) {
+      automerge.mark(
+        doc,
+        path,
+        { start: index, end: index + length, expand: "both" },
+        markName,
+        newMarks[markName],
+      )
+    }
+  }
+  for (const markName of currentMarkNames) {
+    if (!newMarkNames.has(markName)) {
+      automerge.unmark(
+        doc,
+        path,
+        { start: index, end: index + length, expand: "both" },
+        markName,
+      )
+    }
+  }
+}
+
+function markAttrsToMarkValue(
+  markType: MarkType,
+  attrs: { [key: string]: string },
+): am.MarkValue {
+  if (markType.name === "link") {
+    return JSON.stringify(attrs)
+  } else if (
+    markType.name === "strong" ||
+    markType.name === "em" ||
+    markType.name === "code"
+  ) {
+    return true
+  } else {
+    // Maybe we should just throw here?
+    return true
+  }
 }

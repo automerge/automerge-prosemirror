@@ -2,7 +2,7 @@ import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
 import { Fragment, Slice, Mark, Attrs, Schema } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
 import { MarkValue } from "./marks"
-import { amSpliceIdxToPmIdx, docFromSpans } from "./traversal"
+import { amSpliceIdxToPmIdx, docFromSpans, pmRangeToAmRange } from "./traversal"
 import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
 import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
 import { ReplaceStep } from "prosemirror-transform"
@@ -85,7 +85,7 @@ export function handleSplice(
 }
 
 function handleDelete(
-  schema: Schema,
+  _schema: Schema,
   spans: am.Span[],
   patch: DelPatch,
   path: Prop[],
@@ -116,7 +116,7 @@ function handleMark(
       if (mark.value == null) {
         tx = tx.removeMark(pmStart, pmEnd, markType)
       } else {
-        const markAttrs = attrsFromMark(mark.value)
+        const markAttrs = attrsFromMark(mark.name, mark.value)
         tx = tx.addMark(pmStart, pmEnd, markType.create(markAttrs))
       }
     }
@@ -125,10 +125,10 @@ function handleMark(
 }
 
 export function handleBlockChange(
-  schema: Schema,
+  _schema: Schema,
   atPath: am.Prop[],
   spans: am.Span[],
-  blockIdx: number,
+  _blockIdx: number,
   patches: am.Patch[],
   tx: Transaction,
 ): Transaction {
@@ -249,7 +249,7 @@ function patchContentToFragment(
         // happen in a `AddMark` patch, not a `Insert` or `Splice` patch. But we
         // appease typescript anyway
         if (value != null) {
-          const markAttrs = attrsFromMark(value)
+          const markAttrs = attrsFromMark(name, value)
           acc.push(schema.mark(name, markAttrs))
         }
         return acc
@@ -264,19 +264,31 @@ function patchContentToFragment(
   return Fragment.from(schema.text(patchContent, pmMarks))
 }
 
-export function attrsFromMark(mark: am.MarkValue): Attrs | null {
-  let markAttrs = null
-  if (typeof mark === "string") {
-    try {
-      const markJson = JSON.parse(mark)
-      if (typeof markJson === "object") {
-        markAttrs = markJson as Attrs
+export function attrsFromMark(
+  markName: string,
+  mark: am.MarkValue,
+): Attrs | null {
+  if (markName === "link") {
+    let markAttrs = null
+    if (typeof mark === "string") {
+      try {
+        const markJson = JSON.parse(mark)
+        if (typeof markJson === "object") {
+          markAttrs = markJson as Attrs
+        }
+      } catch (e) {
+        // ignore
       }
-    } catch (e) {
-      // ignore
     }
+    return markAttrs
+  } else if (markName === "strong" || markName === "em") {
+    if (typeof mark === "boolean") {
+      return {}
+    }
+    return {}
+  } else {
+    return {}
   }
-  return markAttrs
 }
 
 type GatheredPatch = TextPatches | BlockPatches
@@ -358,4 +370,34 @@ function gatherPatches(textPath: am.Prop[], diff: am.Patch[]): GatheredPatch[] {
   }
   flush()
   return result
+}
+
+export function reconcileStoredMarks(
+  doc: am.Doc<unknown>,
+  path: am.Prop[],
+  spans: am.Span[],
+  tx: Transaction,
+): Transaction {
+  if (!tx.selection.empty) {
+    return tx
+  }
+  const amRange = pmRangeToAmRange(spans, {
+    from: tx.selection.from,
+    to: tx.selection.to,
+  })
+  if (amRange == null) {
+    return tx
+  }
+  // If we're inserting at the end of the document then the stored marks are
+  // (kind of) the marks on the previous character
+  const idx = Math.max(amRange.start - 1, 0)
+  const marks = am.marksAt(doc, path, idx)
+  if (marks == null) return tx
+  const expectedMarks = []
+  for (const [markName, markValue] of Object.entries(marks)) {
+    const markType = tx.doc.type.schema.marks[markName]
+    if (markType == null) continue
+    expectedMarks.push(markType.create(attrsFromMark(markName, markValue)))
+  }
+  return tx.setStoredMarks(expectedMarks)
 }
