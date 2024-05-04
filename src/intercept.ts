@@ -10,7 +10,6 @@ export function intercept<T>(
   intercepted: Transaction,
   state: EditorState,
 ): EditorState {
-  console.log(intercepted)
   const docBefore = handle.docSync()
   if (docBefore === undefined) throw new Error("handle is not ready")
   const headsBefore = am.getHeads(docBefore)
