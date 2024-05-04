@@ -117,7 +117,11 @@ export function amSpliceIdxToPmIdx(
       return maxInsertableIndex
     }
     if (state.event.type === "openTag") {
-      if (state.event.tag === "paragraph" || state.event.tag === "heading") {
+      if (
+        state.event.tag === "paragraph" ||
+        state.event.tag === "heading" ||
+        state.event.tag === "code_block"
+      ) {
         maxInsertableIndex = state.after.pmIdx
       }
     } else if (state.event.type === "leafNode") {

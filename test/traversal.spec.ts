@@ -223,6 +223,22 @@ describe("the traversal API", () => {
       // pm 0     0    1     2
       assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
     })
+
+    it("should find the first index inside a code block at the start of the document", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("code-block"),
+            attrs: {},
+            parents: [],
+          },
+        },
+      ]
+      const events = traverseSpans(spans)
+      console.log(printIndexTable(events))
+      assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
+    })
   })
 
   describe("the pmRangeToAmRange function", () => {

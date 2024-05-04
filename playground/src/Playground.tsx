@@ -21,10 +21,15 @@ const rightRepo = new Repo({
 
 const leftHandle = leftRepo.create()
 leftHandle.change(d => {
-  d.text = "Heading"
+  d.text = ""
+  //am.splitBlock(d, ["text"], 0, {
+  //type: new am.RawString("heading"),
+  //attrs: { level: 1 },
+  //parents: [],
+  //})
   am.splitBlock(d, ["text"], 0, {
-    type: new am.RawString("heading"),
-    attrs: { level: 1 },
+    type: new am.RawString("code-block"),
+    attrs: {},
     parents: [],
   })
 })

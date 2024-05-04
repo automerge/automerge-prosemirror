@@ -509,8 +509,8 @@ function headingRule(nodeType: NodeType, maxLevel: number) {
 }
 
 function buildInputRules(schema: Schema) {
-  let rules = smartQuotes.concat(ellipsis, emDash),
-    type
+  const rules = smartQuotes.concat(ellipsis, emDash)
+  let type
   if ((type = schema.nodes.blockquote)) rules.push(blockQuoteRule(type))
   if ((type = schema.nodes.ordered_list)) rules.push(orderedListRule(type))
   if ((type = schema.nodes.bullet_list)) rules.push(bulletListRule(type))
