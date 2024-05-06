@@ -1,0 +1,27 @@
+{
+  "name": "prosemirror-automerge-vanilla-quickstart",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  },
+  "dependencies": {
+    "@automerge/automerge-repo": "^1.1.9",
+    "@automerge/automerge-repo-network-websocket": "^1.1.9",
+    "@automerge/automerge-repo-storage-indexeddb": "^1.1.9",
+    "@automerge/prosemirror": "^0.0.12",
+    "prosemirror-example-setup": "^1.2.2",
+    "prosemirror-model": "^1.21.0",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-transform": "^1.9.0",
+    "prosemirror-view": "^1.33.6",
+    "vite-plugin-wasm": "^3.3.0"
+  }
+}
