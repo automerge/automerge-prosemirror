@@ -1,7 +1,8 @@
 #editors {
   display: flex;
   flex-direction: row;
-  width: 800px;
+  max-width: 800px;
+  min-height: 300px;
   justify-content: space-between;
   gap: 10px;
 }
@@ -21,7 +22,7 @@
 }
 
 .menubar button {
-  padding: 10px;
+  padding: 5px;
   border: none;
   background-color: #f0f0f0;
   cursor: pointer;

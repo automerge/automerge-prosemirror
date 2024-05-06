@@ -413,6 +413,8 @@ function MenuBar({
         <button onClick={onCodeClicked}>
           <Braces />
         </button>
+      </div>
+      <div className="row">
         <button onClick={() => onHeadingClicked(1)}>
           <Heading1 />
         </button>
