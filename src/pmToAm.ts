@@ -31,13 +31,14 @@ export default function (
 
   for (const step of steps) {
     //console.log(step)
-    if (isAddMarkStep(step)) {
-      unappliedMarks.push(step)
+    const stepId = step.toJSON()["stepType"]
+    if (stepId === "addMark") {
+      unappliedMarks.push(step as AddMarkStep)
       continue
     } else {
       flushMarks()
     }
-    oneStep(spans, step, doc, pmDoc, path)
+    oneStep(spans, stepId, step, doc, pmDoc, path)
     const nextDoc = step.apply(pmDoc).doc
     if (nextDoc == null) {
       throw new Error("Could not apply step to document")
@@ -50,39 +51,20 @@ export default function (
 
 function oneStep(
   spans: am.Span[],
+  stepId: string,
   step: Step,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   doc: any,
   pmDoc: Node,
   path: Prop[],
 ) {
-  // This shenanigans with the constructor name is necessary for reasons I
-  // don't really understand. I _think_ that the `*Step` classs we get
-  // passed here can be slightly different to the classes we've imported if the
-  // dependencies are messed up
-  if (
-    step.constructor.name === "ReplaceStep" ||
-    step.constructor.name === "_ReplaceStep"
-  ) {
+  if (stepId === "replace") {
     replaceStep(spans, step as ReplaceStep, doc, path, pmDoc)
-  } else if (
-    step.constructor.name === "ReplaceAroundStep" ||
-    step.constructor.name === "_ReplaceAroundStep"
-  ) {
+  } else if (stepId === "replaceAround") {
     replaceAroundStep(step as ReplaceAroundStep, doc, pmDoc, path)
-  } else if (
-    step.constructor.name === "RemoveMarkStep" ||
-    step.constructor.name === "_RemoveMarkStep"
-  ) {
+  } else if (stepId === "removeMark") {
     removeMarkStep(spans, step as RemoveMarkStep, doc, path)
   }
-}
-
-function isAddMarkStep(step: Step): step is AddMarkStep {
-  return (
-    step.constructor.name === "AddMarkStep" ||
-    step.constructor.name === "_AddMarkStep"
-  )
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
