@@ -26,7 +26,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     defaults:
-      working-directory: ./examples/vanilla
+      run:
+        working-directory: ./examples/vanilla
     env:
      # This is used in vanilla/vite.config.ts to set the base path
      GITHUB_PAGES: true
