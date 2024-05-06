@@ -1,9 +1,13 @@
 import { defineConfig } from "vite"
 import wasm from "vite-plugin-wasm"
 
+let base = "/"
+if (process.env.GITHUB_PAGES) {
+  base = "/automerge-prosemirror/"
+}
+
 export default defineConfig({
-  // customize this to your repo name for github pages deploy
-  base: "/",
+  base,
 
   build: { target: "esnext" },
 
