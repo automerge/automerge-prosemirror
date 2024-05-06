@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react"
-import { next as am } from "@automerge/automerge"
 import { Editor } from "./Editor"
 import { Repo } from "@automerge/automerge-repo"
 //import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"

@@ -8,7 +8,6 @@ if (process.env.GITHUB_PAGES) {
   base = "/automerge-prosemirror/"
 }
 
-
 // https://vitejs.dev/config/
 export default defineConfig({
   base,
