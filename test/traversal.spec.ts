@@ -1684,7 +1684,7 @@ describe("the traversal API", () => {
   })
 
   describe("the traverseNode function", () => {
-    it("should infer the isAmgBlock attribute for list elements without it", () => {
+    it("should emit block markers for list elements without {isAmgBlock: true} it", () => {
       const node = schema.node("doc", null, [
         schema.node("bullet_list", null, [
           schema.node("list_item", null, [schema.node("paragraph", null, [])]),
@@ -1713,7 +1713,7 @@ describe("the traversal API", () => {
       assert.deepStrictEqual(events, expected)
     })
 
-    it("should not infer the isAmgBlock attribute for list elements wihtout it but who first child has it", () => {
+    it("should not emit block markers for list elements with any child which has isAmgBlock: true", () => {
       const node = schema.node("doc", null, [
         schema.node("bullet_list", null, [
           schema.node("list_item", null, [
@@ -1741,10 +1741,10 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ]
-      assert.deepStrictEqual(events, expected)
+      assertTraversalEqual(events, expected)
     })
 
-    it("should not infer the isAmgBlock attribute for list elements without it but which has any descendant that does have it", () => {
+    it("should not emit block markers for list elements with any descendant that has isAmgBlock: true", () => {
       const node = schema.node("doc", null, [
         schema.node("bullet_list", null, [
           schema.node("list_item", null, [
@@ -1783,10 +1783,10 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ]
-      assert.deepStrictEqual(events, expected)
+      assertTraversalEqual(events, expected)
     })
 
-    it("should infer the isAmgBlock attribute for children of list items where the first child does not have it but the item has multiple paragraphs", () => {
+    it("should emit block markers for children of list items where the first child does not have isAmgBlock:true but the item has multiple paragraphs", () => {
       const node = schema.node("doc", null, [
         schema.node("bullet_list", null, [
           schema.node("list_item", null, [
@@ -1799,7 +1799,18 @@ describe("the traversal API", () => {
       const expected: TraversalEvent[] = [
         { type: "openTag", tag: "doc", role: "render-only" },
         { type: "openTag", tag: "bullet_list", role: "render-only" },
-        { type: "openTag", tag: "list_item", role: "render-only" },
+        {
+          type: "block",
+          block: {
+            type: "unordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "list_item", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
           block: {
@@ -1811,22 +1822,11 @@ describe("the traversal API", () => {
         },
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        {
-          type: "block",
-          block: {
-            type: "paragraph",
-            parents: ["unordered-list-item"],
-            attrs: {},
-            isEmbed: false,
-          },
-        },
-        { type: "openTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "list_item", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ]
-      assert.deepStrictEqual(events, expected)
+      assertTraversalEqual(events, expected)
     })
 
     it("should recognise header blocks", () => {
@@ -1866,41 +1866,6 @@ describe("the traversal API", () => {
       assert.deepStrictEqual(events, expected)
     })
 
-    it("should add the isAmgBlock: true attribute to a leading paragraph if there is following block content", () => {
-      const node = schema.node("doc", null, [
-        schema.node("paragraph", null, []),
-        schema.node("heading", { level: 1 }, [schema.text("hello")]),
-      ])
-      const events = Array.from(traverseNode(node))
-      assert.deepStrictEqual(events, [
-        { type: "openTag", tag: "doc", role: "render-only" },
-        {
-          type: "block",
-          block: {
-            type: "paragraph",
-            parents: [],
-            attrs: {},
-            isEmbed: false,
-          },
-        },
-        { type: "openTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "paragraph", role: "explicit" },
-        {
-          type: "block",
-          block: {
-            type: "heading",
-            parents: [],
-            attrs: { level: 1 },
-            isEmbed: false,
-          },
-        },
-        { type: "openTag", tag: "heading", role: "explicit" },
-        { type: "text", text: "hello", marks: {} },
-        { type: "closeTag", tag: "heading", role: "explicit" },
-        { type: "closeTag", tag: "doc", role: "render-only" },
-      ])
-    })
-
     it("should recognise image tags", () => {
       const node = schema.node("doc", null, [
         schema.node("paragraph", null, [
@@ -1912,7 +1877,7 @@ describe("the traversal API", () => {
         ]),
       ])
       const events = Array.from(traverseNode(node))
-      assert.deepStrictEqual(events, [
+      assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         {
@@ -1941,24 +1906,24 @@ describe("the traversal API", () => {
       const events = Array.from(traverseNode(node))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
-        { type: "openTag", tag: "blockquote", role: "render-only" },
         {
           type: "block",
           block: {
-            type: "paragraph",
-            parents: ["blockquote"],
+            type: "blockquote",
+            parents: [],
             attrs: {},
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "blockquote", role: "render-only" },
+        { type: "openTag", tag: "blockquote", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "blockquote", role: "explicit" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ])
     })
 
-    it("should recognise paragraphs in blockquotes", () => {
+    it("should not emit a block marker for the first paragraph in blockquotes", () => {
       const node = schema.node("doc", null, [
         schema.node("blockquote", null, [
           schema.node("paragraph", null, [schema.text("hello")]),
@@ -1968,19 +1933,19 @@ describe("the traversal API", () => {
       const events = Array.from(traverseNode(node))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
-        { type: "openTag", tag: "blockquote", role: "render-only" },
         {
           type: "block",
           block: {
-            type: "paragraph",
-            parents: ["blockquote"],
+            type: "blockquote",
+            parents: [],
             attrs: {},
             isEmbed: false,
           },
         },
-        { type: "openTag", tag: "paragraph", role: "explicit" },
+        { type: "openTag", tag: "blockquote", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "text", text: "hello", marks: {} },
-        { type: "closeTag", tag: "paragraph", role: "explicit" },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
           block: {
@@ -1993,7 +1958,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         { type: "text", text: "world", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "explicit" },
-        { type: "closeTag", tag: "blockquote", role: "render-only" },
+        { type: "closeTag", tag: "blockquote", role: "explicit" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ])
     })

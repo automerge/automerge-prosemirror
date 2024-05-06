@@ -59,15 +59,6 @@ describe("<Editor />", () => {
       cy.wait(100)
         .then(() => automerge.spans(handle.docSync(), ["text"]))
         .should("deep.equal", [
-          {
-            type: "block",
-            value: {
-              type: new automerge.RawString("paragraph"),
-              parents: [],
-              attrs: {},
-              isEmbed: false,
-            },
-          },
           { type: "text", value: "Hello World" },
           {
             type: "block",

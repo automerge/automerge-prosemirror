@@ -1,5 +1,6 @@
 import { next as am } from "@automerge/automerge"
 import {
+  Attrs,
   ContentMatch,
   Fragment,
   Mark,
@@ -7,7 +8,7 @@ import {
   NodeType,
   Schema,
 } from "prosemirror-model"
-import { isBlockMarker, BlockType, BlockMarker, amSpanToSpan } from "./types"
+import { isBlockMarker, BlockMarker, amSpanToSpan } from "./types"
 import { schema } from "./schema"
 import { attrsFromMark } from "./amToPm"
 
@@ -209,6 +210,77 @@ export function* eventsWithIndexChanges(
   }
 }
 
+type NodeMapping = {
+  blockName: string
+  outer: NodeType | null
+  content: NodeType
+  attrParsers?: {
+    fromProsemirror: (node: Node) => { [key: string]: BlockAttrValue }
+    fromAutomerge: (block: BlockMarker) => Attrs
+  }
+  isEmbed?: boolean
+}
+
+const nodeMappings: NodeMapping[] = [
+  {
+    blockName: "ordered-list-item",
+    outer: schema.nodes.ordered_list,
+    content: schema.nodes.list_item,
+  },
+  {
+    blockName: "unordered-list-item",
+    outer: schema.nodes.bullet_list,
+    content: schema.nodes.list_item,
+  },
+  {
+    blockName: "paragraph",
+    outer: null,
+    content: schema.nodes.paragraph,
+  },
+  {
+    blockName: "blockquote",
+    outer: null,
+    content: schema.nodes.blockquote,
+  },
+  {
+    blockName: "heading",
+    outer: null,
+    content: schema.nodes.heading,
+    attrParsers: {
+      fromAutomerge: block => ({ level: block.attrs.level }),
+      fromProsemirror: node => ({ level: node.attrs.level }),
+    },
+  },
+  {
+    blockName: "code-block",
+    outer: null,
+    content: schema.nodes.code_block,
+  },
+  {
+    blockName: "image",
+    outer: null,
+    content: schema.nodes.image,
+    isEmbed: true,
+    attrParsers: {
+      fromAutomerge: block => ({
+        src: block.attrs.src?.toString() || null,
+        alt: block.attrs.alt,
+        title: block.attrs.title,
+      }),
+      fromProsemirror: node => ({
+        src: new am.RawString(node.attrs.src),
+        alt: node.attrs.alt,
+        title: node.attrs.title,
+      }),
+    },
+  },
+  {
+    blockName: "aside",
+    outer: null,
+    content: schema.nodes.aside,
+  },
+]
+
 export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
   const toProcess: (
     | TraversalEvent
@@ -235,115 +307,22 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         yield { type: "text", text: cur.text!, marks: {} }
       } else {
-        let blockType: BlockType | null = null
-        const attrs: { [key: string]: BlockAttrValue } = {}
-        let isEmbed = false
-        const nodeType = cur.type.name
-        if (nodeType === "list_item") {
-          const parentNode = nodePath[nodePath.length - 1]
-          if (parentNode == null) {
-            throw new Error("li must have a parent")
-          }
-          if (parentNode.type.name === "ordered_list") {
-            blockType = "ordered-list-item"
-          } else if (parentNode.type.name === "bullet_list") {
-            blockType = "unordered-list-item"
-          } else {
-            throw new Error("li must have a parent of ol or ul")
-          }
-        } else if (nodeType === "paragraph") {
-          blockType = nodeType
-        } else if (nodeType === "heading") {
-          blockType = nodeType
-          attrs.level = cur.attrs.level
-        } else if (nodeType === "aside") {
-          blockType = nodeType
-        } else if (nodeType === "image") {
-          blockType = nodeType
-          isEmbed = true
-          attrs.src = new am.RawString(cur.attrs.src)
-          attrs.alt = cur.attrs.alt
-          attrs.title = cur.attrs.title
-        } else if (nodeType === "blockquote") {
-          blockType = nodeType
-        } else if (nodeType === "code_block") {
-          blockType = "code-block"
-        }
+        const block = blockForNode(cur, nodePath, next.indexInParent)
+        const role = block != null ? "explicit" : "render-only"
 
-        let role: RenderRole = "render-only"
-        if (cur.attrs.isAmgBlock) {
-          role = "explicit"
-        } else {
-          let hasExplicitDescendant = false
-          cur.descendants(desc => {
-            if (desc.attrs.isAmgBlock) {
-              hasExplicitDescendant = true
-              return false
-            }
-            return true
-          })
-          if (cur.type.name === "list_item") {
-            if (!hasExplicitDescendant) {
-              role = "explicit"
-            }
-          } else if (cur.type.name === "paragraph") {
-            if (next.indexInParent > 0) {
-              role = "explicit"
-            } else {
-              // If the paragraph is an empty paragraph and there's one following
-              // child in the list item which is a block element then the paragraph
-              // is filler content
-              const parent = next.parent
-              if (parent != null) {
-                if (parent.type.name === "list_item") {
-                  if (parent.childCount === 2) {
-                    if (
-                      parent.child(1).type.name !== "ordered_list" &&
-                      parent.child(1).type.name !== "bullet_list"
-                    ) {
-                      role = "explicit"
-                    }
-                  }
-                } else if (parent.type.name === "doc") {
-                  if (parent.childCount > 1) {
-                    role = "explicit"
-                  }
-                } else if (parent.type.name === "aside") {
-                  role = "explicit"
-                } else if (parent.type.name === "blockquote") {
-                  if (parent.childCount > 0) {
-                    role = "explicit"
-                  }
-                }
-              }
-            }
-          } else if (cur.type.name === "heading") {
-            role = "explicit"
-          } else if (cur.type.name === "image") {
-            role = "explicit"
-          } else if (cur.type.name === "code_block") {
-            role = "explicit"
-          }
-        }
-
-        if (role === "explicit" && blockType != null) {
+        if (block != null) {
           yield {
             type: "block",
-            block: {
-              type: blockType,
-              parents: findParents(nodePath),
-              attrs,
-              isEmbed,
-            },
+            block,
           }
         }
-        if (isEmbed) {
+        if (cur.isLeaf) {
           yield { type: "leafNode", tag: cur.type.name, role }
         } else {
           yield { type: "openTag", tag: cur.type.name, role }
           nodePath.push(cur)
-          if (blockType != null && role === "explicit") {
-            path.push(blockType)
+          if (block != null && role === "explicit") {
+            path.push(block.type)
           }
 
           toProcess.push({ type: "closeTag", tag: cur.type.name, role })
@@ -369,23 +348,200 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
   }
 }
 
+function blockForNode(
+  node: Node,
+  nodePath: Node[],
+  indexInParent: number,
+): {
+  type: string
+  parents: string[]
+  attrs: { [key: string]: BlockAttrValue }
+  isEmbed: boolean
+} | null {
+  const blockMapping = blockMappingForNode(node, nodePath)
+
+  if (blockMapping == null) {
+    if (node.attrs.isAmgBlock) {
+      throw new Error("no mapping found for node which is marked as a block")
+    }
+    return null
+  }
+
+  // We have a few things to do
+  // 1. If this node has `isAmgBlock: true` then we just need to get the block
+  //    mapping and emit the correct block
+  // 2. If this node has `isAmgBlock: false` then we have to decide, based on
+  //    it's descendants, whether we should emit a block at this point
+
+  if (node.attrs.isAmgBlock) {
+    return {
+      type: blockMapping.blockName,
+      parents: findParents(nodePath),
+      attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
+      isEmbed: blockMapping.isEmbed || false,
+    }
+  } else if (blockMapping.isEmbed) {
+    return {
+      type: blockMapping.blockName,
+      parents: findParents(nodePath),
+      attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
+      isEmbed: true,
+    }
+  } else {
+    // Two possibilities:
+    //
+    // 1. The block is a container for an `isAmgBlock: true` block
+    // 2. The block is a newly inserted block
+
+    const explicitChildren = findExplicitChildren(node)
+    if (explicitChildren != null) {
+      // This block has explicit children. So we only need to emit a block
+      // marker if the content before the first explicit child is different to
+      // that which would be emitted by the default schema
+      const defaultContent = blockMapping.content.contentMatch.fillBefore(
+        Fragment.from([explicitChildren.first]),
+        true,
+      )
+      if (defaultContent == null) {
+        throw new Error("schema could not find wrapping")
+      }
+      if (defaultContent.eq(explicitChildren.contentBeforeFirst)) {
+        return null
+      }
+    }
+
+    const parent = nodePath[nodePath.length - 1]
+    let parentType
+    if (parent != null) {
+      parentType = parent.type
+    } else {
+      parentType = schema.nodes.doc
+    }
+
+    let emitBlock = false
+    if (node.isTextblock) {
+      // If we're the first node in our parent, and we're the default textblock
+      // for that parent then we don't emit a block marker
+      const isTextWrapper =
+        parentType.contentMatch.defaultType === node.type &&
+        indexInParent === 0 &&
+        !node.attrs.isAmgBlock
+      if (!isTextWrapper) {
+        emitBlock = true
+      }
+    } else if (hasImmediateTextChild(node)) {
+      emitBlock = true
+    }
+    if (emitBlock) {
+      return {
+        type: blockMapping.blockName,
+        parents: findParents(nodePath),
+        attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
+        isEmbed: blockMapping.isEmbed || false,
+      }
+    } else {
+      return null
+    }
+  }
+}
+
+function hasImmediateTextChild(node: Node): boolean {
+  for (let i = 0; i < node.childCount; i++) {
+    if (node.child(i).isTextblock) {
+      return true
+    }
+  }
+  return false
+}
+
+type ExplicitChildren = {
+  /**
+   * The content before the first child which has `isAmgBlock: true` or has a
+   * descendant with `isAmgBlock: true`
+   */
+  contentBeforeFirst: Fragment
+  /**
+   * The child which has `isAmgBlock: true` or has a descendant with
+   * `isAmgBlock: true`
+   */
+  first: Node
+}
+
+/**
+ * Find the first child of this node which either has `isAmgBlock: true` or
+ * has a descendant with `isAmgBlock: true`
+ */
+function findExplicitChildren(node: Node): ExplicitChildren | null {
+  let numExplicitChildren = 0
+  let firstExplicitChild = null
+  const contentBeforeFirst = []
+  for (let i = 0; i < node.childCount; i++) {
+    const child = node.child(i)
+    let hasExplicitDescendant = false
+    if (child.attrs.isAmgBlock) {
+      hasExplicitDescendant = true
+    } else {
+      child.descendants(desc => {
+        if (desc.attrs.isAmgBlock) {
+          hasExplicitDescendant = true
+          return false
+        }
+        return true
+      })
+    }
+    if (hasExplicitDescendant) {
+      numExplicitChildren++
+      if (firstExplicitChild == null) {
+        firstExplicitChild = child
+      }
+    }
+    if (firstExplicitChild == null) {
+      contentBeforeFirst.push(child)
+    }
+    if (numExplicitChildren > 1) {
+      break
+    }
+  }
+  if (numExplicitChildren > 0) {
+    return {
+      contentBeforeFirst: Fragment.from(contentBeforeFirst),
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      first: firstExplicitChild!,
+    }
+  } else {
+    return null
+  }
+}
+
+function blockMappingForNode(node: Node, nodePath: Node[]): NodeMapping | null {
+  const possibleMappings = nodeMappings.filter(m => m.content === node.type)
+  if (possibleMappings.length === 0) {
+    return null
+  }
+  // choose more "specific" mappings if possible. A mapping is more specific if
+  // it's outer and inner node type match than if only the inner type matches
+
+  const parent = nodePath[nodePath.length - 1]
+
+  let bestMapping = possibleMappings[0]
+  for (const mapping of possibleMappings) {
+    if (parent != null && mapping.outer === parent.type) {
+      bestMapping = mapping
+      break
+    }
+  }
+
+  return bestMapping
+}
+
 function findParents(parentNodes: Node[]): string[] {
   const parents: string[] = []
   for (const [index, node] of parentNodes.entries()) {
-    if (node.type.name === "bullet_list" && index < parentNodes.length - 1) {
-      parents.push("unordered-list-item")
-    } else if (
-      node.type.name === "ordered_list" &&
-      index < parentNodes.length - 1
-    ) {
-      parents.push("ordered-list-item")
-    } else if (node.type.name === "paragraph") {
-      parents.push("paragraph")
-    } else if (node.type.name === "aside") {
-      parents.push("aside")
-    } else if (node.type.name === "blockquote") {
-      parents.push("blockquote")
+    const mapping = blockMappingForNode(node, parentNodes.slice(0, index))
+    if (mapping == null) {
+      continue
     }
+    parents.push(mapping.blockName)
   }
   return parents
 }
@@ -758,37 +914,10 @@ export function blocksFromNode(node: Node): (
 function nodesForBlock(blockType: string): {
   outer: NodeType | null
   content: NodeType
-  inner: NodeType | null
 } {
-  if (blockType === "paragraph") {
-    return { outer: null, content: schema.nodes.paragraph, inner: null }
-  } else if (blockType === "heading") {
-    return { outer: null, content: schema.nodes.heading, inner: null }
-  } else if (blockType === "aside") {
-    return {
-      outer: null,
-      content: schema.nodes.aside,
-      inner: schema.nodes.paragraph,
-    }
-  } else if (blockType === "blockquote") {
-    return { outer: null, content: schema.nodes.blockquote, inner: null }
-  } else if (blockType === "ordered-list-item") {
-    return {
-      outer: schema.nodes.ordered_list,
-      content: schema.nodes.list_item,
-      inner: schema.nodes.paragraph,
-    }
-  } else if (blockType === "unordered-list-item") {
-    return {
-      outer: schema.nodes.bullet_list,
-      content: schema.nodes.list_item,
-      inner: schema.nodes.paragraph,
-    }
-  } else if (blockType === "code-block") {
-    return { outer: null, content: schema.nodes.code_block, inner: null }
-  } else if (blockType === "image") {
-    return { outer: null, content: schema.nodes.image, inner: null }
-  } else {
+  const mapping = nodeMappings.find(m => m.blockName === blockType)
+  if (mapping == null) {
     throw new Error(`Unknown block type: ${blockType}`)
   }
+  return { outer: mapping.outer, content: mapping.content }
 }
