@@ -45,6 +45,7 @@
     "debug": "^4.3.4",
     "eslint": "^8.43.0",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.6",
     "fast-check": "^3.17.1",
     "ist": "^1.1.7",
     "lucide-react": "^0.344.0",
