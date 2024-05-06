@@ -25,9 +25,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    defaults:
-      run:
-        working-directory: ./examples/vanilla
     env:
      # This is used in vanilla/vite.config.ts to set the base path
      GITHUB_PAGES: true
@@ -43,14 +40,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build
-        run: npm run build
+        run: npm run playground:build
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload dist folder
-          path: './examples/vanilla/dist'
+          path: './playground/dist'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

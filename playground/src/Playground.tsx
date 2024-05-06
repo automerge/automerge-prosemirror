@@ -27,11 +27,6 @@ leftHandle.change(d => {
   //attrs: { level: 1 },
   //parents: [],
   //})
-  am.splitBlock(d, ["text"], 0, {
-    type: new am.RawString("code-block"),
-    attrs: {},
-    parents: [],
-  })
 })
 
 const rightHandle = rightRepo.find(leftHandle.url)

@@ -8,6 +8,8 @@
     "lint": "eslint .",
     "cypress:open": "cypress open",
     "playground": "vite dev playground",
+    "playground:build": "vite build playground",
+    "playground:preview": "vite preview playground",
     "mocha": "node --experimental-specifier-resolution=node --experimental-loader=ts-node/esm ./node_modules/.bin/mocha ./test/**/*.spec.ts"
   },
   "type": "module",
