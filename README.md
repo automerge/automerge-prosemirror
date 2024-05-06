@@ -4,7 +4,7 @@
 
 Support for all elements in the `prosemirror-schema-basic` and `prosemirror-schema-list` except for the `hr` element is implemented. The next step is to generalize this to allow adapting user provided schemas.
 
-In general this is alpha quality software. There are still a fair number of bugs and the API will probably change, but the core functionality works most of the time.
+In general this is beta quality software. There are still bugs and the API will probably change, but the core functionality works.
 
 ## How to play
 
