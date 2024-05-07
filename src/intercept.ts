@@ -2,7 +2,7 @@ import { next as am } from "@automerge/automerge"
 import { EditorState, Transaction, TextSelection } from "prosemirror-state"
 import pmToAm from "./pmToAm"
 import amToPm from "./amToPm"
-import { DocHandle } from "./DocHandle"
+import { DocHandle } from "./types"
 
 export function intercept<T>(
   path: am.Prop[],

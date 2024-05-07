@@ -1,7 +1,7 @@
 import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
 import { Fragment, Slice, Mark, Attrs, Schema } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
-import { MarkValue } from "./marks"
+//import { MarkValue } from "./marks"
 import { amSpliceIdxToPmIdx, docFromSpans, pmRangeToAmRange } from "./traversal"
 import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
 import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
@@ -243,7 +243,7 @@ function patchContentToFragment(
   let pmMarks: Array<Mark> | undefined = undefined
   if (marks != null) {
     pmMarks = Object.entries(marks).reduce(
-      (acc: Mark[], [name, value]: [string, MarkValue]) => {
+      (acc: Mark[], [name, value]: [string, am.MarkValue]) => {
         // This should actually never be null because automerge only uses null
         // as the value for a mark when a mark is being removed, which would only
         // happen in a `AddMark` patch, not a `Insert` or `Splice` patch. But we

@@ -1,5 +1,10 @@
 import { next as am } from "@automerge/automerge"
 
+export interface DocHandle<T> {
+  docSync: () => am.Doc<T> | undefined
+  change: (fn: am.ChangeFn<T>) => void
+}
+
 export type BlockType = string
 
 export function isBlockMarker(obj: unknown): obj is BlockMarker {
