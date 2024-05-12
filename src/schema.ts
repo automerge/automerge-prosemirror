@@ -41,6 +41,7 @@ export const schema = new Schema({
     paragraph: {
       content: "inline*",
       group: "block",
+      attrs: { unknownBlock: { default: null } },
       parseDOM: [{ tag: "p" }],
       toDOM() {
         return pDOM
@@ -137,6 +138,15 @@ export const schema = new Schema({
         return ["img", { src, alt, title }]
       },
     } as NodeSpec,
+
+    unknownLeaf: {
+      inline: true,
+      attrs: { isAmgBlock: { default: true }, unknownBlock: { default: null } },
+      group: "inline",
+      toDOM() {
+        return document.createTextNode("u{fffc}")
+      },
+    },
 
     ordered_list: {
       group: "block",

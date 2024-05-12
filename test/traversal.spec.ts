@@ -236,7 +236,6 @@ describe("the traversal API", () => {
         },
       ]
       const events = traverseSpans(spans)
-      console.log(printIndexTable(events))
       assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
     })
   })
@@ -702,6 +701,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: ["unordered-list-item"],
@@ -732,6 +732,7 @@ describe("the traversal API", () => {
       const expected: TraversalEvent[] = [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -744,6 +745,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -776,6 +778,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -816,6 +819,7 @@ describe("the traversal API", () => {
       const expected: TraversalEvent[] = [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -833,6 +837,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: ["unordered-list-item"],
@@ -885,6 +890,7 @@ describe("the traversal API", () => {
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -899,6 +905,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -913,6 +920,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -967,6 +975,7 @@ describe("the traversal API", () => {
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -981,6 +990,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -994,6 +1004,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1007,6 +1018,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "list_item", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1055,6 +1067,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1065,6 +1078,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -1077,6 +1091,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -1118,6 +1133,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: [],
@@ -1131,6 +1147,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -1178,6 +1195,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: [],
@@ -1211,6 +1229,7 @@ describe("the traversal API", () => {
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "aside",
             parents: [],
@@ -1252,6 +1271,7 @@ describe("the traversal API", () => {
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1264,6 +1284,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "heading", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1316,6 +1337,7 @@ describe("the traversal API", () => {
         // First block
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1332,6 +1354,7 @@ describe("the traversal API", () => {
         // Second block
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1347,6 +1370,7 @@ describe("the traversal API", () => {
         // Third block
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: ["ordered-list-item"],
@@ -1387,6 +1411,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "image",
             parents: ["paragraph"],
@@ -1433,6 +1458,7 @@ describe("the traversal API", () => {
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -1443,6 +1469,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "image",
             parents: ["paragraph"],
@@ -1490,6 +1517,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote", "unordered-list-item"],
@@ -1503,6 +1531,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote"],
@@ -1534,6 +1563,7 @@ describe("the traversal API", () => {
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "code-block",
             parents: [],
@@ -1573,6 +1603,7 @@ describe("the traversal API", () => {
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1587,6 +1618,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -1638,6 +1670,7 @@ describe("the traversal API", () => {
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -1652,6 +1685,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -1665,6 +1699,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: ["unordered-list-item"],
@@ -1696,6 +1731,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: [],
@@ -1728,6 +1764,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -1767,6 +1804,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: ["unordered-list-item"],
@@ -1801,6 +1839,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: [],
@@ -1813,6 +1852,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -1839,6 +1879,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1851,6 +1892,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "heading", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1882,6 +1924,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "image",
             parents: ["paragraph"],
@@ -1908,6 +1951,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "blockquote",
             parents: [],
@@ -1935,6 +1979,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "blockquote",
             parents: [],
@@ -1948,6 +1993,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote"],
@@ -1980,6 +2026,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: ["blockquote"],
@@ -2016,6 +2063,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote", "unordered-list-item"],
@@ -2029,6 +2077,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote"],
@@ -2083,6 +2132,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote", "unordered-list-item"],
@@ -2097,6 +2147,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote"],
@@ -2110,6 +2161,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: ["blockquote"],
@@ -2135,6 +2187,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "code-block",
             parents: [],
@@ -2172,6 +2225,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -2186,6 +2240,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -2199,6 +2254,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: ["unordered-list-item"],
@@ -2213,6 +2269,41 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         { type: "closeTag", tag: "list_item", role: "render-only" },
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should not emit block markers for multiple top level leaf nodes of different types", () => {
+      const node = schema.node("doc", null, [
+        schema.node("paragraph", null, [
+          schema.nodes.unknownLeaf.create({
+            unknownBlock: {
+              type: "unknown",
+              parents: [],
+              attrs: {},
+              isEmbed: true,
+            },
+          }),
+          schema.text("hello"),
+        ]),
+      ])
+      const events = Array.from(traverseNode(node))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: true,
+          block: {
+            type: "unknown",
+            parents: [],
+            attrs: {},
+            isEmbed: true,
+          },
+        },
+        { type: "leafNode", tag: "unknownLeaf", role: "explicit" },
+        { type: "text", text: "hello", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ])
     })
@@ -2869,6 +2960,42 @@ describe("the traversal API", () => {
         ),
       )
     })
+
+    describe("when handling unknown blocks", () => {
+      it("should render them as a paragraph", () => {
+        const spans: am.Span[] = [
+          {
+            type: "block",
+            value: {
+              type: new am.RawString("unknown"),
+              parents: [],
+              attrs: {},
+            },
+          },
+          { type: "text", value: "hello" },
+        ]
+        const doc = docFromSpans(spans)
+        assert.isTrue(
+          doc.eq(
+            schema.node("doc", null, [
+              schema.node(
+                "paragraph",
+                {
+                  isAmgBlock: true,
+                  unknownBlock: {
+                    type: "unknown",
+                    parents: [],
+                    attrs: {},
+                    isEmbed: false,
+                  },
+                },
+                [schema.text("hello")],
+              ),
+            ]),
+          ),
+        )
+      })
+    })
   })
 
   describe("the blocksFromNode function", () => {
@@ -2993,6 +3120,44 @@ describe("the traversal API", () => {
         },
       },
     ])
+  })
+
+  describe("when handling unknown block types", () => {
+    it("should round trip the block type", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("unknown"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "hello" },
+      ]
+      const doc = docFromSpans(spans)
+      const blocks: am.Span[] = Array.from(blocksFromNode(doc))
+      assert.deepStrictEqual(blocks, spans)
+    })
+
+    it("should round trip the isEmbed state", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("unknown"),
+            parents: [],
+            attrs: {},
+            isEmbed: true,
+          },
+        },
+        { type: "text", value: "hello" },
+      ]
+      const doc = docFromSpans(spans)
+      const blocks: am.Span[] = Array.from(blocksFromNode(doc))
+      assert.deepStrictEqual(blocks, spans)
+    })
   })
 })
 

@@ -126,7 +126,7 @@ function replaceAroundStep(
 ) {
   const applied = step.apply(pmDoc).doc
   if (applied == null) {
-    console.log(step)
+    //console.log(step)
     throw new Error("Could not apply step to document")
   }
   //console.log(applied)

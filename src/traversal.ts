@@ -24,6 +24,7 @@ export type TraversalEvent =
   | { type: "text"; text: string; marks: am.MarkSet }
   | {
       type: "block"
+      isUnknown?: boolean
       block: {
         type: string
         parents: string[]
@@ -84,6 +85,9 @@ export function docFromSpans(spans: am.Span[]): Node {
 
     if (event.type === "block") {
       nextBlockAmgAttrs = { isAmgBlock: true, ...event.block.attrs }
+      if (event.isUnknown) {
+        nextBlockAmgAttrs.unknownBlock = event.block
+      }
     } else {
       nextBlockAmgAttrs = null
     }
@@ -281,6 +285,22 @@ const nodeMappings: NodeMapping[] = [
   },
 ]
 
+type SchemaAdapter = {
+  mappings: NodeMapping[]
+  unknownTextblock: NodeType
+  unknownLeaf: NodeType
+}
+
+const schemaAdapter: SchemaAdapter = {
+  mappings: nodeMappings,
+  unknownTextblock: schema.nodes.paragraph,
+  unknownLeaf: schema.nodes.unknownLeaf,
+}
+
+function isKnownBlock(adapter: SchemaAdapter, blockName: string): boolean {
+  return adapter.mappings.some(m => m.blockName === blockName)
+}
+
 export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
   const toProcess: (
     | TraversalEvent
@@ -307,12 +327,14 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         yield { type: "text", text: cur.text!, marks: {} }
       } else {
-        const block = blockForNode(cur, nodePath, next.indexInParent)
-        const role = block != null ? "explicit" : "render-only"
+        const maybeBlock = blockForNode(cur, nodePath, next.indexInParent)
+        const role = maybeBlock != null ? "explicit" : "render-only"
 
-        if (block != null) {
+        if (maybeBlock != null) {
+          const { block, isUnknown } = maybeBlock
           yield {
             type: "block",
+            isUnknown,
             block,
           }
         }
@@ -321,8 +343,8 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
         } else {
           yield { type: "openTag", tag: cur.type.name, role }
           nodePath.push(cur)
-          if (block != null && role === "explicit") {
-            path.push(block.type)
+          if (maybeBlock != null && role === "explicit") {
+            path.push(maybeBlock.block.type)
           }
 
           toProcess.push({ type: "closeTag", tag: cur.type.name, role })
@@ -353,15 +375,24 @@ function blockForNode(
   nodePath: Node[],
   indexInParent: number,
 ): {
-  type: string
-  parents: string[]
-  attrs: { [key: string]: BlockAttrValue }
-  isEmbed: boolean
+  isUnknown: boolean
+  block: {
+    type: string
+    parents: string[]
+    attrs: { [key: string]: BlockAttrValue }
+    isEmbed: boolean
+  }
 } | null {
   const blockMapping = blockMappingForNode(node, nodePath)
 
   if (blockMapping == null) {
     if (node.attrs.isAmgBlock) {
+      if (node.attrs.unknownBlock != null) {
+        return {
+          isUnknown: true,
+          block: node.attrs.unknownBlock,
+        }
+      }
       throw new Error("no mapping found for node which is marked as a block")
     }
     return null
@@ -374,18 +405,33 @@ function blockForNode(
   //    it's descendants, whether we should emit a block at this point
 
   if (node.attrs.isAmgBlock) {
+    if (node.attrs.unknownBlock != null) {
+      return {
+        isUnknown: true,
+        block: node.attrs.unknownBlock,
+      }
+    }
     return {
-      type: blockMapping.blockName,
-      parents: findParents(nodePath),
-      attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
-      isEmbed: blockMapping.isEmbed || false,
+      isUnknown: false,
+      block: {
+        type: blockMapping.blockName,
+        parents: findParents(nodePath),
+        attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
+        isEmbed: blockMapping.isEmbed || false,
+      },
     }
   } else if (blockMapping.isEmbed) {
+    if (node.attrs.unknownBlock != null) {
+      return node.attrs.unknownBlock
+    }
     return {
-      type: blockMapping.blockName,
-      parents: findParents(nodePath),
-      attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
-      isEmbed: true,
+      isUnknown: false,
+      block: {
+        type: blockMapping.blockName,
+        parents: findParents(nodePath),
+        attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
+        isEmbed: true,
+      },
     }
   } else {
     // Two possibilities:
@@ -434,10 +480,13 @@ function blockForNode(
     }
     if (emitBlock) {
       return {
-        type: blockMapping.blockName,
-        parents: findParents(nodePath),
-        attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
-        isEmbed: blockMapping.isEmbed || false,
+        isUnknown: false,
+        block: {
+          type: blockMapping.blockName,
+          parents: findParents(nodePath),
+          attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
+          isEmbed: blockMapping.isEmbed || false,
+        },
       }
     } else {
       return null
@@ -599,25 +648,21 @@ class TraverseState {
 
   *newBlock(block: BlockMarker): IterableIterator<TraversalEvent> {
     if (block.isEmbed) {
-      const { content } = nodesForBlock(block.type.val)
+      const { content } = nodesForBlock(
+        schemaAdapter,
+        block.type.val,
+        block.isEmbed,
+      )
       const wrapping = this.currentMatch.findWrapping(content)
-      if (wrapping && wrapping.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        this.currentMatch = this.currentMatch.matchType(wrapping[0])!
-        for (let i = 0; i < wrapping.length; i++) {
-          yield { type: "openTag", tag: wrapping[i].name, role: "render-only" }
-        }
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        this.currentMatch = this.currentMatch.matchType(content)!
-      }
-      yield blockEvent(block)
-      yield { type: "leafNode", tag: block.type.val, role: "explicit" }
       if (wrapping) {
-        for (let i = wrapping.length - 1; i >= 0; i--) {
-          yield { type: "closeTag", tag: wrapping[i].name, role: "render-only" }
+        for (let i = 0; i < wrapping.length; i++) {
+          yield this.pushNode(wrapping[i], "render-only")
         }
       }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.currentMatch = this.currentMatch.matchType(content)!
+      yield blockEvent(schemaAdapter, block)
+      yield { type: "leafNode", tag: content.name, role: "explicit" }
       return
     }
     const newOuter = outerNodeTypes(block)
@@ -639,8 +684,12 @@ class TraverseState {
       yield* this.fillBefore(next)
       yield this.pushNode(newOuter[j], "render-only")
     }
-    yield blockEvent(block)
-    const { content } = nodesForBlock(block.type.val)
+    yield blockEvent(schemaAdapter, block)
+    const { content } = nodesForBlock(
+      schemaAdapter,
+      block.type.val,
+      block.isEmbed || false,
+    )
     yield this.pushNode(content, "explicit")
   }
 
@@ -659,6 +708,8 @@ class TraverseState {
         yield this.pushNode(wrapping[i], "render-only")
       }
     }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    this.currentMatch = this.currentMatch.matchType(schema.nodes.text)!
     yield { type: "text", text, marks }
   }
 
@@ -729,20 +780,28 @@ class TraverseState {
 function outerNodeTypes(block: BlockMarker): NodeType[] {
   const result = []
   for (const parent of block.parents) {
-    const { outer, content } = nodesForBlock(parent.val)
+    const { outer, content } = nodesForBlock(schemaAdapter, parent.val, false)
     if (outer != null) {
       result.push(outer)
     }
     result.push(content)
   }
-  const { outer } = nodesForBlock(block.type.val)
+  const { outer } = nodesForBlock(
+    schemaAdapter,
+    block.type.val,
+    block.isEmbed || false,
+  )
   if (outer != null) {
     result.push(outer)
   }
   return result
 }
 
-function blockEvent(block: BlockMarker): TraversalEvent {
+function blockEvent(
+  adapter: SchemaAdapter,
+  block: BlockMarker,
+): TraversalEvent {
+  const isUnknown = !isKnownBlock(adapter, block.type.val)
   const attrs = { ...block.attrs }
   for (const [key, value] of Object.entries(attrs)) {
     if (value instanceof am.RawString) {
@@ -751,6 +810,7 @@ function blockEvent(block: BlockMarker): TraversalEvent {
   }
   return {
     type: "block",
+    isUnknown,
     block: {
       attrs,
       parents: block.parents.map(p => p.val),
@@ -911,13 +971,27 @@ export function blocksFromNode(node: Node): (
   return result
 }
 
-function nodesForBlock(blockType: string): {
+function nodesForBlock(
+  adapter: SchemaAdapter,
+  blockType: string,
+  isEmbed: boolean,
+): {
   outer: NodeType | null
   content: NodeType
 } {
   const mapping = nodeMappings.find(m => m.blockName === blockType)
   if (mapping == null) {
-    throw new Error(`Unknown block type: ${blockType}`)
+    if (isEmbed) {
+      return {
+        outer: null,
+        content: adapter.unknownLeaf,
+      }
+    } else {
+      return {
+        outer: null,
+        content: adapter.unknownTextblock,
+      }
+    }
   }
   return { outer: mapping.outer, content: mapping.content }
 }
