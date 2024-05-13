@@ -107,7 +107,32 @@ function constructNode(
   attrs: { [key: string]: any },
   children: Node[],
 ): Node {
-  return schema.node(nodeName, attrs, children)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const knownAttrs: { [key: string]: any } = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const unknownAttrs: { [key: string]: any } = {}
+  let hasUnknownAttr = false
+  for (const name of Object.keys(attrs)) {
+    if (
+      name === "isAmgBlock" ||
+      name === "unknownBlock" ||
+      name === "unknownAttrs"
+    ) {
+      knownAttrs[name] = attrs[name]
+      continue
+    }
+    const attrSpec = schema.nodes[nodeName]?.spec?.attrs?.[name]
+    if (attrSpec != null) {
+      knownAttrs[name] = attrs[name]
+    } else {
+      hasUnknownAttr = true
+      unknownAttrs[name] = attrs[name]
+    }
+  }
+  if (hasUnknownAttr) {
+    knownAttrs.unknownAttrs = unknownAttrs
+  }
+  return schema.node(nodeName, knownAttrs, children)
 }
 
 export function amSpliceIdxToPmIdx(
@@ -297,10 +322,6 @@ const schemaAdapter: SchemaAdapter = {
   unknownLeaf: schema.nodes.unknownLeaf,
 }
 
-function isKnownBlock(adapter: SchemaAdapter, blockName: string): boolean {
-  return adapter.mappings.some(m => m.blockName === blockName)
-}
-
 export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
   const toProcess: (
     | TraversalEvent
@@ -383,19 +404,29 @@ function blockForNode(
     isEmbed: boolean
   }
 } | null {
+  // Round trip unknown blocks through the editor
+  if (node.attrs.unknownBlock != null) {
+    return {
+      isUnknown: true,
+      block: node.attrs.unknownBlock,
+    }
+  }
+
   const blockMapping = blockMappingForNode(node, nodePath)
 
   if (blockMapping == null) {
     if (node.attrs.isAmgBlock) {
-      if (node.attrs.unknownBlock != null) {
-        return {
-          isUnknown: true,
-          block: node.attrs.unknownBlock,
-        }
-      }
       throw new Error("no mapping found for node which is marked as a block")
     }
     return null
+  }
+
+  const attrs = blockMapping.attrParsers?.fromProsemirror(node) || {}
+  // make sure to round trip unknown attributes
+  if (node.attrs.unknownAttrs != null) {
+    for (const key of Object.keys(node.attrs.unknownAttrs)) {
+      attrs[key] = node.attrs.unknownAttrs[key]
+    }
   }
 
   // We have a few things to do
@@ -405,31 +436,22 @@ function blockForNode(
   //    it's descendants, whether we should emit a block at this point
 
   if (node.attrs.isAmgBlock) {
-    if (node.attrs.unknownBlock != null) {
-      return {
-        isUnknown: true,
-        block: node.attrs.unknownBlock,
-      }
-    }
     return {
       isUnknown: false,
       block: {
         type: blockMapping.blockName,
         parents: findParents(nodePath),
-        attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
+        attrs,
         isEmbed: blockMapping.isEmbed || false,
       },
     }
   } else if (blockMapping.isEmbed) {
-    if (node.attrs.unknownBlock != null) {
-      return node.attrs.unknownBlock
-    }
     return {
       isUnknown: false,
       block: {
         type: blockMapping.blockName,
         parents: findParents(nodePath),
-        attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
+        attrs,
         isEmbed: true,
       },
     }
@@ -484,7 +506,7 @@ function blockForNode(
         block: {
           type: blockMapping.blockName,
           parents: findParents(nodePath),
-          attrs: blockMapping.attrParsers?.fromProsemirror(node) || {},
+          attrs,
           isEmbed: blockMapping.isEmbed || false,
         },
       }
@@ -586,6 +608,15 @@ function blockMappingForNode(node: Node, nodePath: Node[]): NodeMapping | null {
 function findParents(parentNodes: Node[]): string[] {
   const parents: string[] = []
   for (const [index, node] of parentNodes.entries()) {
+    if (
+      index === parentNodes.length - 1 &&
+      node.isTextblock &&
+      !node.attrs.isAmgBlock
+    ) {
+      // If the last node is a render-only text block then we don't need to emit it, the
+      // schema will take care of inserting it around the content for us
+      continue
+    }
     const mapping = blockMappingForNode(node, parentNodes.slice(0, index))
     if (mapping == null) {
       continue
@@ -801,7 +832,8 @@ function blockEvent(
   adapter: SchemaAdapter,
   block: BlockMarker,
 ): TraversalEvent {
-  const isUnknown = !isKnownBlock(adapter, block.type.val)
+  const mapping = nodeMappings.find(m => m.blockName === block.type.val)
+
   const attrs = { ...block.attrs }
   for (const [key, value] of Object.entries(attrs)) {
     if (value instanceof am.RawString) {
@@ -810,7 +842,7 @@ function blockEvent(
   }
   return {
     type: "block",
-    isUnknown,
+    isUnknown: mapping == null,
     block: {
       attrs,
       parents: block.parents.map(p => p.val),

@@ -235,7 +235,6 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const events = traverseSpans(spans)
       assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
     })
   })
@@ -1927,7 +1926,7 @@ describe("the traversal API", () => {
           isUnknown: false,
           block: {
             type: "image",
-            parents: ["paragraph"],
+            parents: [],
             attrs: {
               src: new am.RawString("some-image.png"),
               alt: "some image",
@@ -2304,6 +2303,88 @@ describe("the traversal API", () => {
         { type: "leafNode", tag: "unknownLeaf", role: "explicit" },
         { type: "text", text: "hello", marks: {} },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should not emit parents which are wrapper content", () => {
+      const node = schema.node("doc", null, [
+        schema.node("paragraph", null, [
+          schema.node("image", {
+            src: "some-image.png",
+            alt: "some image",
+            title: "some title",
+            isAmgBlock: true,
+            unknownAttrs: null,
+          }),
+        ]),
+      ])
+      const events = Array.from(traverseNode(node))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "image",
+            parents: [],
+            attrs: {
+              src: new am.RawString("some-image.png"),
+              alt: "some image",
+              title: "some title",
+            },
+            isEmbed: true,
+          },
+        },
+        { type: "leafNode", tag: "image", role: "explicit" },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should emit parents which are wrapper content if they are explicit blocks", () => {
+      const node = schema.node("doc", null, [
+        schema.node("paragraph", { isAmgBlock: true }, [
+          schema.node("image", {
+            src: "some-image.png",
+            alt: "some image",
+            title: "some title",
+            isAmgBlock: true,
+            unknownAttrs: null,
+          }),
+        ]),
+      ])
+      const events = Array.from(traverseNode(node))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "paragraph", role: "explicit" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "image",
+            parents: ["paragraph"],
+            attrs: {
+              src: new am.RawString("some-image.png"),
+              alt: "some image",
+              title: "some title",
+            },
+            isEmbed: true,
+          },
+        },
+        { type: "leafNode", tag: "image", role: "explicit" },
+        { type: "closeTag", tag: "paragraph", role: "explicit" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ])
     })
@@ -3149,6 +3230,50 @@ describe("the traversal API", () => {
             type: new am.RawString("unknown"),
             parents: [],
             attrs: {},
+            isEmbed: true,
+          },
+        },
+        { type: "text", value: "hello" },
+      ]
+      const doc = docFromSpans(spans)
+      const blocks: am.Span[] = Array.from(blocksFromNode(doc))
+      assert.deepStrictEqual(blocks, spans)
+    })
+  })
+
+  describe("when handling unknown attributes of known blocks", () => {
+    it("should round trip them through the editor", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {
+              foo: "bar",
+            },
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "hello" },
+      ]
+      const doc = docFromSpans(spans)
+      const blocks: am.Span[] = Array.from(blocksFromNode(doc))
+      assert.deepStrictEqual(blocks, spans)
+    })
+
+    it("should round trip unknown attributes of known embed blocks through the editor", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("image"),
+            parents: [],
+            attrs: {
+              src: new am.RawString("image.png"),
+              alt: null,
+              title: null,
+            },
             isEmbed: true,
           },
         },

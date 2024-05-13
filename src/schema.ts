@@ -3,11 +3,17 @@ import { NodeSpec, Schema, DOMOutputSpec, MarkSpec } from "prosemirror-model"
 function addIsAmgBlockAttr(nodes: { [key: string]: NodeSpec }): {
   [key: string]: NodeSpec
 } {
-  for (const [_, node] of Object.entries(nodes)) {
-    if (node.content) {
-      node.attrs
-        ? (node.attrs.isAmgBlock = { default: false })
-        : (node.attrs = { isAmgBlock: { default: false } })
+  for (const [name, node] of Object.entries(nodes)) {
+    if (name !== "text") {
+      if (node.attrs == null) {
+        node.attrs = {
+          isAmgBlock: { default: false },
+          unknownAttrs: { default: null },
+        }
+      } else {
+        node.attrs.isAmgBlock = { default: false }
+        node.attrs.unknownAttrs = { default: null }
+      }
     }
   }
   return nodes
