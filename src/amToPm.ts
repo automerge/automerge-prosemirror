@@ -1,11 +1,12 @@
 import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
-import { Fragment, Slice, Mark, Attrs, Schema } from "prosemirror-model"
+import { Fragment, Slice, Mark, Schema } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
 //import { MarkValue } from "./marks"
-import { amSpliceIdxToPmIdx, docFromSpans, pmRangeToAmRange } from "./traversal"
+import { amSpliceIdxToPmIdx, docFromSpans } from "./traversal"
 import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
 import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
 import { ReplaceStep } from "prosemirror-transform"
+import { pmMarksFromAmMarks, schemaAdapter } from "./schema"
 
 type SpliceTextPatch = am.SpliceTextPatch
 
@@ -111,13 +112,11 @@ function handleMark(
       const pmStart = amSpliceIdxToPmIdx(spans, mark.start)
       const pmEnd = amSpliceIdxToPmIdx(spans, mark.end)
       if (pmStart == null || pmEnd == null) throw new Error("Invalid index")
-      const markType = schema.marks[mark.name]
-      if (markType == null) continue
-      if (mark.value == null) {
-        tx = tx.removeMark(pmStart, pmEnd, markType)
-      } else {
-        const markAttrs = attrsFromMark(mark.name, mark.value)
-        tx = tx.addMark(pmStart, pmEnd, markType.create(markAttrs))
+      const pmMarks = pmMarksFromAmMarks(schemaAdapter, {
+        [mark.name]: mark.value,
+      })
+      for (const pmMark of pmMarks) {
+        tx = tx.addMark(pmStart, pmEnd, pmMark)
       }
     }
   }
@@ -242,53 +241,13 @@ function patchContentToFragment(
 ): Fragment {
   let pmMarks: Array<Mark> | undefined = undefined
   if (marks != null) {
-    pmMarks = Object.entries(marks).reduce(
-      (acc: Mark[], [name, value]: [string, am.MarkValue]) => {
-        // This should actually never be null because automerge only uses null
-        // as the value for a mark when a mark is being removed, which would only
-        // happen in a `AddMark` patch, not a `Insert` or `Splice` patch. But we
-        // appease typescript anyway
-        if (value != null) {
-          const markAttrs = attrsFromMark(name, value)
-          acc.push(schema.mark(name, markAttrs))
-        }
-        return acc
-      },
-      [],
-    )
+    pmMarks = pmMarksFromAmMarks(schemaAdapter, marks)
   }
 
   // Splice is only ever called once a block has already been created so we're
   // only inserting text. This means we don't have to think about openStart
   // and openEnd
   return Fragment.from(schema.text(patchContent, pmMarks))
-}
-
-export function attrsFromMark(
-  markName: string,
-  mark: am.MarkValue,
-): Attrs | null {
-  if (markName === "link") {
-    let markAttrs = null
-    if (typeof mark === "string") {
-      try {
-        const markJson = JSON.parse(mark)
-        if (typeof markJson === "object") {
-          markAttrs = markJson as Attrs
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-    return markAttrs
-  } else if (markName === "strong" || markName === "em") {
-    if (typeof mark === "boolean") {
-      return {}
-    }
-    return {}
-  } else {
-    return {}
-  }
 }
 
 type GatheredPatch = TextPatches | BlockPatches
@@ -370,34 +329,4 @@ function gatherPatches(textPath: am.Prop[], diff: am.Patch[]): GatheredPatch[] {
   }
   flush()
   return result
-}
-
-export function reconcileStoredMarks(
-  doc: am.Doc<unknown>,
-  path: am.Prop[],
-  spans: am.Span[],
-  tx: Transaction,
-): Transaction {
-  if (!tx.selection.empty) {
-    return tx
-  }
-  const amRange = pmRangeToAmRange(spans, {
-    from: tx.selection.from,
-    to: tx.selection.to,
-  })
-  if (amRange == null) {
-    return tx
-  }
-  // If we're inserting at the end of the document then the stored marks are
-  // (kind of) the marks on the previous character
-  const idx = Math.max(amRange.start - 1, 0)
-  const marks = am.marksAt(doc, path, idx)
-  if (marks == null) return tx
-  const expectedMarks = []
-  for (const [markName, markValue] of Object.entries(marks)) {
-    const markType = tx.doc.type.schema.marks[markName]
-    if (markType == null) continue
-    expectedMarks.push(markType.create(attrsFromMark(markName, markValue)))
-  }
-  return tx.setStoredMarks(expectedMarks)
 }

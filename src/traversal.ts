@@ -1,21 +1,22 @@
 import { next as am } from "@automerge/automerge"
 import {
-  Attrs,
   ContentMatch,
   Fragment,
-  Mark,
   Node,
   NodeType,
   Schema,
 } from "prosemirror-model"
 import { isBlockMarker, BlockMarker, amSpanToSpan } from "./types"
-import { schema } from "./schema"
-import { attrsFromMark } from "./amToPm"
+import {
+  NodeMapping,
+  SchemaAdapter,
+  amMarksFromPmMarks,
+  pmMarksFromAmMarks,
+  schema,
+  schemaAdapter,
+} from "./schema"
 
 type RenderRole = "explicit" | "render-only"
-
-//type BlockAttrValue = string | number | boolean | null
-type BlockAttrValue = am.MaterializeValue
 
 export type TraversalEvent =
   | { type: "openTag"; tag: string; role: RenderRole }
@@ -28,7 +29,7 @@ export type TraversalEvent =
       block: {
         type: string
         parents: string[]
-        attrs: { [key: string]: BlockAttrValue }
+        attrs: { [key: string]: am.MaterializeValue }
         isEmbed: boolean
       }
     }
@@ -48,7 +49,7 @@ export function docFromSpans(spans: am.Span[]): Node {
       children: [],
     },
   ]
-  let nextBlockAmgAttrs: { [key: string]: BlockAttrValue } | null = null
+  let nextBlockAmgAttrs: { [key: string]: am.MaterializeValue } | null = null
 
   for (const event of events) {
     if (event.type === "openTag") {
@@ -67,19 +68,7 @@ export function docFromSpans(spans: am.Span[]): Node {
         constructNode(schema, event.tag, nextBlockAmgAttrs || {}, []),
       )
     } else if (event.type === "text") {
-      let pmMarks: Mark[] = []
-      if (event.marks != null) {
-        pmMarks = Object.entries(event.marks).reduce(
-          (acc: Mark[], [name, value]: [string, am.MarkValue]) => {
-            if (value != null) {
-              const markAttrs = attrsFromMark(name, value)
-              acc.push(schema.mark(name, markAttrs))
-            }
-            return acc
-          },
-          [],
-        )
-      }
+      const pmMarks = pmMarksFromAmMarks(schemaAdapter, event.marks)
       stack[stack.length - 1].children.push(schema.text(event.text, pmMarks))
     }
 
@@ -239,89 +228,6 @@ export function* eventsWithIndexChanges(
   }
 }
 
-type NodeMapping = {
-  blockName: string
-  outer: NodeType | null
-  content: NodeType
-  attrParsers?: {
-    fromProsemirror: (node: Node) => { [key: string]: BlockAttrValue }
-    fromAutomerge: (block: BlockMarker) => Attrs
-  }
-  isEmbed?: boolean
-}
-
-const nodeMappings: NodeMapping[] = [
-  {
-    blockName: "ordered-list-item",
-    outer: schema.nodes.ordered_list,
-    content: schema.nodes.list_item,
-  },
-  {
-    blockName: "unordered-list-item",
-    outer: schema.nodes.bullet_list,
-    content: schema.nodes.list_item,
-  },
-  {
-    blockName: "paragraph",
-    outer: null,
-    content: schema.nodes.paragraph,
-  },
-  {
-    blockName: "blockquote",
-    outer: null,
-    content: schema.nodes.blockquote,
-  },
-  {
-    blockName: "heading",
-    outer: null,
-    content: schema.nodes.heading,
-    attrParsers: {
-      fromAutomerge: block => ({ level: block.attrs.level }),
-      fromProsemirror: node => ({ level: node.attrs.level }),
-    },
-  },
-  {
-    blockName: "code-block",
-    outer: null,
-    content: schema.nodes.code_block,
-  },
-  {
-    blockName: "image",
-    outer: null,
-    content: schema.nodes.image,
-    isEmbed: true,
-    attrParsers: {
-      fromAutomerge: block => ({
-        src: block.attrs.src?.toString() || null,
-        alt: block.attrs.alt,
-        title: block.attrs.title,
-      }),
-      fromProsemirror: node => ({
-        src: new am.RawString(node.attrs.src),
-        alt: node.attrs.alt,
-        title: node.attrs.title,
-      }),
-    },
-  },
-  {
-    blockName: "aside",
-    outer: null,
-    content: schema.nodes.aside,
-  },
-]
-
-type SchemaAdapter = {
-  mappings: NodeMapping[]
-  unknownTextblock: NodeType
-  unknownLeaf: NodeType
-}
-
-const schemaAdapter: SchemaAdapter = {
-  mappings: nodeMappings,
-  unknownTextblock: schema.nodes.paragraph,
-  unknownLeaf: schema.nodes.unknownLeaf,
-}
-
 export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
   const toProcess: (
     | TraversalEvent
@@ -334,7 +240,6 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
       type: "node",
     },
   ]
-  const path: string[] = []
   const nodePath: Node[] = []
 
   while (toProcess.length > 0) {
@@ -345,8 +250,9 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
     if (next.type === "node") {
       const cur = next.node
       if (cur.isText) {
+        const marks = amMarksFromPmMarks(schemaAdapter, cur.marks)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        yield { type: "text", text: cur.text!, marks: {} }
+        yield { type: "text", text: cur.text!, marks }
       } else {
         const maybeBlock = blockForNode(cur, nodePath, next.indexInParent)
         const role = maybeBlock != null ? "explicit" : "render-only"
@@ -364,9 +270,6 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
         } else {
           yield { type: "openTag", tag: cur.type.name, role }
           nodePath.push(cur)
-          if (maybeBlock != null && role === "explicit") {
-            path.push(maybeBlock.block.type)
-          }
 
           toProcess.push({ type: "closeTag", tag: cur.type.name, role })
           for (let i = cur.childCount - 1; i >= 0; i--) {
@@ -381,9 +284,6 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
       }
     } else {
       if (next.type === "closeTag") {
-        if (next.role === "explicit") {
-          path.pop()
-        }
         nodePath.pop()
       }
       yield next
@@ -400,7 +300,7 @@ function blockForNode(
   block: {
     type: string
     parents: string[]
-    attrs: { [key: string]: BlockAttrValue }
+    attrs: { [key: string]: am.MaterializeValue }
     isEmbed: boolean
   }
 } | null {
@@ -585,7 +485,9 @@ function findExplicitChildren(node: Node): ExplicitChildren | null {
 }
 
 function blockMappingForNode(node: Node, nodePath: Node[]): NodeMapping | null {
-  const possibleMappings = nodeMappings.filter(m => m.content === node.type)
+  const possibleMappings = schemaAdapter.nodeMappings.filter(
+    m => m.content === node.type,
+  )
   if (possibleMappings.length === 0) {
     return null
   }
@@ -832,7 +734,9 @@ function blockEvent(
   adapter: SchemaAdapter,
   block: BlockMarker,
 ): TraversalEvent {
-  const mapping = nodeMappings.find(m => m.blockName === block.type.val)
+  const mapping = schemaAdapter.nodeMappings.find(
+    m => m.blockName === block.type.val,
+  )
 
   const attrs = { ...block.attrs }
   for (const [key, value] of Object.entries(attrs)) {
@@ -964,11 +868,11 @@ export function blocksFromNode(node: Node): (
       value: {
         type: am.RawString
         parents: am.RawString[]
-        attrs: { [key: string]: BlockAttrValue }
+        attrs: { [key: string]: am.MaterializeValue }
         isEmbed: boolean
       }
     }
-  | { type: "text"; value: string }
+  | { type: "text"; value: string; marks?: am.MarkSet }
 )[] {
   const events = traverseNode(node)
   const result: (
@@ -977,11 +881,11 @@ export function blocksFromNode(node: Node): (
         value: {
           type: am.RawString
           parents: am.RawString[]
-          attrs: { [key: string]: BlockAttrValue }
+          attrs: { [key: string]: am.MaterializeValue }
           isEmbed: boolean
         }
       }
-    | { type: "text"; value: string }
+    | { type: "text"; value: string; marks: am.MarkSet }
   )[] = []
   for (const event of events) {
     if (event.type == "block") {
@@ -997,7 +901,7 @@ export function blocksFromNode(node: Node): (
         },
       })
     } else if (event.type == "text") {
-      result.push({ type: "text", value: event.text })
+      result.push({ type: "text", value: event.text, marks: event.marks })
     }
   }
   return result
@@ -1011,7 +915,7 @@ function nodesForBlock(
   outer: NodeType | null
   content: NodeType
 } {
-  const mapping = nodeMappings.find(m => m.blockName === blockType)
+  const mapping = adapter.nodeMappings.find(m => m.blockName === blockType)
   if (mapping == null) {
     if (isEmbed) {
       return {

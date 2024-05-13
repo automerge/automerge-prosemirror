@@ -3102,7 +3102,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "text", value: "item 1" },
+        { type: "text", value: "item 1", marks: {} },
         {
           type: "block",
           value: {
@@ -3144,7 +3144,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "text", value: "hello world" },
+        { type: "text", value: "hello world", marks: {} },
         {
           type: "block",
           value: {
@@ -3154,7 +3154,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "text", value: "item one" },
+        { type: "text", value: "item one", marks: {} },
         {
           type: "block",
           value: {
@@ -3190,7 +3190,7 @@ describe("the traversal API", () => {
           isEmbed: false,
         },
       },
-      { type: "text", value: "item 1" },
+      { type: "text", value: "item 1", marks: {} },
       {
         type: "block",
         value: {
@@ -3215,7 +3215,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "text", value: "hello" },
+        { type: "text", value: "hello", marks: {} },
       ]
       const doc = docFromSpans(spans)
       const blocks: am.Span[] = Array.from(blocksFromNode(doc))
@@ -3233,7 +3233,7 @@ describe("the traversal API", () => {
             isEmbed: true,
           },
         },
-        { type: "text", value: "hello" },
+        { type: "text", value: "hello", marks: {} },
       ]
       const doc = docFromSpans(spans)
       const blocks: am.Span[] = Array.from(blocksFromNode(doc))
@@ -3255,7 +3255,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "text", value: "hello" },
+        { type: "text", value: "hello", marks: {} },
       ]
       const doc = docFromSpans(spans)
       const blocks: am.Span[] = Array.from(blocksFromNode(doc))
@@ -3277,7 +3277,28 @@ describe("the traversal API", () => {
             isEmbed: true,
           },
         },
-        { type: "text", value: "hello" },
+        { type: "text", value: "hello", marks: {} },
+      ]
+      const doc = docFromSpans(spans)
+      const blocks: am.Span[] = Array.from(blocksFromNode(doc))
+      assert.deepStrictEqual(blocks, spans)
+    })
+  })
+
+  describe("when handling unknown marks", () => {
+    it("should round trip them through the editor", () => {
+      const date = new Date()
+      const spans: am.Span[] = [
+        {
+          type: "text",
+          value: "hello",
+          marks: {
+            unknownBool: true,
+            unknownString: "hello",
+            unknownNumber: 1,
+            unknownDate: date,
+          },
+        },
       ]
       const doc = docFromSpans(spans)
       const blocks: am.Span[] = Array.from(blocksFromNode(doc))

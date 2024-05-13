@@ -9,6 +9,7 @@ import { Mark, MarkType, Node } from "prosemirror-model"
 import { Prop, next as automerge } from "@automerge/automerge"
 import { blocksFromNode, pmRangeToAmRange } from "./traversal"
 import { next as am } from "@automerge/automerge"
+import { amMarksFromPmMarks, schemaAdapter } from "./schema"
 
 export type ChangeFn<T> = (doc: T, field: string) => void
 
@@ -232,13 +233,7 @@ function reconcileMarks(
   marks: readonly Mark[],
 ) {
   const currentMarks = automerge.marksAt(doc, path, index)
-  const newMarks: { [key: string]: am.MarkValue } = marks.reduce(
-    (acc, mark) => {
-      acc[mark.type.name] = markAttrsToMarkValue(mark.type, mark.attrs)
-      return acc
-    },
-    {} as { [key: string]: am.MarkValue },
-  )
+  const newMarks = amMarksFromPmMarks(schemaAdapter, marks)
 
   const newMarkNames = new Set(Object.keys(newMarks))
   const currentMarkNames = new Set(Object.keys(currentMarks))
@@ -258,6 +253,12 @@ function reconcileMarks(
     }
   }
   for (const markName of currentMarkNames) {
+    const markMapping = schemaAdapter.markMappings.find(
+      m => m.automergeMarkName === markName,
+    )
+    if (markMapping == null) {
+      continue
+    }
     if (!newMarkNames.has(markName)) {
       automerge.unmark(
         doc,
