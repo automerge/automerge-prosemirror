@@ -21,7 +21,7 @@ import {
 } from "prosemirror-inputrules"
 import "prosemirror-view/style/prosemirror.css"
 import { Prop } from "@automerge/automerge"
-import { AutoMirror } from "../../src"
+import { AutoMirror, basicSchemaAdapter } from "../../src"
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo"
 import {
   wrapInList,
@@ -110,7 +110,7 @@ export function Editor({ handle, path }: EditorProps) {
     if (!handleReady) {
       return
     }
-    const autoMirror = new AutoMirror(path)
+    const autoMirror = new AutoMirror(path, basicSchemaAdapter)
 
     const initialDoc = autoMirror.initialize(handle)
     const editorConfig = {

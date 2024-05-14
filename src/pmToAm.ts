@@ -9,11 +9,12 @@ import { Mark, MarkType, Node } from "prosemirror-model"
 import { Prop, next as automerge } from "@automerge/automerge"
 import { blocksFromNode, pmRangeToAmRange } from "./traversal"
 import { next as am } from "@automerge/automerge"
-import { amMarksFromPmMarks, schemaAdapter } from "./schema"
+import { SchemaAdapter, amMarksFromPmMarks } from "./schema"
 
 export type ChangeFn<T> = (doc: T, field: string) => void
 
 export default function (
+  adapter: SchemaAdapter,
   spans: am.Span[],
   steps: Step[],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,7 +26,7 @@ export default function (
 
   function flushMarks() {
     if (unappliedMarks.length > 0) {
-      applyAddMarkSteps(spans, unappliedMarks, doc, path)
+      applyAddMarkSteps(adapter, spans, unappliedMarks, doc, path)
       unappliedMarks = []
     }
   }
@@ -39,7 +40,7 @@ export default function (
     } else {
       flushMarks()
     }
-    oneStep(spans, stepId, step, doc, pmDoc, path)
+    oneStep(adapter, spans, stepId, step, doc, pmDoc, path)
     const nextDoc = step.apply(pmDoc).doc
     if (nextDoc == null) {
       throw new Error("Could not apply step to document")
@@ -51,6 +52,7 @@ export default function (
 }
 
 function oneStep(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   stepId: string,
   step: Step,
@@ -60,16 +62,17 @@ function oneStep(
   path: Prop[],
 ) {
   if (stepId === "replace") {
-    replaceStep(spans, step as ReplaceStep, doc, path, pmDoc)
+    replaceStep(adapter, spans, step as ReplaceStep, doc, path, pmDoc)
   } else if (stepId === "replaceAround") {
-    replaceAroundStep(step as ReplaceAroundStep, doc, pmDoc, path)
+    replaceAroundStep(adapter, step as ReplaceAroundStep, doc, pmDoc, path)
   } else if (stepId === "removeMark") {
-    removeMarkStep(spans, step as RemoveMarkStep, doc, path)
+    removeMarkStep(adapter, spans, step as RemoveMarkStep, doc, path)
   }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function replaceStep(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   step: ReplaceStep,
   doc: automerge.Doc<unknown>,
@@ -81,7 +84,10 @@ function replaceStep(
     step.slice.content.firstChild?.isText
   ) {
     // This is a text insertion or deletion
-    const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
+    const amRange = pmRangeToAmRange(adapter, spans, {
+      from: step.from,
+      to: step.to,
+    })
     if (amRange == null) {
       throw new Error(
         `Could not find range (${step.from}, ${step.to}) in render tree`,
@@ -105,7 +111,7 @@ function replaceStep(
     const marks = step.slice.content.firstChild.marks
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const length = step.slice.content.firstChild.text!.length
-    reconcileMarks(doc, field, start, length, marks)
+    reconcileMarks(adapter, doc, field, start, length, marks)
     return
   }
   const applied = step.apply(pmDoc).doc
@@ -113,12 +119,13 @@ function replaceStep(
     throw new Error("Could not apply step to document")
   }
   //console.log(JSON.stringify(applied, null, 2))
-  const newBlocks = blocksFromNode(applied)
+  const newBlocks = blocksFromNode(adapter, applied)
   //console.log(JSON.stringify(newBlocks, null, 2))
   automerge.updateSpans(doc, field, newBlocks)
 }
 
 function replaceAroundStep(
+  adapter: SchemaAdapter,
   step: ReplaceAroundStep,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   doc: any,
@@ -131,12 +138,13 @@ function replaceAroundStep(
     throw new Error("Could not apply step to document")
   }
   //console.log(applied)
-  const newBlocks = blocksFromNode(applied)
+  const newBlocks = blocksFromNode(adapter, applied)
   //console.log(newBlocks)
   automerge.updateSpans(doc, field, newBlocks)
 }
 
 function applyAddMarkSteps(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   steps: AddMarkStep[],
   doc: automerge.Doc<unknown>,
@@ -149,7 +157,10 @@ function applyAddMarkSteps(
     value: am.MarkValue
   }
   const marks: Mark[] = steps.map(step => {
-    const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
+    const amRange = pmRangeToAmRange(adapter, spans, {
+      from: step.from,
+      to: step.to,
+    })
     if (amRange == null) {
       throw new Error(
         `Could not find range (${step.from}, ${step.to}) in render tree`,
@@ -202,12 +213,16 @@ function applyAddMarkSteps(
 }
 
 function removeMarkStep(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   step: RemoveMarkStep,
   doc: automerge.Doc<unknown>,
   field: Prop[],
 ) {
-  const amRange = pmRangeToAmRange(spans, { from: step.from, to: step.to })
+  const amRange = pmRangeToAmRange(adapter, spans, {
+    from: step.from,
+    to: step.to,
+  })
   if (amRange == null) {
     throw new Error(
       `Could not find range (${step.from}, ${step.to}) in render tree`,
@@ -226,6 +241,7 @@ function removeMarkStep(
 }
 
 function reconcileMarks(
+  adapter: SchemaAdapter,
   doc: am.Doc<unknown>,
   path: am.Prop[],
   index: number,
@@ -233,7 +249,7 @@ function reconcileMarks(
   marks: readonly Mark[],
 ) {
   const currentMarks = automerge.marksAt(doc, path, index)
-  const newMarks = amMarksFromPmMarks(schemaAdapter, marks)
+  const newMarks = amMarksFromPmMarks(adapter, marks)
 
   const newMarkNames = new Set(Object.keys(newMarks))
   const currentMarkNames = new Set(Object.keys(currentMarks))
@@ -253,7 +269,7 @@ function reconcileMarks(
     }
   }
   for (const markName of currentMarkNames) {
-    const markMapping = schemaAdapter.markMappings.find(
+    const markMapping = adapter.markMappings.find(
       m => m.automergeMarkName === markName,
     )
     if (markMapping == null) {

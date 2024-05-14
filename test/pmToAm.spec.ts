@@ -3,10 +3,12 @@ import { assertSplitBlock, makeDoc } from "./utils"
 import { AddMarkStep, ReplaceStep, Step } from "prosemirror-transform"
 import { default as pmToAm } from "../src/pmToAm"
 import { next as am } from "@automerge/automerge"
-import { schema } from "../src/schema"
 import { assert } from "chai"
 import { docFromSpans } from "../src/traversal"
 import { EditorState } from "prosemirror-state"
+import { basicSchemaAdapter } from "../src/basicSchema"
+
+const schema = basicSchemaAdapter.schema
 
 function updateDoc(
   amDoc: am.Doc<unknown>,
@@ -16,7 +18,7 @@ function updateDoc(
   const heads = am.getHeads(amDoc)
   const spans = am.spans(amDoc, ["text"])
   const updatedDoc = am.change(amDoc, d => {
-    pmToAm(spans, steps, d, pmDoc, ["text"])
+    pmToAm(basicSchemaAdapter, spans, steps, d, pmDoc, ["text"])
   })
   return am.diff(amDoc, heads, am.getHeads(updatedDoc))
 }
@@ -201,7 +203,7 @@ describe("when converting a ReplaceStep to a change", () => {
       )
     })
     const spans = am.spans(doc, ["text"])
-    const pmDoc = docFromSpans(spans)
+    const pmDoc = docFromSpans(basicSchemaAdapter, spans)
     const editor = EditorState.create({ schema, doc: pmDoc })
     updateDoc(doc, editor.doc, [
       new ReplaceStep(

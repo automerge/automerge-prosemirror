@@ -12,8 +12,6 @@ import {
   SchemaAdapter,
   amMarksFromPmMarks,
   pmMarksFromAmMarks,
-  schema,
-  schemaAdapter,
 } from "./schema"
 
 type RenderRole = "explicit" | "render-only"
@@ -34,8 +32,8 @@ export type TraversalEvent =
       }
     }
 
-export function docFromSpans(spans: am.Span[]): Node {
-  const events = traverseSpans(spans)
+export function docFromSpans(adapter: SchemaAdapter, spans: am.Span[]): Node {
+  const events = traverseSpans(adapter, spans)
   type StackItem = {
     tag: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,15 +59,17 @@ export function docFromSpans(spans: am.Span[]): Node {
     } else if (event.type === "closeTag") {
       //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const { children, attrs, tag } = stack.pop()!
-      const node = constructNode(schema, tag, attrs, children)
+      const node = constructNode(adapter.schema, tag, attrs, children)
       stack[stack.length - 1].children.push(node)
     } else if (event.type === "leafNode") {
       stack[stack.length - 1].children.push(
-        constructNode(schema, event.tag, nextBlockAmgAttrs || {}, []),
+        constructNode(adapter.schema, event.tag, nextBlockAmgAttrs || {}, []),
       )
     } else if (event.type === "text") {
-      const pmMarks = pmMarksFromAmMarks(schemaAdapter, event.marks)
-      stack[stack.length - 1].children.push(schema.text(event.text, pmMarks))
+      const pmMarks = pmMarksFromAmMarks(adapter, event.marks)
+      stack[stack.length - 1].children.push(
+        adapter.schema.text(event.text, pmMarks),
+      )
     }
 
     if (event.type === "block") {
@@ -85,7 +85,7 @@ export function docFromSpans(spans: am.Span[]): Node {
     throw new Error("Invalid stack length")
   } else {
     const { children, attrs, tag } = stack[0]
-    return constructNode(schema, tag, attrs, children)
+    return constructNode(adapter.schema, tag, attrs, children)
   }
 }
 
@@ -125,10 +125,11 @@ function constructNode(
 }
 
 export function amSpliceIdxToPmIdx(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   target: number,
 ): number | null {
-  const events = eventsWithIndexChanges(traverseSpans(spans))
+  const events = eventsWithIndexChanges(traverseSpans(adapter, spans))
   let maxInsertableIndex = null
 
   for (const state of events) {
@@ -159,10 +160,11 @@ export function amSpliceIdxToPmIdx(
 }
 
 export function amIdxToPmBlockIdx(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   target: number,
 ): number | null {
-  const events = eventsWithIndexChanges(traverseSpans(spans))
+  const events = eventsWithIndexChanges(traverseSpans(adapter, spans))
   let lastBlockStart = null
   let isFirstTag = true
 
@@ -228,7 +230,10 @@ export function* eventsWithIndexChanges(
   }
 }
 
-export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
+export function* traverseNode(
+  adapter: SchemaAdapter,
+  node: Node,
+): IterableIterator<TraversalEvent> {
   const toProcess: (
     | TraversalEvent
     | { type: "node"; node: Node; parent: Node | null; indexInParent: number }
@@ -250,11 +255,16 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
     if (next.type === "node") {
       const cur = next.node
       if (cur.isText) {
-        const marks = amMarksFromPmMarks(schemaAdapter, cur.marks)
+        const marks = amMarksFromPmMarks(adapter, cur.marks)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         yield { type: "text", text: cur.text!, marks }
       } else {
-        const maybeBlock = blockForNode(cur, nodePath, next.indexInParent)
+        const maybeBlock = blockForNode(
+          adapter,
+          cur,
+          nodePath,
+          next.indexInParent,
+        )
         const role = maybeBlock != null ? "explicit" : "render-only"
 
         if (maybeBlock != null) {
@@ -292,6 +302,7 @@ export function* traverseNode(node: Node): IterableIterator<TraversalEvent> {
 }
 
 function blockForNode(
+  adapter: SchemaAdapter,
   node: Node,
   nodePath: Node[],
   indexInParent: number,
@@ -312,7 +323,7 @@ function blockForNode(
     }
   }
 
-  const blockMapping = blockMappingForNode(node, nodePath)
+  const blockMapping = blockMappingForNode(adapter, node, nodePath)
 
   if (blockMapping == null) {
     if (node.attrs.isAmgBlock) {
@@ -340,7 +351,7 @@ function blockForNode(
       isUnknown: false,
       block: {
         type: blockMapping.blockName,
-        parents: findParents(nodePath),
+        parents: findParents(adapter, nodePath),
         attrs,
         isEmbed: blockMapping.isEmbed || false,
       },
@@ -350,7 +361,7 @@ function blockForNode(
       isUnknown: false,
       block: {
         type: blockMapping.blockName,
-        parents: findParents(nodePath),
+        parents: findParents(adapter, nodePath),
         attrs,
         isEmbed: true,
       },
@@ -383,7 +394,7 @@ function blockForNode(
     if (parent != null) {
       parentType = parent.type
     } else {
-      parentType = schema.nodes.doc
+      parentType = adapter.schema.nodes.doc
     }
 
     let emitBlock = false
@@ -405,7 +416,7 @@ function blockForNode(
         isUnknown: false,
         block: {
           type: blockMapping.blockName,
-          parents: findParents(nodePath),
+          parents: findParents(adapter, nodePath),
           attrs,
           isEmbed: blockMapping.isEmbed || false,
         },
@@ -484,8 +495,12 @@ function findExplicitChildren(node: Node): ExplicitChildren | null {
   }
 }
 
-function blockMappingForNode(node: Node, nodePath: Node[]): NodeMapping | null {
-  const possibleMappings = schemaAdapter.nodeMappings.filter(
+function blockMappingForNode(
+  adapter: SchemaAdapter,
+  node: Node,
+  nodePath: Node[],
+): NodeMapping | null {
+  const possibleMappings = adapter.nodeMappings.filter(
     m => m.content === node.type,
   )
   if (possibleMappings.length === 0) {
@@ -507,7 +522,7 @@ function blockMappingForNode(node: Node, nodePath: Node[]): NodeMapping | null {
   return bestMapping
 }
 
-function findParents(parentNodes: Node[]): string[] {
+function findParents(adapter: SchemaAdapter, parentNodes: Node[]): string[] {
   const parents: string[] = []
   for (const [index, node] of parentNodes.entries()) {
     if (
@@ -519,7 +534,11 @@ function findParents(parentNodes: Node[]): string[] {
       // schema will take care of inserting it around the content for us
       continue
     }
-    const mapping = blockMappingForNode(node, parentNodes.slice(0, index))
+    const mapping = blockMappingForNode(
+      adapter,
+      node,
+      parentNodes.slice(0, index),
+    )
     if (mapping == null) {
       continue
     }
@@ -529,6 +548,7 @@ function findParents(parentNodes: Node[]): string[] {
 }
 
 export function* traverseSpans(
+  adapter: SchemaAdapter,
   amSpans: am.Span[],
 ): IterableIterator<TraversalEvent> {
   const blockSpans = amSpans.map(amSpanToSpan)
@@ -538,7 +558,7 @@ export function* traverseSpans(
       { type: "closeTag", tag: "paragraph", role: "render-only" },
     ]
   }
-  const state = new TraverseState()
+  const state = new TraverseState(adapter)
 
   for (const span of blockSpans) {
     if (span.type === "block") {
@@ -551,13 +571,15 @@ export function* traverseSpans(
 }
 
 class TraverseState {
+  adapter: SchemaAdapter
   lastBlock: BlockMarker | null = null
   stack: { node: NodeType; role: RenderRole; lastMatch: ContentMatch }[] = []
   topMatch: ContentMatch
 
-  constructor() {
+  constructor(adapter: SchemaAdapter) {
+    this.adapter = adapter
     this.stack = []
-    this.topMatch = schema.nodes.doc.contentMatch
+    this.topMatch = this.adapter.schema.nodes.doc.contentMatch
   }
 
   set currentMatch(match: ContentMatch) {
@@ -582,7 +604,7 @@ class TraverseState {
   *newBlock(block: BlockMarker): IterableIterator<TraversalEvent> {
     if (block.isEmbed) {
       const { content } = nodesForBlock(
-        schemaAdapter,
+        this.adapter,
         block.type.val,
         block.isEmbed,
       )
@@ -594,11 +616,11 @@ class TraverseState {
       }
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this.currentMatch = this.currentMatch.matchType(content)!
-      yield blockEvent(schemaAdapter, block)
+      yield blockEvent(this.adapter, block)
       yield { type: "leafNode", tag: content.name, role: "explicit" }
       return
     }
-    const newOuter = outerNodeTypes(block)
+    const newOuter = outerNodeTypes(this.adapter, block)
     let i = 0
     while (i < newOuter.length && i < this.stack.length) {
       if (this.stack[i].node !== newOuter[i]) {
@@ -617,9 +639,9 @@ class TraverseState {
       yield* this.fillBefore(next)
       yield this.pushNode(newOuter[j], "render-only")
     }
-    yield blockEvent(schemaAdapter, block)
+    yield blockEvent(this.adapter, block)
     const { content } = nodesForBlock(
-      schemaAdapter,
+      this.adapter,
       block.type.val,
       block.isEmbed || false,
     )
@@ -634,7 +656,9 @@ class TraverseState {
   }
 
   *newText(text: string, marks: am.MarkSet): IterableIterator<TraversalEvent> {
-    const wrapping = this.currentMatch.findWrapping(schema.nodes.text)
+    const wrapping = this.currentMatch.findWrapping(
+      this.adapter.schema.nodes.text,
+    )
 
     if (wrapping) {
       for (let i = 0; i < wrapping.length; i++) {
@@ -642,7 +666,9 @@ class TraverseState {
       }
     }
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    this.currentMatch = this.currentMatch.matchType(schema.nodes.text)!
+    this.currentMatch = this.currentMatch.matchType(
+      this.adapter.schema.nodes.text,
+    )!
     yield { type: "text", text, marks }
   }
 
@@ -710,17 +736,20 @@ class TraverseState {
   }
 }
 
-function outerNodeTypes(block: BlockMarker): NodeType[] {
+function outerNodeTypes(
+  adapter: SchemaAdapter,
+  block: BlockMarker,
+): NodeType[] {
   const result = []
   for (const parent of block.parents) {
-    const { outer, content } = nodesForBlock(schemaAdapter, parent.val, false)
+    const { outer, content } = nodesForBlock(adapter, parent.val, false)
     if (outer != null) {
       result.push(outer)
     }
     result.push(content)
   }
   const { outer } = nodesForBlock(
-    schemaAdapter,
+    adapter,
     block.type.val,
     block.isEmbed || false,
   )
@@ -734,9 +763,7 @@ function blockEvent(
   adapter: SchemaAdapter,
   block: BlockMarker,
 ): TraversalEvent {
-  const mapping = schemaAdapter.nodeMappings.find(
-    m => m.blockName === block.type.val,
-  )
+  const mapping = adapter.nodeMappings.find(m => m.blockName === block.type.val)
 
   const attrs = { ...block.attrs }
   for (const [key, value] of Object.entries(attrs)) {
@@ -757,10 +784,11 @@ function blockEvent(
 }
 
 export function pmRangeToAmRange(
+  adapter: SchemaAdapter,
   spans: am.Span[],
   { from, to }: { from: number; to: number },
 ): { start: number; end: number } | null {
-  const events = eventsWithIndexChanges(traverseSpans(spans))
+  const events = eventsWithIndexChanges(traverseSpans(adapter, spans))
   let amStart = null
   let amEnd = null
   let maxPmIdxSeen = null
@@ -862,7 +890,10 @@ export function blockAtIdx(
   return block
 }
 
-export function blocksFromNode(node: Node): (
+export function blocksFromNode(
+  adapter: SchemaAdapter,
+  node: Node,
+): (
   | {
       type: "block"
       value: {
@@ -874,7 +905,7 @@ export function blocksFromNode(node: Node): (
     }
   | { type: "text"; value: string; marks?: am.MarkSet }
 )[] {
-  const events = traverseNode(node)
+  const events = traverseNode(adapter, node)
   const result: (
     | {
         type: "block"

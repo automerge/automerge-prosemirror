@@ -3,8 +3,10 @@ import { EditorState, Transaction, TextSelection } from "prosemirror-state"
 import pmToAm from "./pmToAm"
 import amToPm from "./amToPm"
 import { DocHandle } from "./types"
+import { SchemaAdapter } from "./schema"
 
 export function intercept<T>(
+  adapter: SchemaAdapter,
   path: am.Prop[],
   handle: DocHandle<T>,
   intercepted: Transaction,
@@ -18,7 +20,7 @@ export function intercept<T>(
   // Apply the incoming transaction to the automerge doc
   handle.change(d => {
     const pmDoc = intercepted.docs[0]
-    pmToAm(materializedSpans, intercepted.steps, d, pmDoc, path)
+    pmToAm(adapter, materializedSpans, intercepted.steps, d, pmDoc, path)
   })
 
   //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -34,7 +36,7 @@ export function intercept<T>(
   //console.log(diff)
 
   // Create a transaction which applies the diff and updates the doc and heads
-  let tx = amToPm(state.schema, materializedSpans, diff, path, state.tr)
+  let tx = amToPm(adapter, materializedSpans, diff, path, state.tr)
   const nonInterceptedAfter = state.apply(intercepted)
   const selectionAfter = nonInterceptedAfter.selection
   try {
