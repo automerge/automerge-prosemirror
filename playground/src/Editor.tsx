@@ -9,6 +9,7 @@ import {
   toggleMark,
   wrapIn,
 } from "prosemirror-commands"
+import { buildKeymap } from "prosemirror-example-setup"
 import { MarkType, NodeType, Schema } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import {
@@ -21,7 +22,7 @@ import {
 } from "prosemirror-inputrules"
 import "prosemirror-view/style/prosemirror.css"
 import { Prop } from "@automerge/automerge"
-import { AutoMirror, basicSchemaAdapter } from "../../src"
+import { AutoMirror, SchemaAdapter } from "../../src"
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo"
 import {
   wrapInList,
@@ -56,6 +57,7 @@ export type EditorProps = {
   name?: string
   handle: DocHandle<unknown>
   path: Prop[]
+  schemaAdapter: SchemaAdapter
 }
 
 const toggleBold = (schema: Schema) => toggleMarkCommand(schema.marks.strong)
@@ -95,7 +97,7 @@ function turnSelectionIntoBlockquote(
   return true
 }
 
-export function Editor({ handle, path }: EditorProps) {
+export function Editor({ handle, path, schemaAdapter }: EditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<EditorView | null>(null)
   const handleReady = useHandleReady(handle)
@@ -110,7 +112,7 @@ export function Editor({ handle, path }: EditorProps) {
     if (!handleReady) {
       return
     }
-    const autoMirror = new AutoMirror(path, basicSchemaAdapter)
+    const autoMirror = new AutoMirror(path, schemaAdapter)
 
     const initialDoc = autoMirror.initialize(handle)
     const editorConfig = {
@@ -127,6 +129,7 @@ export function Editor({ handle, path }: EditorProps) {
           }),
           Enter: splitListItem(autoMirror.schema.nodes.list_item),
         }),
+        keymap(buildKeymap(autoMirror.schema)),
         keymap(baseKeymap),
       ],
       doc: initialDoc,
@@ -139,10 +142,7 @@ export function Editor({ handle, path }: EditorProps) {
         //console.log(`${name}: dispatchTransaction`, tx)
         const newState = autoMirror.intercept(handle, tx, view.state)
         view.updateState(newState)
-        setMarkState({
-          boldActive: markActive(newState, autoMirror.schema.marks.strong),
-          emActive: markActive(newState, autoMirror.schema.marks.em),
-        })
+        setMarkState(activeMarks(newState, autoMirror.schema))
       },
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -170,91 +170,55 @@ export function Editor({ handle, path }: EditorProps) {
     }
   }, [handleReady])
 
-  const onBoldClicked = () => {
-    if (view) {
-      toggleBold(view.state.schema)(view.state, view.dispatch, view)
+  let onBoldClicked = null
+  if (view && view.state.schema.marks.strong) {
+    onBoldClicked = () => {
+      if (view) {
+        toggleBold(view.state.schema)(view.state, view.dispatch, view)
+      }
     }
   }
 
-  const onItalicClicked = () => {
-    if (view) {
-      toggleItalic(view.state.schema)(view.state, view.dispatch, view)
+  let onItalicClicked = null
+  if (view && view.state.schema.marks.em) {
+    onItalicClicked = () => {
+      if (view) {
+        toggleItalic(view.state.schema)(view.state, view.dispatch, view)
+      }
     }
   }
 
-  const onIncreaseIndent = () => {
-    if (view) {
-      // If we're in a list, figure out what kind it is
-      const { $from } = view.state.selection
-      let listNode = null
-      for (let i = $from.depth; i > 0; i--) {
-        if ($from.node(i).type.name === "list_item") {
-          listNode = $from.node(i - 1)
-          break
+  let onIncreaseIndent = null
+  if (view && view.state.schema.nodes.list_item) {
+    onIncreaseIndent = () => {
+      if (view) {
+        // If we're in a list, figure out what kind it is
+        const { $from } = view.state.selection
+        let listNode = null
+        for (let i = $from.depth; i > 0; i--) {
+          if ($from.node(i).type.name === "list_item") {
+            listNode = $from.node(i - 1)
+            break
+          }
+        }
+        const listType = listNode
+          ? listNode.type
+          : view.state.schema.nodes.bullet_list
+        if (listNode) {
+          chainCommands(
+            sinkListItem(view.state.schema.nodes.list_item),
+            wrapInList(listType),
+          )(view.state, view.dispatch, view)
         }
       }
-      const listType = listNode
-        ? listNode.type
-        : view.state.schema.nodes.bullet_list
-      if (listNode) {
-        chainCommands(
-          sinkListItem(view.state.schema.nodes.list_item),
-          wrapInList(listType),
-        )(view.state, view.dispatch, view)
-      }
     }
   }
 
-  const onDecreaseIndent = () => {
-    if (view) {
-      liftListItem(view.state.schema.nodes.list_item)(
-        view.state,
-        view.dispatch,
-        view,
-      )
-    }
-  }
-
-  const onBlockQuoteClicked = () => {
-    if (view) {
-      turnSelectionIntoBlockquote(view.state, view.dispatch, view)
-    }
-  }
-
-  const onToggleOrderedList = () => {
-    if (view) {
-      wrapInList(view.state.schema.nodes.bullet_list)(
-        view.state,
-        view.dispatch,
-        view,
-      )
-    }
-  }
-
-  const onToggleNumberedList = () => {
-    if (view) {
-      wrapInList(view.state.schema.nodes.ordered_list)(
-        view.state,
-        view.dispatch,
-        view,
-      )
-    }
-  }
-
-  const onHeadingClicked = (level: number) => {
-    if (view) {
-      const { $from } = view.state.selection
-      if (
-        $from.node().type.name === "heading" &&
-        $from.node().attrs.level === level
-      ) {
-        setBlockType(view.state.schema.nodes.paragraph)(
-          view.state,
-          view.dispatch,
-          view,
-        )
-      } else {
-        setBlockType(view.state.schema.nodes.heading, { level })(
+  let onDecreaseIndent = null
+  if (view && view.state.schema.nodes.list_item) {
+    onDecreaseIndent = () => {
+      if (view) {
+        liftListItem(view.state.schema.nodes.list_item)(
           view.state,
           view.dispatch,
           view,
@@ -263,8 +227,71 @@ export function Editor({ handle, path }: EditorProps) {
     }
   }
 
-  const showImageDialog = () => {
-    setImageModalOpen(true)
+  let onBlockQuoteClicked = null
+  if (view && view.state.schema.nodes.blockquote) {
+    onBlockQuoteClicked = () => {
+      if (view) {
+        turnSelectionIntoBlockquote(view.state, view.dispatch, view)
+      }
+    }
+  }
+
+  let onToggleOrderedList = null
+  if (view && view.state.schema.nodes.bullet_list) {
+    onToggleOrderedList = () => {
+      if (view) {
+        wrapInList(view.state.schema.nodes.bullet_list)(
+          view.state,
+          view.dispatch,
+          view,
+        )
+      }
+    }
+  }
+
+  let onToggleNumberedList = null
+  if (view && view.state.schema.nodes.ordered_list) {
+    onToggleNumberedList = () => {
+      if (view) {
+        wrapInList(view.state.schema.nodes.ordered_list)(
+          view.state,
+          view.dispatch,
+          view,
+        )
+      }
+    }
+  }
+
+  let onHeadingClicked = null
+  if (view && view.state.schema.nodes.heading) {
+    onHeadingClicked = (level: number) => {
+      if (view) {
+        const { $from } = view.state.selection
+        if (
+          $from.node().type.name === "heading" &&
+          $from.node().attrs.level === level
+        ) {
+          setBlockType(view.state.schema.nodes.paragraph)(
+            view.state,
+            view.dispatch,
+            view,
+          )
+        } else {
+          setBlockType(view.state.schema.nodes.heading, { level })(
+            view.state,
+            view.dispatch,
+            view,
+          )
+        }
+      }
+    }
+  }
+
+  let showImageDialog = null
+  if (view && view.state.schema.nodes.image) {
+    showImageDialog = () => {
+      setImageModalOpen(true)
+    }
   }
 
   const onImageChosen = (url: string) => {
@@ -280,8 +307,11 @@ export function Editor({ handle, path }: EditorProps) {
     }
   }
 
-  const showLinkDialog = () => {
-    setLinkModalOpen(true)
+  let showLinkDialog = null
+  if (view && view.state.schema.marks.link) {
+    showLinkDialog = () => {
+      setLinkModalOpen(true)
+    }
   }
 
   const onLinkChosen = (url: string) => {
@@ -297,13 +327,16 @@ export function Editor({ handle, path }: EditorProps) {
     }
   }
 
-  const onCodeClicked = () => {
-    if (view) {
-      setBlockType(view.state.schema.nodes.code_block)(
-        view.state,
-        view.dispatch,
-        view,
-      )
+  let onCodeClicked = null
+  if (view && view.state.schema.nodes.code_block) {
+    onCodeClicked = () => {
+      if (view) {
+        setBlockType(view.state.schema.nodes.code_block)(
+          view.state,
+          view.dispatch,
+          view,
+        )
+      }
     }
   }
 
@@ -360,17 +393,17 @@ export function Editor({ handle, path }: EditorProps) {
 }
 
 type MenuBarProps = {
-  onBoldClicked: () => void
-  onItalicClicked: () => void
-  onLinkClicked: () => void
-  onBlockQuoteClicked: () => void
-  onToggleOrderedList: () => void
-  onToggleNumberedList: () => void
-  onIncreaseIndent: () => void
-  onDecreaseIndent: () => void
-  onHeadingClicked: (level: number) => void
-  onImageClicked: () => void
-  onCodeClicked: () => void
+  onBoldClicked: (() => void) | null
+  onItalicClicked: (() => void) | null
+  onLinkClicked: (() => void) | null
+  onBlockQuoteClicked: (() => void) | null
+  onToggleOrderedList: (() => void) | null
+  onToggleNumberedList: (() => void) | null
+  onIncreaseIndent: (() => void) | null
+  onDecreaseIndent: (() => void) | null
+  onHeadingClicked: ((level: number) => void) | null
+  onImageClicked: (() => void) | null
+  onCodeClicked: (() => void) | null
   isBoldActive: boolean
   isEmActive: boolean
 }
@@ -393,66 +426,88 @@ function MenuBar({
   return (
     <div id="menubar" className="menubar">
       <div className="row">
-        <button
-          id="bold"
-          onClick={onBoldClicked}
-          className={isBoldActive ? "active" : ""}
-        >
-          <Bold />
-        </button>
-        <button
-          id="italic"
-          onClick={onItalicClicked}
-          className={isEmActive ? "active" : ""}
-        >
-          <Italic />
-        </button>
-        <button id="link" onClick={onLinkClicked}>
-          <Link />
-        </button>
-        <button onClick={onCodeClicked}>
-          <Braces />
-        </button>
+        {onBoldClicked ? (
+          <button
+            id="bold"
+            onClick={onBoldClicked}
+            className={isBoldActive ? "active" : ""}
+          >
+            <Bold />
+          </button>
+        ) : null}
+        {onItalicClicked ? (
+          <button
+            id="italic"
+            onClick={onItalicClicked}
+            className={isEmActive ? "active" : ""}
+          >
+            <Italic />
+          </button>
+        ) : null}
+        {onLinkClicked ? (
+          <button id="link" onClick={onLinkClicked}>
+            <Link />
+          </button>
+        ) : null}
+        {onCodeClicked ? (
+          <button onClick={onCodeClicked}>
+            <Braces />
+          </button>
+        ) : null}
       </div>
+      {onHeadingClicked ? (
+        <div className="row">
+          <button onClick={() => onHeadingClicked(1)}>
+            <Heading1 />
+          </button>
+          <button onClick={() => onHeadingClicked(2)}>
+            <Heading2 />
+          </button>
+          <button onClick={() => onHeadingClicked(3)}>
+            <Heading3 />
+          </button>
+          <button onClick={() => onHeadingClicked(4)}>
+            <Heading4 />
+          </button>
+          <button onClick={() => onHeadingClicked(5)}>
+            <Heading5 />
+          </button>
+          <button onClick={() => onHeadingClicked(6)}>
+            <Heading6 />
+          </button>
+        </div>
+      ) : null}
       <div className="row">
-        <button onClick={() => onHeadingClicked(1)}>
-          <Heading1 />
-        </button>
-        <button onClick={() => onHeadingClicked(2)}>
-          <Heading2 />
-        </button>
-        <button onClick={() => onHeadingClicked(3)}>
-          <Heading3 />
-        </button>
-        <button onClick={() => onHeadingClicked(4)}>
-          <Heading4 />
-        </button>
-        <button onClick={() => onHeadingClicked(5)}>
-          <Heading5 />
-        </button>
-        <button onClick={() => onHeadingClicked(6)}>
-          <Heading6 />
-        </button>
-      </div>
-      <div className="row">
-        <CaptionedButton caption="Blockquote" onClick={onBlockQuoteClicked}>
-          <TextQuote />
-        </CaptionedButton>
-        <CaptionedButton caption="number list" onClick={onToggleNumberedList}>
-          <ListOrdered />
-        </CaptionedButton>
-        <CaptionedButton caption="bullet list" onClick={onToggleOrderedList}>
-          <List />
-        </CaptionedButton>
-        <CaptionedButton caption="indent" onClick={onIncreaseIndent}>
-          <Indent />
-        </CaptionedButton>
-        <CaptionedButton caption="outdent" onClick={onDecreaseIndent}>
-          <Outdent />
-        </CaptionedButton>
-        <CaptionedButton caption="image" onClick={onImageClicked}>
-          <Image />
-        </CaptionedButton>
+        {onBlockQuoteClicked ? (
+          <CaptionedButton caption="Blockquote" onClick={onBlockQuoteClicked}>
+            <TextQuote />
+          </CaptionedButton>
+        ) : null}
+        {onToggleNumberedList ? (
+          <CaptionedButton caption="number list" onClick={onToggleNumberedList}>
+            <ListOrdered />
+          </CaptionedButton>
+        ) : null}
+        {onToggleOrderedList ? (
+          <CaptionedButton caption="bullet list" onClick={onToggleOrderedList}>
+            <List />
+          </CaptionedButton>
+        ) : null}
+        {onIncreaseIndent ? (
+          <CaptionedButton caption="indent" onClick={onIncreaseIndent}>
+            <Indent />
+          </CaptionedButton>
+        ) : null}
+        {onDecreaseIndent ? (
+          <CaptionedButton caption="outdent" onClick={onDecreaseIndent}>
+            <Outdent />
+          </CaptionedButton>
+        ) : null}
+        {onImageClicked ? (
+          <CaptionedButton caption="image" onClick={onImageClicked}>
+            <Image />
+          </CaptionedButton>
+        ) : null}
       </div>
     </div>
   )
@@ -479,6 +534,21 @@ function markActive(state: EditorState, type: MarkType) {
   const { from, $from, to, empty } = state.selection
   if (empty) return !!type.isInSet(state.storedMarks || $from.marks())
   else return state.doc.rangeHasMark(from, to, type)
+}
+
+function activeMarks(
+  state: EditorState,
+  schema: Schema,
+): { boldActive: boolean; emActive: boolean } {
+  let boldActive = false
+  let emActive = false
+  if (schema.marks.strong) {
+    boldActive = markActive(state, schema.marks.strong)
+  }
+  if (schema.marks.em) {
+    emActive = markActive(state, schema.marks.em)
+  }
+  return { boldActive, emActive }
 }
 
 function blockQuoteRule(nodeType: NodeType) {

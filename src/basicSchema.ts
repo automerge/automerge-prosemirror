@@ -37,16 +37,26 @@ const basicSchema: MappedSchemaSpec = {
     paragraph: {
       automerge: {
         block: "paragraph",
-        unknownBlock: true,
       },
       content: "inline*",
       group: "block",
-      attrs: { unknownBlock: { default: null } },
       parseDOM: [{ tag: "p" }],
       toDOM() {
         return pDOM
       },
     } as NodeSpec,
+
+    unknownBlock: {
+      automerge: {
+        unknownBlock: true,
+      },
+      group: "block",
+      content: "block+",
+      parseDOM: [{ tag: "div", attrs: { "data-unknown-block": "true" } }],
+      toDOM() {
+        return ["div", { "data-unknown-block": "true" }, 0]
+      },
+    },
 
     /// A blockquote (`<blockquote>`) wrapping one or more blocks.
     blockquote: {

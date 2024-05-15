@@ -2548,6 +2548,106 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "doc", role: "render-only" },
       ])
     })
+
+    it("should generate block markers when there are insertions inside an unknown block", () => {
+      const node = schema.node("doc", null, [
+        schema.node("unknownBlock", { unknownParentBlock: "unknown" }, [
+          schema.node("paragraph", null, [schema.text("hello")]),
+          schema.node(
+            "unknownBlock",
+            {
+              isAmgBlock: true,
+              unknownBlock: {
+                type: "unknown",
+                parents: ["unknown"],
+                attrs: {},
+                isEmbed: false,
+              },
+            },
+            [schema.node("paragraph", null, [schema.text("world")])],
+          ),
+        ]),
+      ])
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: true,
+          block: {
+            type: "unknown",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "unknownBlock", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "text", text: "hello", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: true,
+          block: {
+            type: "unknown",
+            parents: ["unknown"],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "unknownBlock", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "text", text: "world", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "unknownBlock", role: "explicit" },
+        { type: "closeTag", tag: "unknownBlock", role: "explicit" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should emit block markers for a leading render-only paragraph at the beginning of the doc", () => {
+      const doc = schema.node("doc", null, [
+        schema.node("paragraph", null, []),
+        schema.node("ordered_list", null, [
+          schema.node("list_item", { isAmgBlock: true }, [
+            schema.node("paragraph", null, []),
+          ]),
+        ]),
+      ])
+      const events = Array.from(traverseNode(basicSchemaAdapter, doc))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "paragraph", role: "explicit" },
+        { type: "closeTag", tag: "paragraph", role: "explicit" },
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "ordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "list_item", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
   })
 
   describe("the amIdxToPmBlockIdx function", () => {
@@ -3204,7 +3304,7 @@ describe("the traversal API", () => {
     })
 
     describe("when handling unknown blocks", () => {
-      it("should render them as a paragraph", () => {
+      it("should render them as the unknown block type", () => {
         const spans: am.Span[] = [
           {
             type: "block",
@@ -3221,7 +3321,7 @@ describe("the traversal API", () => {
           doc.eq(
             schema.node("doc", null, [
               schema.node(
-                "paragraph",
+                "unknownBlock",
                 {
                   isAmgBlock: true,
                   unknownBlock: {
@@ -3231,11 +3331,44 @@ describe("the traversal API", () => {
                     isEmbed: false,
                   },
                 },
-                [schema.text("hello")],
+                [schema.node("paragraph", null, [schema.text("hello")])],
               ),
             ]),
           ),
         )
+      })
+
+      it("should render nested blocks using the unknown block type", () => {
+        const spans: am.Span[] = [
+          {
+            type: "block",
+            value: {
+              type: new am.RawString("unknown"),
+              parents: [new am.RawString("unknown")],
+              attrs: {},
+            },
+          },
+          { type: "text", value: "hello" },
+        ]
+        const doc = docFromSpans(basicSchemaAdapter, spans)
+        const expected = schema.node("doc", null, [
+          schema.node("unknownBlock", { unknownParentBlock: "unknown" }, [
+            schema.node(
+              "unknownBlock",
+              {
+                isAmgBlock: true,
+                unknownBlock: {
+                  type: "unknown",
+                  parents: ["unknown"],
+                  attrs: {},
+                  isEmbed: false,
+                },
+              },
+              [schema.node("paragraph", null, [schema.text("hello")])],
+            ),
+          ]),
+        ])
+        assert.isTrue(doc.eq(expected))
       })
     })
   })
@@ -3396,6 +3529,26 @@ describe("the traversal API", () => {
             parents: [],
             attrs: {},
             isEmbed: true,
+          },
+        },
+        { type: "text", value: "hello", marks: {} },
+      ]
+      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const blocks: am.Span[] = Array.from(
+        blocksFromNode(basicSchemaAdapter, doc),
+      )
+      assert.deepStrictEqual(blocks, spans)
+    })
+
+    it("should round trip nested unknown blocks", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("unknown"),
+            parents: [new am.RawString("unknown")],
+            attrs: {},
+            isEmbed: false,
           },
         },
         { type: "text", value: "hello", marks: {} },

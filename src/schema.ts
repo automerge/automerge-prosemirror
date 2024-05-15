@@ -16,10 +16,10 @@ export interface MappedSchemaSpec {
   marks?: { [key: string]: MappedMarkSpec }
 }
 
-type MappedNodeSpec = NodeSpec & {
+export type MappedNodeSpec = NodeSpec & {
   automerge?: {
     unknownBlock?: boolean
-    block: BlockMappingSpec
+    block?: BlockMappingSpec
     isEmbed?: boolean
     attrParsers?: {
       fromProsemirror: (node: Node) => { [key: string]: am.MaterializeValue }
@@ -28,9 +28,9 @@ type MappedNodeSpec = NodeSpec & {
   }
 }
 
-type BlockMappingSpec = string | { within: { [key: string]: string } }
+export type BlockMappingSpec = string | { within: { [key: string]: string } }
 
-type MappedMarkSpec = MarkSpec & {
+export type MappedMarkSpec = MarkSpec & {
   automerge?: {
     markName: string
     parsers?: {
@@ -63,7 +63,7 @@ export type NodeMapping = {
 export class SchemaAdapter {
   nodeMappings: NodeMapping[]
   markMappings: MarkMapping[]
-  unknownTextblock: NodeType
+  unknownBlock: NodeType
   unknownLeaf: NodeType
   unknownMark: MarkType
   schema: Schema
@@ -72,13 +72,17 @@ export class SchemaAdapter {
     const actualSpec = shallowClone(spec)
 
     addAmgNodeStateAttrs(actualSpec.nodes)
+    const unknownMarkSpec: MarkSpec = {
+      attrs: { unknownMarks: { default: null } },
+      toDOM() {
+        return ["span", { "data-unknown-mark": true }]
+      },
+    }
     if (actualSpec.marks != null) {
-      actualSpec.marks["unknownMark"] = {
-        attrs: { unknownMarks: { default: null } },
-      }
+      actualSpec.marks["unknownMark"] = unknownMarkSpec
     } else {
       actualSpec.marks = {
-        unknownMark: { attrs: { unknownMarks: { default: null } } },
+        unknownMark: unknownMarkSpec,
       }
     }
 
@@ -94,7 +98,7 @@ export class SchemaAdapter {
     const schema = new Schema(actualSpec)
     const nodeMappings: NodeMapping[] = []
     const markMappings: MarkMapping[] = []
-    let unknownTextblock: NodeType | null = null
+    let unknownBlock: NodeType | null = null
 
     for (const [nodeName, nodeSpec] of Object.entries(actualSpec.nodes)) {
       const adaptSpec = nodeSpec.automerge
@@ -102,10 +106,10 @@ export class SchemaAdapter {
         continue
       }
       if (adaptSpec.unknownBlock) {
-        if (unknownTextblock != null) {
+        if (unknownBlock != null) {
           throw new Error("only one node can be marked as unknownBlock")
         }
-        unknownTextblock = schema.nodes[nodeName]
+        unknownBlock = schema.nodes[nodeName]
       }
       if (adaptSpec.block != null) {
         if (typeof adaptSpec.block === "string") {
@@ -161,18 +165,18 @@ export class SchemaAdapter {
       }
     }
 
-    if (unknownTextblock == null) {
+    if (unknownBlock == null) {
       throw new Error(
         `no unknown block specified: one node must be marked as the unknownblock
-   by setting the automerge.unknownBlock property to true`,
+by setting the automerge.unknownBlock property to true`,
       )
     }
 
     this.unknownMark = schema.marks.unknownMark
     this.nodeMappings = nodeMappings
     this.markMappings = markMappings
-    this.unknownTextblock = unknownTextblock
     this.unknownLeaf = schema.nodes.unknownLeaf
+    this.unknownBlock = unknownBlock
     this.schema = schema
   }
 }
@@ -199,8 +203,8 @@ function shallowClone(spec: MappedSchemaSpec): MappedSchemaSpec {
   return { nodes, marks }
 }
 
-function addAmgNodeStateAttrs(nodes: { [key: string]: NodeSpec }): {
-  [key: string]: NodeSpec
+function addAmgNodeStateAttrs(nodes: { [key: string]: MappedNodeSpec }): {
+  [key: string]: MappedNodeSpec
 } {
   for (const [name, node] of Object.entries(nodes)) {
     if (name !== "text") {
@@ -212,6 +216,17 @@ function addAmgNodeStateAttrs(nodes: { [key: string]: NodeSpec }): {
       } else {
         node.attrs.isAmgBlock = { default: false }
         node.attrs.unknownAttrs = { default: null }
+      }
+    }
+    if (node.automerge?.unknownBlock) {
+      if (node.attrs == null) {
+        node.attrs = {
+          unknownParentBlock: { default: null },
+          unknownBlock: { default: null },
+        }
+      } else {
+        node.attrs.unknownParentBlock = { default: null }
+        node.attrs.unknownBlock = { default: null }
       }
     }
   }
