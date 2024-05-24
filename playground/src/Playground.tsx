@@ -31,17 +31,6 @@ const rightRepo = new Repo({
 const leftHandle = leftRepo.create()
 leftHandle.change(d => {
   d.text = ""
-  am.splitBlock(d, ["text"], 0, {
-    type: new am.RawString("ordered-list-item"),
-    attrs: { level: 1 },
-    parents: [],
-  })
-  am.splitBlock(d, ["text"], 1, {
-    type: new am.RawString("ordered-list-item"),
-    attrs: { level: 1 },
-    parents: [],
-  })
-  am.splice(d, ["text"], 2, 0, "item two")
 })
 
 const rightHandle = rightRepo.find(leftHandle.url)
