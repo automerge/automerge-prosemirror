@@ -74,7 +74,7 @@ const onPatch = (p: DocHandlePatchPayload<any>) => {
   view.updateState(newState)
 }
 // somehow wire up the callback
-handle.on("patch", onPatch)
+handle.on("change", onPatch)
 ```
 
 ## Schema Mapping
