@@ -13,8 +13,8 @@ import {
 } from "../src/traversal"
 import { next as am } from "@automerge/automerge"
 import { docFromBlocksNotation, makeDoc } from "./utils"
-import { schema } from "../src/schema"
 import { AssertionError } from "assert"
+import { basicSchemaAdapter } from "../src/basicSchema"
 
 describe("the traversal API", () => {
   describe("the amSpliceIdxToPmIdx function", () => {
@@ -26,12 +26,12 @@ describe("the traversal API", () => {
       // am:             0  1 2 3 4  5  6
       //      <ol> <li> <p> i t e m ' ' 1</p> </li> </ol>
       // pm: 0    1    2   3 4 5 6 7   8 9   10    11    12
-      assert.equal(amSpliceIdxToPmIdx(spans, 6), 8)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 6), 8)
     })
 
     it("should include the render-only <p> tag in a document with no top level paragraph block", () => {
       const { spans } = docFromBlocksNotation(["hello"])
-      assert.equal(amSpliceIdxToPmIdx(spans, 0), 1)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 0), 1)
     })
 
     it("should return the first text index in a document after initial paragraph blocks", () => {
@@ -43,7 +43,7 @@ describe("the traversal API", () => {
       //      <p> h e l l o ' ' w o r  l  d </p>
       // pm: 0   1 2 3 4 5 6  7  8 9 10 11 12
       //
-      assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 1), 1)
     })
 
     it("should return a text index after a block idx", () => {
@@ -54,7 +54,7 @@ describe("the traversal API", () => {
       // am:             0  1 2 3 4  5  6
       //      <ol> <li> <p> i t e m ' ' 1</p> </li> </ol>
       // pm: 0    1    2   3 4 5 6 7   8 9   10    11    12
-      assert.equal(amSpliceIdxToPmIdx(spans, 1), 3)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 1), 3)
     })
 
     it("should return a text index inside a render-only node after a block", () => {
@@ -68,7 +68,7 @@ describe("the traversal API", () => {
       // am:                            0
       //      <ol> <li> <p> </p> <ul> <li> <p> </p> </li> </ul> </li> </ol>
       // pm: 0    1    2   3    4    5    6   7    8     9     10    11    12
-      assert.equal(amSpliceIdxToPmIdx(spans, 0), 3)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 0), 3)
     })
 
     it("should return a text index inside text in a render-only node after a block", () => {
@@ -83,10 +83,10 @@ describe("the traversal API", () => {
       // am:                        0           1 2 3  4   5   6
       //      <ol> <li>  <p> </p> <ul> <li> <p> i t e  m  ' '  1  </p> </li> </ul> </li> </ol>
       // pm: 0    1    2    3    4    5    6   7 8 9 10 11  12  13   14    15   16    17
-      assert.equal(amSpliceIdxToPmIdx(spans, 1), 7)
-      assert.equal(amSpliceIdxToPmIdx(spans, 2), 8)
-      assert.equal(amSpliceIdxToPmIdx(spans, 4), 10)
-      assert.equal(amSpliceIdxToPmIdx(spans, 6), 12)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 1), 7)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 2), 8)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 4), 10)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 6), 12)
     })
 
     it("should return the first index in a render-only node after closing parents", () => {
@@ -102,9 +102,9 @@ describe("the traversal API", () => {
       // am:   0  1 2 3 4 5 6 7 8 9                               10
       //      <p> p a r a g r a p h </p> <ul> <li> <p> </p> <ol> <li> <p> </p> </li> </ol> </li> </ul>
       // pm: 0   1 2 3 4 5 5 6 6 9 10   11   12   13  14   15   16   17  18   19    20    21    22    22
-      assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
-      assert.equal(amSpliceIdxToPmIdx(spans, 10), 14)
-      assert.equal(amSpliceIdxToPmIdx(spans, 11), 18)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 1), 1)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 10), 14)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 11), 18)
     })
 
     it("should return the first index in text in a render-only node after closing parents", () => {
@@ -121,12 +121,12 @@ describe("the traversal API", () => {
       // am:   0  1 2 3 4 5 6 7 8 9                               10       11  12 13 14 15   16
       //      <p> p a r a g r a p h </p> <ul> <li> <p> </p> <ol> <li> <p>  i   t  e  m  ' '  1 </p> </li> </ol> </li> </ul>
       // pm: 0   1 2 3 4 5 5 6 6 9 10   11   12   13  14   15   16   17  18 19 20 21  22   23  24  25   26    27    28
-      assert.equal(amSpliceIdxToPmIdx(spans, 0), 1)
-      assert.equal(amSpliceIdxToPmIdx(spans, 10), 14)
-      assert.equal(amSpliceIdxToPmIdx(spans, 11), 18)
-      assert.equal(amSpliceIdxToPmIdx(spans, 12), 19)
-      assert.equal(amSpliceIdxToPmIdx(spans, 16), 23)
-      assert.equal(amSpliceIdxToPmIdx(spans, 17), 24)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 0), 1)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 10), 14)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 11), 18)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 12), 19)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 16), 23)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 17), 24)
     })
 
     it("should return the internal index of an empty paragraph tag", () => {
@@ -139,7 +139,7 @@ describe("the traversal API", () => {
       // am:      0 1 2 3 4       5        6  7  8  9  10 11
       //      <p> h e l l o </p> <p> </p> <p> w  o  r  l  d </p>
       // pm: 0   1 2 3 4 5 6    7   8    9  10 11 12 13 14 15   16
-      assert.equal(amSpliceIdxToPmIdx(spans, 6), 8)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 6), 8)
     })
 
     it("should find the correct index for the last character in a nexted list item", () => {
@@ -154,7 +154,7 @@ describe("the traversal API", () => {
       // am:                                  0      1 2 3  4  5  6
       //      <doc> <ul> <li> <p> </p> <ol> <li> <p> i t e  m ' ' 1 </p> </li> </ol> </li> </ul> </doc>
       // pm:       0    1    2   3    4    5    6   7 8 9 10 11 12 13   14   15     16    17    18
-      assert.equal(amSpliceIdxToPmIdx(spans, 7), 13)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 7), 13)
     })
 
     it("should find the index after an empty nested list item", () => {
@@ -172,7 +172,7 @@ describe("the traversal API", () => {
       // am:              0       1 2 3 4  5  6  7  8              9                  10      11 12 13 14  15  16
       //      <doc> <ul> <li> <p> i t e m ' ' o  n  e </p> </li> <li> <p> </p> <ol>  <li> <p> i  t  e  m  ' '  2  </p> </li> </ol> </li> </ul> </doc>
       // pm:       0    1    2   3 4 5 6 7   8  9 10 11   12    13   14  15   16   17    18  19 20 21 22 23  24  25   26   27    28    29    30     31
-      assert.equal(amSpliceIdxToPmIdx(spans, 10), 15)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 10), 15)
     })
 
     it("should find the index after an embed tag", () => {
@@ -204,7 +204,7 @@ describe("the traversal API", () => {
       // am:         0   1
       //     <doc>  <p> <img src="http://example.com/image.png" /> </p> </doc>
       // pm: 0     0   1                                          2    3      4
-      assert.equal(amSpliceIdxToPmIdx(spans, 2), 2)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 2), 2)
     })
 
     it("should find the index inside a lone header tag", () => {
@@ -221,7 +221,7 @@ describe("the traversal API", () => {
       // am         0
       //     <doc> <h1> </h1> </doc>
       // pm 0     0    1     2
-      assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 1), 1)
     })
 
     it("should find the first index inside a code block at the start of the document", () => {
@@ -235,9 +235,7 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const events = traverseSpans(spans)
-      console.log(printIndexTable(events))
-      assert.equal(amSpliceIdxToPmIdx(spans, 1), 1)
+      assert.equal(amSpliceIdxToPmIdx(basicSchemaAdapter, spans, 1), 1)
     })
   })
 
@@ -251,22 +249,34 @@ describe("the traversal API", () => {
       //      <p> h e l l o </p>
       // pm: 0   1 2 3 4 5 6
       //
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 0, to: 6 }), {
-        start: 0,
-        end: 6,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 1, to: 6 }), {
-        start: 1,
-        end: 6,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 2, to: 6 }), {
-        start: 2,
-        end: 6,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 2, to: 5 }), {
-        start: 2,
-        end: 5,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 0, to: 6 }),
+        {
+          start: 0,
+          end: 6,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 1, to: 6 }),
+        {
+          start: 1,
+          end: 6,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 2, to: 6 }),
+        {
+          start: 2,
+          end: 6,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 2, to: 5 }),
+        {
+          start: 2,
+          end: 5,
+        },
+      )
     })
 
     it("should return the automerge text index before and after the given prosemirror indexes in a nested block", () => {
@@ -277,38 +287,62 @@ describe("the traversal API", () => {
       // am:        0       1 2 3 4  5  6
       //      <ul> <li> <p> i t e m ' ' 1 </p> </li> </ul>
       // pm: 0    1    2   3 4 5 6 7   8 9   10    11    12
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 0, to: 12 }), {
-        start: 0,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 1, to: 12 }), {
-        start: 0,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 2, to: 12 }), {
-        start: 1,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 3, to: 12 }), {
-        start: 1,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 4, to: 11 }), {
-        start: 2,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 4, to: 10 }), {
-        start: 2,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 4, to: 9 }), {
-        start: 2,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 4, to: 8 }), {
-        start: 2,
-        end: 6,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 0, to: 12 }),
+        {
+          start: 0,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 1, to: 12 }),
+        {
+          start: 0,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 2, to: 12 }),
+        {
+          start: 1,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 3, to: 12 }),
+        {
+          start: 1,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 4, to: 11 }),
+        {
+          start: 2,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 4, to: 10 }),
+        {
+          start: 2,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 4, to: 9 }),
+        {
+          start: 2,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 4, to: 8 }),
+        {
+          start: 2,
+          end: 6,
+        },
+      )
     })
 
     it("should return the automerge text indexes before and after the given prosemirror indexes in a nested block with a render-only wrapper", () => {
@@ -323,74 +357,125 @@ describe("the traversal API", () => {
       // am:                            0      1 2 3  4  5   6
       //      <ol> <li> <p> </p> <ul> <li> <p> i t e  m ' '  1 </p> </li> </ul> </li> </ol>
       // pm: 0    1    2   3    4    5    6   7 8 9 10 11  12 13   14    15   16    17     18
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 0, to: 18 }), {
-        start: 0,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 1, to: 18 }), {
-        start: 0,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 2, to: 18 }), {
-        start: 0,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 3, to: 18 }), {
-        start: 0,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 4, to: 18 }), {
-        start: 0,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 5, to: 18 }), {
-        start: 0,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 6, to: 18 }), {
-        start: 1,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 7, to: 18 }), {
-        start: 1,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 8, to: 18 }), {
-        start: 2,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 9, to: 18 }), {
-        start: 3,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 8, to: 17 }), {
-        start: 2,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 8, to: 16 }), {
-        start: 2,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 8, to: 15 }), {
-        start: 2,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 8, to: 14 }), {
-        start: 2,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 8, to: 13 }), {
-        start: 2,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 8, to: 12 }), {
-        start: 2,
-        end: 6,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 8, to: 11 }), {
-        start: 2,
-        end: 5,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 0, to: 18 }),
+        {
+          start: 0,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 1, to: 18 }),
+        {
+          start: 0,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 2, to: 18 }),
+        {
+          start: 0,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 3, to: 18 }),
+        {
+          start: 0,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 4, to: 18 }),
+        {
+          start: 0,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 5, to: 18 }),
+        {
+          start: 0,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 6, to: 18 }),
+        {
+          start: 1,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 7, to: 18 }),
+        {
+          start: 1,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 8, to: 18 }),
+        {
+          start: 2,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 9, to: 18 }),
+        {
+          start: 3,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 8, to: 17 }),
+        {
+          start: 2,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 8, to: 16 }),
+        {
+          start: 2,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 8, to: 15 }),
+        {
+          start: 2,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 8, to: 14 }),
+        {
+          start: 2,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 8, to: 13 }),
+        {
+          start: 2,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 8, to: 12 }),
+        {
+          start: 2,
+          end: 6,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 8, to: 11 }),
+        {
+          start: 2,
+          end: 5,
+        },
+      )
     })
 
     it("should return the automerge text indexes before and after the given prosemirror indexes in a document with sibling blocks", () => {
@@ -409,66 +494,108 @@ describe("the traversal API", () => {
       // pm: 0    1    2   3 4 5 6 7   8  9    10   11   12  13 14 15 16 17   18 19   20     21   22     23    24
 
       // Check indices in the first <p>
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 1, to: 24 }), {
-        start: 0,
-        end: 14,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 1, to: 9 }), {
-        start: 0,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 2, to: 9 }), {
-        start: 1,
-        end: 7,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 2, to: 8 }), {
-        start: 1,
-        end: 6,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 1, to: 24 }),
+        {
+          start: 0,
+          end: 14,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 1, to: 9 }),
+        {
+          start: 0,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 2, to: 9 }),
+        {
+          start: 1,
+          end: 7,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 2, to: 8 }),
+        {
+          start: 1,
+          end: 6,
+        },
+      )
 
       // Check indices in the second <p>
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 11, to: 24 }), {
-        start: 7,
-        end: 14,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 13, to: 24 }), {
-        start: 8,
-        end: 14,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 12, to: 18 }), {
-        start: 8,
-        end: 13,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 13, to: 18 }), {
-        start: 8,
-        end: 13,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 14, to: 18 }), {
-        start: 9,
-        end: 13,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 11, to: 24 }),
+        {
+          start: 7,
+          end: 14,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 13, to: 24 }),
+        {
+          start: 8,
+          end: 14,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 12, to: 18 }),
+        {
+          start: 8,
+          end: 13,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 13, to: 18 }),
+        {
+          start: 8,
+          end: 13,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 14, to: 18 }),
+        {
+          start: 9,
+          end: 13,
+        },
+      )
 
       ////// check indices which span both <p>s
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 2, to: 19 }), {
-        start: 1,
-        end: 14,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 3, to: 19 }), {
-        start: 1,
-        end: 14,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 4, to: 18 }), {
-        start: 2,
-        end: 13,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 4, to: 13 }), {
-        start: 2,
-        end: 8,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 4, to: 12 }), {
-        start: 2,
-        end: 8,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 2, to: 19 }),
+        {
+          start: 1,
+          end: 14,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 3, to: 19 }),
+        {
+          start: 1,
+          end: 14,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 4, to: 18 }),
+        {
+          start: 2,
+          end: 13,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 4, to: 13 }),
+        {
+          start: 2,
+          end: 8,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 4, to: 12 }),
+        {
+          start: 2,
+          end: 8,
+        },
+      )
     })
 
     it("should return the automerge index following the prosemirror index for zero length ranges", () => {
@@ -484,10 +611,13 @@ describe("the traversal API", () => {
       // am:               0                  1       2 3 4  4   6   7
       //       <doc> <ul> <li> <p> </p> <ol> <li> <p> i t e  m  ' '  1 </p> </li> </ol> </li> </ul> </doc>
       // pm:        0    1    2   3    4    5    5   7 8 9 10 11   12 13   14   15     16    17    18
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 7, to: 7 }), {
-        start: 2,
-        end: 2,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 7, to: 7 }),
+        {
+          start: 2,
+          end: 2,
+        },
+      )
     })
 
     it("should return the automerge index in the middle of a paragraph", () => {
@@ -495,10 +625,13 @@ describe("the traversal API", () => {
       // am:      0 1 2 3 4  5  6 7 8  9  10
       //      <p> h e l l o ' ' w o r  l  d  </p>
       // pm: 0   1 2 3 4 5 6   7 8 9 10 11 12
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 7, to: 7 }), {
-        start: 6,
-        end: 6,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 7, to: 7 }),
+        {
+          start: 6,
+          end: 6,
+        },
+      )
     })
 
     it("should return the automerge index following an empty paragraph", () => {
@@ -511,10 +644,13 @@ describe("the traversal API", () => {
       // am:      0 1 2 3 4  5        6        7   8  9  10 11 12
       //      <p> h e l l o ' ' </p> <p> </p> <p>  w  o  r  l  d </p>
       // pm: 0   1 2 3 4 5 6   7    8   9   10   11 12 13 14 15 16   17
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 9, to: 9 }), {
-        start: 7,
-        end: 7,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 9, to: 9 }),
+        {
+          start: 7,
+          end: 7,
+        },
+      )
     })
 
     it("should find the correct range for the last character in the document", () => {
@@ -522,10 +658,13 @@ describe("the traversal API", () => {
       // am:      0 1 2 3 4  5  6  7  8  9  10
       //      <p> h e l l o ' ' w  o  r  l  d </p>
       // pm: 0   1 2 3 4 5 6   7  8  9 10 11 12  13
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 11, to: 12 }), {
-        start: 10,
-        end: 11,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 11, to: 12 }),
+        {
+          start: 10,
+          end: 11,
+        },
+      )
     })
 
     it("should find the last character in a document with mixed explicit and render-only paragraphs", () => {
@@ -536,10 +675,13 @@ describe("the traversal API", () => {
       // am:      0 1 2 3 4  5  6  7  8  9  10     11
       //      <p> h e l l o ' ' w  o  r  l  d </p> <p> </p>
       // pm: 0   1 2 3 4 5 6   7  8  9 10 11 12  13   14
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 14, to: 14 }), {
-        start: 12,
-        end: 12,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 14, to: 14 }),
+        {
+          start: 12,
+          end: 12,
+        },
+      )
     })
 
     it("should return zero length ranges for zero length prosemirror ranges", () => {
@@ -551,14 +693,20 @@ describe("the traversal API", () => {
       // am:      0 1 2 3 4  5        6  7  8  9  10 11
       //      <p> h e l l o ' ' </p> <p> w  o  r  l  d </p>
       // pm: 0   1 2 3 4 5 6   7    8   9 10 11 12 13 14  15
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 5, to: 5 }), {
-        start: 4,
-        end: 4,
-      })
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 9, to: 9 }), {
-        start: 7,
-        end: 7,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 5, to: 5 }),
+        {
+          start: 4,
+          end: 4,
+        },
+      )
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 9, to: 9 }),
+        {
+          start: 7,
+          end: 7,
+        },
+      )
     })
 
     it("should return the correct range for the end of a list item", () => {
@@ -573,10 +721,13 @@ describe("the traversal API", () => {
       // am:                                  0      1 2 3 4  5  6
       //      <doc> <ul> <li> <p> </p> <ol> <li> <p> i t e m ' ' 1 </p> </li> </ol> </li> </ul> </doc>
       // pm: 0     1    2    3   4    5    6    7   8 9 10  11 12 13   14   15     16    17    18
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 13, to: 13 }), {
-        start: 7,
-        end: 7,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 13, to: 13 }),
+        {
+          start: 7,
+          end: 7,
+        },
+      )
     })
 
     it("should only count embed nodes as a single character", () => {
@@ -592,10 +743,13 @@ describe("the traversal API", () => {
       // am:         0   1
       //      <doc> <p> <img src="http://example.com/image.png" /> </p> </doc>
       // pm: 0     0   1                                          2    3      4
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 1, to: 2 }), {
-        start: 1,
-        end: 2,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 1, to: 2 }),
+        {
+          start: 1,
+          end: 2,
+        },
+      )
     })
 
     it("should return the range around bare text", () => {
@@ -604,10 +758,13 @@ describe("the traversal API", () => {
       // am:      0
       //      <p> a </p>
       // pm: 0   1 2     3
-      assert.deepStrictEqual(pmRangeToAmRange(spans, { from: 1, to: 2 }), {
-        start: 0,
-        end: 1,
-      })
+      assert.deepStrictEqual(
+        pmRangeToAmRange(basicSchemaAdapter, spans, { from: 1, to: 2 }),
+        {
+          start: 0,
+          end: 1,
+        },
+      )
     })
   })
 
@@ -674,7 +831,7 @@ describe("the traversal API", () => {
   describe("the traverseSpans function", () => {
     it("should return a single paragraph for empty spans", () => {
       const spans: am.Span[] = []
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assert.deepStrictEqual(events, [
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "closeTag", tag: "paragraph", role: "render-only" },
@@ -693,7 +850,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 1" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       const expected: TraversalEvent[] = [
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         { type: "openTag", tag: "list_item", role: "render-only" },
@@ -702,6 +859,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: ["unordered-list-item"],
@@ -728,10 +886,11 @@ describe("the traversal API", () => {
         { type: "block", value: { type: "paragraph", parents: [], attrs: {} } },
         { type: "text", value: "world" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       const expected: TraversalEvent[] = [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -744,6 +903,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -770,12 +930,13 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "hello" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       const expected: TraversalEvent[] = [
         { type: "openTag", tag: "ordered_list", role: "render-only" },
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -812,10 +973,11 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       const expected: TraversalEvent[] = [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -833,6 +995,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: ["unordered-list-item"],
@@ -881,10 +1044,11 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 3" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -899,6 +1063,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -913,6 +1078,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -963,10 +1129,11 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -981,6 +1148,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -994,6 +1162,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1007,6 +1176,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "list_item", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1050,11 +1220,12 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1065,6 +1236,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -1077,6 +1249,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -1113,11 +1286,12 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 2" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: [],
@@ -1131,6 +1305,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -1151,7 +1326,7 @@ describe("the traversal API", () => {
         { type: "text", value: "hello " },
         { type: "text", value: "world" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "paragraph", role: "render-only" },
         { type: "text", text: "hello ", marks: {} },
@@ -1173,11 +1348,12 @@ describe("the traversal API", () => {
         { type: "text", value: "hello " },
         { type: "text", value: "world" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: [],
@@ -1207,10 +1383,11 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "aside",
             parents: [],
@@ -1248,10 +1425,11 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "world" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1264,6 +1442,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "heading", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1309,13 +1488,14 @@ describe("the traversal API", () => {
         { type: "text", value: "item 2" },
       ]
 
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "ordered_list", role: "render-only" },
 
         // First block
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1332,6 +1512,7 @@ describe("the traversal API", () => {
         // Second block
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: [],
@@ -1347,6 +1528,7 @@ describe("the traversal API", () => {
         // Third block
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: ["ordered-list-item"],
@@ -1382,11 +1564,12 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "image",
             parents: ["paragraph"],
@@ -1429,10 +1612,11 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "hello" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -1443,6 +1627,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "paragraph", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "image",
             parents: ["paragraph"],
@@ -1483,13 +1668,14 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "hello" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "blockquote", role: "render-only" },
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote", "unordered-list-item"],
@@ -1503,6 +1689,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote"],
@@ -1530,10 +1717,11 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "var x" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "code-block",
             parents: [],
@@ -1569,10 +1757,11 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "some text" },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1587,6 +1776,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["ordered-list-item"],
@@ -1634,10 +1824,11 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -1652,6 +1843,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -1665,6 +1857,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: ["unordered-list-item"],
@@ -1684,18 +1877,20 @@ describe("the traversal API", () => {
   })
 
   describe("the traverseNode function", () => {
+    const schema = basicSchemaAdapter.schema
     it("should emit block markers for list elements without {isAmgBlock: true} it", () => {
       const node = schema.node("doc", null, [
         schema.node("bullet_list", null, [
           schema.node("list_item", null, [schema.node("paragraph", null, [])]),
         ]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       const expected: TraversalEvent[] = [
         { type: "openTag", tag: "doc", role: "render-only" },
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: [],
@@ -1721,13 +1916,14 @@ describe("the traversal API", () => {
           ]),
         ]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       const expected: TraversalEvent[] = [
         { type: "openTag", tag: "doc", role: "render-only" },
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -1757,7 +1953,7 @@ describe("the traversal API", () => {
           ]),
         ]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       const expected: TraversalEvent[] = [
         { type: "openTag", tag: "doc", role: "render-only" },
         { type: "openTag", tag: "bullet_list", role: "render-only" },
@@ -1767,6 +1963,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "ordered_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "ordered-list-item",
             parents: ["unordered-list-item"],
@@ -1795,12 +1992,13 @@ describe("the traversal API", () => {
           ]),
         ]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       const expected: TraversalEvent[] = [
         { type: "openTag", tag: "doc", role: "render-only" },
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: [],
@@ -1813,6 +2011,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -1834,11 +2033,12 @@ describe("the traversal API", () => {
         schema.node("heading", { level: 1 }, [schema.text("hello")]),
         schema.node("heading", { level: 2 }, [schema.text("world")]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       const expected: TraversalEvent[] = [
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1851,6 +2051,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "heading", role: "explicit" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "heading",
             parents: [],
@@ -1876,15 +2077,16 @@ describe("the traversal API", () => {
           }),
         ]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
         { type: "openTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "image",
-            parents: ["paragraph"],
+            parents: [],
             attrs: {
               src: new am.RawString("some-image.png"),
               alt: "some image",
@@ -1903,11 +2105,12 @@ describe("the traversal API", () => {
       const node = schema.node("doc", null, [
         schema.node("blockquote", null, [schema.node("paragraph", null, [])]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "blockquote",
             parents: [],
@@ -1930,11 +2133,12 @@ describe("the traversal API", () => {
           schema.node("paragraph", null, [schema.text("world")]),
         ]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "blockquote",
             parents: [],
@@ -1948,6 +2152,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "paragraph", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote"],
@@ -1973,13 +2178,14 @@ describe("the traversal API", () => {
           ]),
         ]),
       ])
-      const events = Array.from(traverseNode(doc))
+      const events = Array.from(traverseNode(basicSchemaAdapter, doc))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
         { type: "openTag", tag: "blockquote", role: "render-only" },
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: ["blockquote"],
@@ -2008,7 +2214,7 @@ describe("the traversal API", () => {
           schema.node("paragraph", null, []),
         ]),
       ])
-      const events = Array.from(traverseNode(doc))
+      const events = Array.from(traverseNode(basicSchemaAdapter, doc))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
         { type: "openTag", tag: "blockquote", role: "render-only" },
@@ -2016,6 +2222,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote", "unordered-list-item"],
@@ -2029,6 +2236,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote"],
@@ -2076,13 +2284,14 @@ describe("the traversal API", () => {
         },
       ]
 
-      const events = Array.from(traverseSpans(spans))
+      const events = Array.from(traverseSpans(basicSchemaAdapter, spans))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "blockquote", role: "render-only" },
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote", "unordered-list-item"],
@@ -2097,6 +2306,7 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["blockquote"],
@@ -2110,6 +2320,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: ["blockquote"],
@@ -2130,11 +2341,12 @@ describe("the traversal API", () => {
       const node = schema.node("doc", null, [
         schema.node("code_block", null, [schema.text("var x")]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "code-block",
             parents: [],
@@ -2167,11 +2379,12 @@ describe("the traversal API", () => {
           ]),
         ]),
       ])
-      const events = Array.from(traverseNode(node))
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
       assertTraversalEqual(events, [
         { type: "openTag", tag: "doc", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: [],
@@ -2186,6 +2399,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "list_item", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "paragraph",
             parents: ["unordered-list-item"],
@@ -2199,6 +2413,7 @@ describe("the traversal API", () => {
         { type: "openTag", tag: "bullet_list", role: "render-only" },
         {
           type: "block",
+          isUnknown: false,
           block: {
             type: "unordered-list-item",
             parents: ["unordered-list-item"],
@@ -2213,6 +2428,223 @@ describe("the traversal API", () => {
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
         { type: "closeTag", tag: "list_item", role: "render-only" },
         { type: "closeTag", tag: "bullet_list", role: "render-only" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should not emit block markers for multiple top level leaf nodes of different types", () => {
+      const node = schema.node("doc", null, [
+        schema.node("paragraph", null, [
+          schema.nodes.unknownLeaf.create({
+            unknownBlock: {
+              type: "unknown",
+              parents: [],
+              attrs: {},
+              isEmbed: true,
+            },
+          }),
+          schema.text("hello"),
+        ]),
+      ])
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: true,
+          block: {
+            type: "unknown",
+            parents: [],
+            attrs: {},
+            isEmbed: true,
+          },
+        },
+        { type: "leafNode", tag: "unknownLeaf", role: "explicit" },
+        { type: "text", text: "hello", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should not emit parents which are wrapper content", () => {
+      const node = schema.node("doc", null, [
+        schema.node("paragraph", null, [
+          schema.node("image", {
+            src: "some-image.png",
+            alt: "some image",
+            title: "some title",
+            isAmgBlock: true,
+            unknownAttrs: null,
+          }),
+        ]),
+      ])
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "image",
+            parents: [],
+            attrs: {
+              src: new am.RawString("some-image.png"),
+              alt: "some image",
+              title: "some title",
+            },
+            isEmbed: true,
+          },
+        },
+        { type: "leafNode", tag: "image", role: "explicit" },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should emit parents which are wrapper content if they are explicit blocks", () => {
+      const node = schema.node("doc", null, [
+        schema.node("paragraph", { isAmgBlock: true }, [
+          schema.node("image", {
+            src: "some-image.png",
+            alt: "some image",
+            title: "some title",
+            isAmgBlock: true,
+            unknownAttrs: null,
+          }),
+        ]),
+      ])
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "paragraph", role: "explicit" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "image",
+            parents: ["paragraph"],
+            attrs: {
+              src: new am.RawString("some-image.png"),
+              alt: "some image",
+              title: "some title",
+            },
+            isEmbed: true,
+          },
+        },
+        { type: "leafNode", tag: "image", role: "explicit" },
+        { type: "closeTag", tag: "paragraph", role: "explicit" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should generate block markers when there are insertions inside an unknown block", () => {
+      const node = schema.node("doc", null, [
+        schema.node("unknownBlock", { unknownParentBlock: "unknown" }, [
+          schema.node("paragraph", null, [schema.text("hello")]),
+          schema.node(
+            "unknownBlock",
+            {
+              isAmgBlock: true,
+              unknownBlock: {
+                type: "unknown",
+                parents: ["unknown"],
+                attrs: {},
+                isEmbed: false,
+              },
+            },
+            [schema.node("paragraph", null, [schema.text("world")])],
+          ),
+        ]),
+      ])
+      const events = Array.from(traverseNode(basicSchemaAdapter, node))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: true,
+          block: {
+            type: "unknown",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "unknownBlock", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "text", text: "hello", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: true,
+          block: {
+            type: "unknown",
+            parents: ["unknown"],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "unknownBlock", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "text", text: "world", marks: {} },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "unknownBlock", role: "explicit" },
+        { type: "closeTag", tag: "unknownBlock", role: "explicit" },
+        { type: "closeTag", tag: "doc", role: "render-only" },
+      ])
+    })
+
+    it("should emit block markers for a leading render-only paragraph at the beginning of the doc", () => {
+      const doc = schema.node("doc", null, [
+        schema.node("paragraph", null, []),
+        schema.node("ordered_list", null, [
+          schema.node("list_item", { isAmgBlock: true }, [
+            schema.node("paragraph", null, []),
+          ]),
+        ]),
+      ])
+      const events = Array.from(traverseNode(basicSchemaAdapter, doc))
+      assertTraversalEqual(events, [
+        { type: "openTag", tag: "doc", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "paragraph",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "paragraph", role: "explicit" },
+        { type: "closeTag", tag: "paragraph", role: "explicit" },
+        { type: "openTag", tag: "ordered_list", role: "render-only" },
+        {
+          type: "block",
+          isUnknown: false,
+          block: {
+            type: "ordered-list-item",
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "openTag", tag: "list_item", role: "explicit" },
+        { type: "openTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "paragraph", role: "render-only" },
+        { type: "closeTag", tag: "list_item", role: "explicit" },
+        { type: "closeTag", tag: "ordered_list", role: "render-only" },
         { type: "closeTag", tag: "doc", role: "render-only" },
       ])
     })
@@ -2231,19 +2663,19 @@ describe("the traversal API", () => {
       // pm: 0   1 2 3 4 5 6    7   8 9  10 11 12 13   14
 
       // Everything in the first block should return the position just afte the opening <p>
-      assert.equal(amIdxToPmBlockIdx(spans, 0), 1)
-      assert.equal(amIdxToPmBlockIdx(spans, 1), 1)
-      assert.equal(amIdxToPmBlockIdx(spans, 2), 1)
-      assert.equal(amIdxToPmBlockIdx(spans, 3), 1)
-      assert.equal(amIdxToPmBlockIdx(spans, 4), 1)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 0), 1)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 1), 1)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 2), 1)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 3), 1)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 4), 1)
 
       // Everything in the second block should return the position just after the second opening <p>
-      assert.equal(amIdxToPmBlockIdx(spans, 5), 8)
-      assert.equal(amIdxToPmBlockIdx(spans, 6), 8)
-      assert.equal(amIdxToPmBlockIdx(spans, 7), 8)
-      assert.equal(amIdxToPmBlockIdx(spans, 8), 8)
-      assert.equal(amIdxToPmBlockIdx(spans, 9), 8)
-      assert.equal(amIdxToPmBlockIdx(spans, 10), 8)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 5), 8)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 6), 8)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 7), 8)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 8), 8)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 9), 8)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 10), 8)
     })
 
     it("should return the index just before list items", () => {
@@ -2258,16 +2690,17 @@ describe("the traversal API", () => {
       //       <ol> <li> <p> i t e m ' ' 1 </p> </li> <li> <p>  i  t  e  m  ' ' 2  </p> </li> </ol>
       // pm: 0     1    2   3 4 5 6 7   8 9   10     11   12  13 14 15 16 17  18 19   20    21    22
 
-      assert.equal(amIdxToPmBlockIdx(spans, 0), 2)
-      assert.equal(amIdxToPmBlockIdx(spans, 1), 2)
-      assert.equal(amIdxToPmBlockIdx(spans, 2), 2)
-      assert.equal(amIdxToPmBlockIdx(spans, 3), 2)
-      assert.equal(amIdxToPmBlockIdx(spans, 4), 2)
-      assert.equal(amIdxToPmBlockIdx(spans, 5), 2)
-      assert.equal(amIdxToPmBlockIdx(spans, 6), 2)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 0), 2)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 1), 2)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 2), 2)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 3), 2)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 4), 2)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 5), 2)
+      assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 6), 2)
     })
   })
   describe("the docFromSpans function", () => {
+    const schema = basicSchemaAdapter.schema
     it("should construct a documnt with extra render-only paragraphs for nested list items", () => {
       const spans: am.Span[] = [
         {
@@ -2280,7 +2713,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 1" },
       ]
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2320,7 +2753,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 2" },
       ]
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2367,7 +2800,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 3" },
       ]
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
 
       assert.isTrue(
         doc.eq(
@@ -2421,7 +2854,7 @@ describe("the traversal API", () => {
         },
       ]
 
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
 
       assert.isTrue(
         doc.eq(
@@ -2485,7 +2918,7 @@ describe("the traversal API", () => {
         },
       ]
 
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2528,7 +2961,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 2" },
       ]
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2566,7 +2999,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 2" },
       ]
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
 
       assert.isTrue(
         doc.eq(
@@ -2593,7 +3026,7 @@ describe("the traversal API", () => {
           value: { type: new am.RawString("aside"), parents: [], attrs: {} },
         },
       ]
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2631,7 +3064,7 @@ describe("the traversal API", () => {
         { type: "text", value: "next line" },
       ]
 
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2669,7 +3102,7 @@ describe("the traversal API", () => {
         { type: "text", value: "world" },
       ]
 
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2708,7 +3141,7 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2751,7 +3184,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "world" },
       ]
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2792,7 +3225,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "more quote" },
       ]
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2846,7 +3279,7 @@ describe("the traversal API", () => {
         },
       ]
 
-      const doc = docFromSpans(spans)
+      const doc = docFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2869,9 +3302,79 @@ describe("the traversal API", () => {
         ),
       )
     })
+
+    describe("when handling unknown blocks", () => {
+      it("should render them as the unknown block type", () => {
+        const spans: am.Span[] = [
+          {
+            type: "block",
+            value: {
+              type: new am.RawString("unknown"),
+              parents: [],
+              attrs: {},
+            },
+          },
+          { type: "text", value: "hello" },
+        ]
+        const doc = docFromSpans(basicSchemaAdapter, spans)
+        assert.isTrue(
+          doc.eq(
+            schema.node("doc", null, [
+              schema.node(
+                "unknownBlock",
+                {
+                  isAmgBlock: true,
+                  unknownBlock: {
+                    type: "unknown",
+                    parents: [],
+                    attrs: {},
+                    isEmbed: false,
+                  },
+                },
+                [schema.node("paragraph", null, [schema.text("hello")])],
+              ),
+            ]),
+          ),
+        )
+      })
+
+      it("should render nested blocks using the unknown block type", () => {
+        const spans: am.Span[] = [
+          {
+            type: "block",
+            value: {
+              type: new am.RawString("unknown"),
+              parents: [new am.RawString("unknown")],
+              attrs: {},
+            },
+          },
+          { type: "text", value: "hello" },
+        ]
+        const doc = docFromSpans(basicSchemaAdapter, spans)
+        const expected = schema.node("doc", null, [
+          schema.node("unknownBlock", { unknownParentBlock: "unknown" }, [
+            schema.node(
+              "unknownBlock",
+              {
+                isAmgBlock: true,
+                unknownBlock: {
+                  type: "unknown",
+                  parents: ["unknown"],
+                  attrs: {},
+                  isEmbed: false,
+                },
+              },
+              [schema.node("paragraph", null, [schema.text("hello")])],
+            ),
+          ]),
+        ])
+        assert.isTrue(doc.eq(expected))
+      })
+    })
   })
 
   describe("the blocksFromNode function", () => {
+    const schema = basicSchemaAdapter.schema
     it("should return the correct blocks for a document with a list containing a paragraph", () => {
       const doc = schema.node("doc", null, [
         schema.node("bullet_list", null, [
@@ -2883,7 +3386,7 @@ describe("the traversal API", () => {
           schema.node("list_item", null, [schema.node("paragraph", null, [])]),
         ]),
       ])
-      const blocks = Array.from(blocksFromNode(doc))
+      const blocks = Array.from(blocksFromNode(basicSchemaAdapter, doc))
       assert.deepStrictEqual(blocks, [
         {
           type: "block",
@@ -2894,7 +3397,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "text", value: "item 1" },
+        { type: "text", value: "item 1", marks: {} },
         {
           type: "block",
           value: {
@@ -2925,7 +3428,7 @@ describe("the traversal API", () => {
           ]),
         ]),
       ])
-      const blocks = Array.from(blocksFromNode(doc))
+      const blocks = Array.from(blocksFromNode(basicSchemaAdapter, doc))
       assert.deepStrictEqual(blocks, [
         {
           type: "block",
@@ -2936,7 +3439,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "text", value: "hello world" },
+        { type: "text", value: "hello world", marks: {} },
         {
           type: "block",
           value: {
@@ -2946,7 +3449,7 @@ describe("the traversal API", () => {
             isEmbed: false,
           },
         },
-        { type: "text", value: "item one" },
+        { type: "text", value: "item one", marks: {} },
         {
           type: "block",
           value: {
@@ -2961,6 +3464,7 @@ describe("the traversal API", () => {
   })
 
   it("should return an explicit paragraph for the second paragraph in a list item", () => {
+    const schema = basicSchemaAdapter.schema
     const doc = schema.node("doc", null, [
       schema.node("bullet_list", null, [
         schema.node("list_item", null, [
@@ -2971,7 +3475,7 @@ describe("the traversal API", () => {
         ]),
       ]),
     ])
-    const blocks = Array.from(blocksFromNode(doc))
+    const blocks = Array.from(blocksFromNode(basicSchemaAdapter, doc))
     assert.deepStrictEqual(blocks, [
       {
         type: "block",
@@ -2982,7 +3486,7 @@ describe("the traversal API", () => {
           isEmbed: false,
         },
       },
-      { type: "text", value: "item 1" },
+      { type: "text", value: "item 1", marks: {} },
       {
         type: "block",
         value: {
@@ -2993,6 +3497,139 @@ describe("the traversal API", () => {
         },
       },
     ])
+  })
+
+  describe("when handling unknown block types", () => {
+    it("should round trip the block type", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("unknown"),
+            parents: [],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "hello", marks: {} },
+      ]
+      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const blocks: am.Span[] = Array.from(
+        blocksFromNode(basicSchemaAdapter, doc),
+      )
+      assert.deepStrictEqual(blocks, spans)
+    })
+
+    it("should round trip the isEmbed state", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("unknown"),
+            parents: [],
+            attrs: {},
+            isEmbed: true,
+          },
+        },
+        { type: "text", value: "hello", marks: {} },
+      ]
+      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const blocks: am.Span[] = Array.from(
+        blocksFromNode(basicSchemaAdapter, doc),
+      )
+      assert.deepStrictEqual(blocks, spans)
+    })
+
+    it("should round trip nested unknown blocks", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("unknown"),
+            parents: [new am.RawString("unknown")],
+            attrs: {},
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "hello", marks: {} },
+      ]
+      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const blocks: am.Span[] = Array.from(
+        blocksFromNode(basicSchemaAdapter, doc),
+      )
+      assert.deepStrictEqual(blocks, spans)
+    })
+  })
+
+  describe("when handling unknown attributes of known blocks", () => {
+    it("should round trip them through the editor", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("paragraph"),
+            parents: [],
+            attrs: {
+              foo: "bar",
+            },
+            isEmbed: false,
+          },
+        },
+        { type: "text", value: "hello", marks: {} },
+      ]
+      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const blocks: am.Span[] = Array.from(
+        blocksFromNode(basicSchemaAdapter, doc),
+      )
+      assert.deepStrictEqual(blocks, spans)
+    })
+
+    it("should round trip unknown attributes of known embed blocks through the editor", () => {
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.RawString("image"),
+            parents: [],
+            attrs: {
+              src: new am.RawString("image.png"),
+              alt: null,
+              title: null,
+            },
+            isEmbed: true,
+          },
+        },
+        { type: "text", value: "hello", marks: {} },
+      ]
+      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const blocks: am.Span[] = Array.from(
+        blocksFromNode(basicSchemaAdapter, doc),
+      )
+      assert.deepStrictEqual(blocks, spans)
+    })
+  })
+
+  describe("when handling unknown marks", () => {
+    it("should round trip them through the editor", () => {
+      const date = new Date()
+      const spans: am.Span[] = [
+        {
+          type: "text",
+          value: "hello",
+          marks: {
+            unknownBool: true,
+            unknownString: "hello",
+            unknownNumber: 1,
+            unknownDate: date,
+          },
+        },
+      ]
+      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const blocks: am.Span[] = Array.from(
+        blocksFromNode(basicSchemaAdapter, doc),
+      )
+      assert.deepStrictEqual(blocks, spans)
+    })
   })
 })
 
@@ -3048,7 +3685,7 @@ function printEvent(event: TraversalEvent): string {
 }
 
 export function printIndexTableForSpans(spans: am.Span[]): string {
-  return printIndexTable(traverseSpans(spans))
+  return printIndexTable(traverseSpans(basicSchemaAdapter, spans))
 }
 
 export function printIndexTable(

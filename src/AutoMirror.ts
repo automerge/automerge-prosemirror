@@ -5,8 +5,8 @@ import amToPm from "./amToPm"
 import { intercept } from "./intercept"
 import { DocHandle } from "./types"
 import { next as am } from "@automerge/automerge"
-import { schema } from "./schema"
 import { docFromSpans } from "./traversal"
+import { MappedSchemaSpec, SchemaAdapter } from "./schema"
 
 type Doc<T> = automerge.Doc<T>
 type Patch = automerge.Patch
@@ -14,20 +14,29 @@ type Patch = automerge.Patch
 export default class AutoMirror<T> {
   _inLocalTransaction = false
   path: am.Prop[]
+  adapter: SchemaAdapter
 
-  constructor(path: am.Prop[]) {
+  constructor(
+    path: am.Prop[],
+    schemaAdapter: MappedSchemaSpec | SchemaAdapter,
+  ) {
     this.path = path
+    if (schemaAdapter instanceof SchemaAdapter) {
+      this.adapter = schemaAdapter
+    } else {
+      this.adapter = new SchemaAdapter(schemaAdapter)
+    }
   }
 
   get schema(): Schema {
-    return schema
+    return this.adapter.schema
   }
 
   initialize = (handle: DocHandle<unknown>): Node => {
     const doc = handle.docSync()
     if (doc === undefined) throw new Error("Handle is not ready")
     const spans = automerge.spans(doc, this.path)
-    return docFromSpans(spans)
+    return docFromSpans(this.adapter, spans)
   }
 
   intercept = (
@@ -36,7 +45,13 @@ export default class AutoMirror<T> {
     state: EditorState,
   ): EditorState => {
     this._inLocalTransaction = true
-    const result = intercept(this.path, handle, intercepted, state)
+    const result = intercept(
+      this.adapter,
+      this.path,
+      handle,
+      intercepted,
+      state,
+    )
     this._inLocalTransaction = false
     return result
   }
@@ -58,7 +73,7 @@ export default class AutoMirror<T> {
       automerge.view(docAfter, headsBefore),
       this.path,
     )
-    const tx = amToPm(state.schema, spans, patches, this.path, state.tr)
+    const tx = amToPm(this.adapter, spans, patches, this.path, state.tr)
     return state.apply(tx)
   }
 }

@@ -4,6 +4,7 @@ import { next as automerge } from "@automerge/automerge"
 import { mount } from "cypress/react18"
 import "../playground/src/playground.css"
 import { Repo, DocHandle } from "@automerge/automerge-repo"
+import { basicSchemaAdapter } from "../src/basicSchema"
 
 const repo = new Repo({ network: [] })
 
@@ -18,14 +19,26 @@ function makeHandle(contents: { text: string }): DocHandle<{ text: string }> {
 describe("<Editor />", () => {
   it("renders", () => {
     const handle = makeHandle({ text: "Hello World" })
-    mount(<Editor handle={handle} path={["text"]} />)
+    mount(
+      <Editor
+        handle={handle}
+        path={["text"]}
+        schemaAdapter={basicSchemaAdapter}
+      />,
+    )
     editorContents().should("have.html", expectedHtml(["Hello World"]))
   })
 
   describe("making local edits", () => {
     it("handles adding and deleting a line at the end of the text", () => {
       const handle = makeHandle({ text: "Hello World" })
-      mount(<Editor handle={handle} path={["text"]} />)
+      mount(
+        <Editor
+          handle={handle}
+          path={["text"]}
+          schemaAdapter={basicSchemaAdapter}
+        />,
+      )
       editorContents().should("have.html", expectedHtml(["Hello World"]))
       editorContents().type("{enter}")
       editorContents().should("have.html", expectedHtml(["Hello World", null]))
@@ -41,7 +54,13 @@ describe("<Editor />", () => {
 
     it("handles inserting two newlines", () => {
       const handle = makeHandle({ text: "Hello World" })
-      mount(<Editor handle={handle} path={["text"]} />)
+      mount(
+        <Editor
+          handle={handle}
+          path={["text"]}
+          schemaAdapter={basicSchemaAdapter}
+        />,
+      )
       editorContents().should("have.html", expectedHtml(["Hello World"]))
       editorContents().type("{moveToEnd}{enter}{enter}{enter}")
       editorContents().should(
@@ -59,6 +78,15 @@ describe("<Editor />", () => {
       cy.wait(100)
         .then(() => automerge.spans(handle.docSync(), ["text"]))
         .should("deep.equal", [
+          {
+            type: "block",
+            value: {
+              type: new automerge.RawString("paragraph"),
+              parents: [],
+              attrs: {},
+              isEmbed: false,
+            },
+          },
           { type: "text", value: "Hello World" },
           {
             type: "block",
@@ -84,7 +112,13 @@ describe("<Editor />", () => {
 
     it("handles bold marks", () => {
       const handle = makeHandle({ text: "Hello Happy World" })
-      mount(<Editor handle={handle} path={["text"]} />)
+      mount(
+        <Editor
+          handle={handle}
+          path={["text"]}
+          schemaAdapter={basicSchemaAdapter}
+        />,
+      )
       editorContents().should("have.html", expectedHtml(["Hello Happy World"]))
 
       withSelection("Happy", () => boldButton().click())
@@ -107,7 +141,13 @@ describe("<Editor />", () => {
 
     it("handles links", () => {
       const handle = makeHandle({ text: "My homepage is here" })
-      mount(<Editor handle={handle} path={["text"]} />)
+      mount(
+        <Editor
+          handle={handle}
+          path={["text"]}
+          schemaAdapter={basicSchemaAdapter}
+        />,
+      )
 
       withSelection("homepage", () => linkButton().click())
 
@@ -142,7 +182,13 @@ describe("<Editor />", () => {
   describe("receiving remote changes", () => {
     it("handles inserted text", () => {
       const handle = makeHandle({ text: "Hello World" })
-      mount(<Editor handle={handle} path={["text"]} />)
+      mount(
+        <Editor
+          handle={handle}
+          path={["text"]}
+          schemaAdapter={basicSchemaAdapter}
+        />,
+      )
       handle.change((d: { text: string }) =>
         automerge.splice(d, ["text"], 5, 0, " Happy"),
       )
@@ -160,7 +206,13 @@ describe("<Editor />", () => {
           true,
         )
       })
-      mount(<Editor handle={handle} path={["text"]} />)
+      mount(
+        <Editor
+          handle={handle}
+          path={["text"]}
+          schemaAdapter={basicSchemaAdapter}
+        />,
+      )
       handle.change((d: { text: string }) =>
         automerge.splice(d, ["text"], 6, 0, "Strong"),
       )

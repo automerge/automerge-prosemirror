@@ -37,8 +37,10 @@ function App({ docUrl }: { docUrl: AutomergeUrl }) {
         patchInfo.before,
         doc,
         patches,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         view!.state,
       )
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       view!.updateState(newState)
     }
     if (editorRoot.current != null && loaded) {
@@ -46,13 +48,17 @@ function App({ docUrl }: { docUrl: AutomergeUrl }) {
         state: EditorState.create({
           schema: mirror.schema, // It's important that we use the schema from the mirror
           plugins: exampleSetup({ schema: mirror.schema }),
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           doc: mirror.initialize(handle!),
         }),
         dispatchTransaction: (tx: Transaction) => {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           const newState = mirror.intercept(handle!, tx, view!.state)
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           view!.updateState(newState)
         },
       })
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       handle!.on("change", onPatch)
     }
     return () => {

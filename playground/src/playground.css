@@ -61,3 +61,33 @@ blockquote {
   padding: 0.5em 10px;
   quotes: "\201C" "\201D" "\2018" "\2019";
 }
+
+.tab-container {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.tab-header {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.tab {
+  padding: 10px;
+  background-color: #f1f1f1;
+  border: none;
+  cursor: pointer;
+}
+
+.tab.active {
+  background-color: #ccc;
+}
+
+.tab-content {
+  display: none;
+  padding: 20px;
+}
+
+.tab-content.active {
+  display: block;
+}

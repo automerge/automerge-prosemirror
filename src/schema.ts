@@ -1,268 +1,287 @@
-import { NodeSpec, Schema, DOMOutputSpec, MarkSpec } from "prosemirror-model"
+import {
+  NodeSpec,
+  Schema,
+  MarkSpec,
+  MarkType,
+  Mark,
+  Attrs,
+  NodeType,
+  Node,
+} from "prosemirror-model"
+import { next as am } from "@automerge/automerge"
+import { BlockMarker } from "./types"
 
-function addIsAmgBlockAttr(nodes: { [key: string]: NodeSpec }): {
-  [key: string]: NodeSpec
+export interface MappedSchemaSpec {
+  nodes: { [key: string]: MappedNodeSpec }
+  marks?: { [key: string]: MappedMarkSpec }
+}
+
+export type MappedNodeSpec = NodeSpec & {
+  automerge?: {
+    unknownBlock?: boolean
+    block?: BlockMappingSpec
+    isEmbed?: boolean
+    attrParsers?: {
+      fromProsemirror: (node: Node) => { [key: string]: am.MaterializeValue }
+      fromAutomerge: (block: BlockMarker) => Attrs
+    }
+  }
+}
+
+export type BlockMappingSpec = string | { within: { [key: string]: string } }
+
+export type MappedMarkSpec = MarkSpec & {
+  automerge?: {
+    markName: string
+    parsers?: {
+      fromAutomerge: (value: am.MarkValue) => Attrs
+      fromProsemirror: (mark: Mark) => am.MarkValue
+    }
+  }
+}
+
+export type MarkMapping = {
+  automergeMarkName: string
+  prosemirrorMark: MarkType
+  parsers: {
+    fromAutomerge: (value: am.MarkValue) => Attrs
+    fromProsemirror: (mark: Mark) => am.MarkValue
+  }
+}
+
+export type NodeMapping = {
+  blockName: string
+  outer: NodeType | null
+  content: NodeType
+  attrParsers?: {
+    fromProsemirror: (node: Node) => { [key: string]: am.MaterializeValue }
+    fromAutomerge: (block: BlockMarker) => Attrs
+  }
+  isEmbed?: boolean
+}
+
+export class SchemaAdapter {
+  nodeMappings: NodeMapping[]
+  markMappings: MarkMapping[]
+  unknownBlock: NodeType
+  unknownLeaf: NodeType
+  unknownMark: MarkType
+  schema: Schema
+
+  constructor(spec: MappedSchemaSpec) {
+    const actualSpec = shallowClone(spec)
+
+    addAmgNodeStateAttrs(actualSpec.nodes)
+    const unknownMarkSpec: MarkSpec = {
+      attrs: { unknownMarks: { default: null } },
+      toDOM() {
+        return ["span", { "data-unknown-mark": true }]
+      },
+    }
+    if (actualSpec.marks != null) {
+      actualSpec.marks["unknownMark"] = unknownMarkSpec
+    } else {
+      actualSpec.marks = {
+        unknownMark: unknownMarkSpec,
+      }
+    }
+
+    actualSpec.nodes.unknownLeaf = {
+      inline: true,
+      attrs: { isAmgBlock: { default: true }, unknownBlock: { default: null } },
+      group: "inline",
+      toDOM() {
+        return document.createTextNode("u{fffc}")
+      },
+    }
+
+    const schema = new Schema(actualSpec)
+    const nodeMappings: NodeMapping[] = []
+    const markMappings: MarkMapping[] = []
+    let unknownBlock: NodeType | null = null
+
+    for (const [nodeName, nodeSpec] of Object.entries(actualSpec.nodes)) {
+      const adaptSpec = nodeSpec.automerge
+      if (adaptSpec == null) {
+        continue
+      }
+      if (adaptSpec.unknownBlock) {
+        if (unknownBlock != null) {
+          throw new Error("only one node can be marked as unknownBlock")
+        }
+        unknownBlock = schema.nodes[nodeName]
+      }
+      if (adaptSpec.block != null) {
+        if (typeof adaptSpec.block === "string") {
+          const nodeMapping: NodeMapping = {
+            blockName: adaptSpec.block,
+            outer: null,
+            content: schema.nodes[nodeName],
+            isEmbed: adaptSpec.isEmbed || false,
+          }
+          if (adaptSpec.attrParsers != null) {
+            nodeMapping.attrParsers = adaptSpec.attrParsers
+          }
+          nodeMappings.push(nodeMapping)
+        } else {
+          for (const [outerName, blockName] of Object.entries(
+            adaptSpec.block.within,
+          )) {
+            const outerNode = schema.nodes[outerName]
+            if (outerNode == null) {
+              throw new Error(`${nodeSpec.name} references an unknown outer node
+  ${outerName} in its within block mapping`)
+            }
+            nodeMappings.push({
+              blockName,
+              outer: schema.nodes[outerName],
+              content: schema.nodes[nodeName],
+            })
+          }
+        }
+      }
+    }
+
+    for (const [markName, markSpec] of Object.entries(actualSpec.marks || {})) {
+      const adaptSpec = markSpec.automerge
+      if (adaptSpec == null) {
+        continue
+      }
+      if (adaptSpec.markName != null) {
+        let parsers
+        if (adaptSpec.parsers != null) {
+          parsers = adaptSpec.parsers
+        } else {
+          parsers = {
+            fromAutomerge: () => ({}),
+            fromProsemirror: () => true,
+          }
+        }
+        markMappings.push({
+          automergeMarkName: adaptSpec.markName,
+          prosemirrorMark: schema.marks[markName],
+          parsers,
+        })
+      }
+    }
+
+    if (unknownBlock == null) {
+      throw new Error(
+        `no unknown block specified: one node must be marked as the unknownblock
+by setting the automerge.unknownBlock property to true`,
+      )
+    }
+
+    this.unknownMark = schema.marks.unknownMark
+    this.nodeMappings = nodeMappings
+    this.markMappings = markMappings
+    this.unknownLeaf = schema.nodes.unknownLeaf
+    this.unknownBlock = unknownBlock
+    this.schema = schema
+  }
+}
+
+function shallowClone(spec: MappedSchemaSpec): MappedSchemaSpec {
+  const nodes: { [key: string]: MappedNodeSpec } = {}
+  for (const [nodeName, node] of Object.entries(spec.nodes)) {
+    const shallowCopy = Object.assign({}, node)
+    if (node.attrs != null) {
+      shallowCopy.attrs = Object.assign({}, node.attrs)
+    }
+    nodes[nodeName] = shallowCopy
+  }
+  const marks: { [key: string]: MappedMarkSpec } = {}
+  if (spec.marks != null) {
+    for (const [markName, mark] of Object.entries(spec.marks)) {
+      const shallowCopy = Object.assign({}, mark)
+      if (mark.attrs != null) {
+        shallowCopy.attrs = Object.assign({}, mark.attrs)
+      }
+      marks[markName] = shallowCopy
+    }
+  }
+  return { nodes, marks }
+}
+
+function addAmgNodeStateAttrs(nodes: { [key: string]: MappedNodeSpec }): {
+  [key: string]: MappedNodeSpec
 } {
-  for (const [_, node] of Object.entries(nodes)) {
-    if (node.content) {
-      node.attrs
-        ? (node.attrs.isAmgBlock = { default: false })
-        : (node.attrs = { isAmgBlock: { default: false } })
+  for (const [name, node] of Object.entries(nodes)) {
+    if (name !== "text") {
+      if (node.attrs == null) {
+        node.attrs = {
+          isAmgBlock: { default: false },
+          unknownAttrs: { default: null },
+        }
+      } else {
+        node.attrs.isAmgBlock = { default: false }
+        node.attrs.unknownAttrs = { default: null }
+      }
+    }
+    if (node.automerge?.unknownBlock) {
+      if (node.attrs == null) {
+        node.attrs = {
+          unknownParentBlock: { default: null },
+          unknownBlock: { default: null },
+        }
+      } else {
+        node.attrs.unknownParentBlock = { default: null }
+        node.attrs.unknownBlock = { default: null }
+      }
     }
   }
   return nodes
 }
 
-// basics
-const pDOM: DOMOutputSpec = ["p", 0]
-const blockquoteDOM: DOMOutputSpec = ["blockquote", 0]
-const hrDOM: DOMOutputSpec = ["hr"]
-const preDOM: DOMOutputSpec = ["pre", ["code", 0]]
+export function amMarksFromPmMarks(
+  adapter: SchemaAdapter,
+  marks: readonly Mark[],
+): am.MarkSet {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: { [key: string]: any } = {}
+  marks.forEach(mark => {
+    const markMapping = adapter.markMappings.find(
+      m => m.prosemirrorMark === mark.type,
+    )
+    if (markMapping != null) {
+      result[markMapping.automergeMarkName] =
+        markMapping.parsers.fromProsemirror(mark)
+    } else if (mark.type === adapter.unknownMark) {
+      for (const [key, value] of Object.entries(mark.attrs.unknownMarks)) {
+        result[key] = value
+      }
+    }
+  })
+  return result
+}
 
-// marks
-const emDOM: DOMOutputSpec = ["em", 0]
-const strongDOM: DOMOutputSpec = ["strong", 0]
-const codeDOM: DOMOutputSpec = ["code", 0]
+export function pmMarksFromAmMarks(
+  adapter: SchemaAdapter,
+  amMarks: am.MarkSet,
+): Mark[] {
+  const unknownMarks: { [key: string]: am.MaterializeValue } = {}
+  let hasUnknownMark = false
+  const pmMarks = []
 
-// lists
-const olDOM: DOMOutputSpec = ["ol", 0]
-const ulDOM: DOMOutputSpec = ["ul", 0]
-const liDOM: DOMOutputSpec = ["li", 0]
+  for (const [markName, markValue] of Object.entries(amMarks)) {
+    const mapping = adapter.markMappings.find(
+      m => m.automergeMarkName === markName,
+    )
+    if (mapping == null) {
+      unknownMarks[markName] = markValue
+      hasUnknownMark = true
+    } else {
+      pmMarks.push(
+        mapping.prosemirrorMark.create(
+          mapping.parsers.fromAutomerge(markValue),
+        ),
+      )
+    }
+  }
 
-export const schema = new Schema({
-  nodes: addIsAmgBlockAttr({
-    /// NodeSpec The top level document node.
-    doc: {
-      content: "block+",
-    } as NodeSpec,
+  if (hasUnknownMark) {
+    pmMarks.push(adapter.unknownMark.create({ unknownMarks }))
+  }
 
-    /// A plain paragraph textblock. Represented in the DOM
-    /// as a `<p>` element.
-    paragraph: {
-      content: "inline*",
-      group: "block",
-      parseDOM: [{ tag: "p" }],
-      toDOM() {
-        return pDOM
-      },
-    } as NodeSpec,
-
-    /// A blockquote (`<blockquote>`) wrapping one or more blocks.
-    blockquote: {
-      content: "block+",
-      group: "block",
-      defining: true,
-      parseDOM: [{ tag: "blockquote" }],
-      toDOM() {
-        return blockquoteDOM
-      },
-    } as NodeSpec,
-
-    /// A horizontal rule (`<hr>`).
-    horizontal_rule: {
-      group: "block",
-      parseDOM: [{ tag: "hr" }],
-      toDOM() {
-        return hrDOM
-      },
-    } as NodeSpec,
-
-    /// A heading textblock, with a `level` attribute that
-    /// should hold the number 1 to 6. Parsed and serialized as `<h1>` to
-    /// `<h6>` elements.
-    heading: {
-      attrs: { level: { default: 1 } },
-      content: "inline*",
-      group: "block",
-      defining: true,
-      parseDOM: [
-        { tag: "h1", attrs: { level: 1 } },
-        { tag: "h2", attrs: { level: 2 } },
-        { tag: "h3", attrs: { level: 3 } },
-        { tag: "h4", attrs: { level: 4 } },
-        { tag: "h5", attrs: { level: 5 } },
-        { tag: "h6", attrs: { level: 6 } },
-      ],
-      toDOM(node) {
-        return ["h" + node.attrs.level, 0]
-      },
-    } as NodeSpec,
-
-    /// A code listing. Disallows marks or non-text inline
-    /// nodes by default. Represented as a `<pre>` element with a
-    /// `<code>` element inside of it.
-    code_block: {
-      content: "text*",
-      marks: "",
-      group: "block",
-      code: true,
-      defining: true,
-      parseDOM: [{ tag: "pre", preserveWhitespace: "full" }],
-      toDOM() {
-        return preDOM
-      },
-    } as NodeSpec,
-
-    /// The text node.
-    text: {
-      group: "inline",
-    } as NodeSpec,
-
-    /// An inline image (`<img>`) node. Supports `src`,
-    /// `alt`, and `href` attributes. The latter two default to the empty
-    /// string.
-    image: {
-      inline: true,
-      attrs: {
-        src: {},
-        alt: { default: null },
-        title: { default: null },
-      },
-      group: "inline",
-      draggable: true,
-      parseDOM: [
-        {
-          tag: "img[src]",
-          getAttrs(dom: HTMLElement) {
-            return {
-              src: dom.getAttribute("src"),
-              title: dom.getAttribute("title"),
-              alt: dom.getAttribute("alt"),
-            }
-          },
-        },
-      ],
-      toDOM(node) {
-        const { src, alt, title } = node.attrs
-        return ["img", { src, alt, title }]
-      },
-    } as NodeSpec,
-
-    ordered_list: {
-      group: "block",
-      content: "list_item+",
-      attrs: { order: { default: 1 } },
-      parseDOM: [
-        {
-          tag: "ol",
-          getAttrs(dom: HTMLElement) {
-            return {
-              order: dom.hasAttribute("start")
-                ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                  +dom.getAttribute("start")!
-                : 1,
-            }
-          },
-        },
-      ],
-      toDOM(node) {
-        return node.attrs.order == 1
-          ? olDOM
-          : ["ol", { start: node.attrs.order }, 0]
-      },
-    } as NodeSpec,
-
-    bullet_list: {
-      content: "list_item+",
-      group: "block",
-      parseDOM: [{ tag: "ul" }],
-      toDOM() {
-        return ulDOM
-      },
-    },
-
-    /// A list item (`<li>`) spec.
-    list_item: {
-      content: "paragraph block*",
-      parseDOM: [{ tag: "li" }],
-      toDOM() {
-        return liDOM
-      },
-      defining: true,
-    },
-
-    aside: {
-      content: "block+",
-      group: "block",
-      defining: true,
-      parseDOM: [{ tag: "aside" }],
-      toDOM() {
-        return ["aside", 0]
-      },
-    },
-  }),
-  marks: {
-    /// A link. Has `href` and `title` attributes. `title`
-    /// defaults to the empty string. Rendered and parsed as an `<a>`
-    /// element.
-    link: {
-      attrs: {
-        href: {},
-        title: { default: null },
-      },
-      inclusive: false,
-      parseDOM: [
-        {
-          tag: "a[href]",
-          getAttrs(dom: HTMLElement) {
-            return {
-              href: dom.getAttribute("href"),
-              title: dom.getAttribute("title"),
-            }
-          },
-        },
-      ],
-      toDOM(node) {
-        const { href, title } = node.attrs
-        return ["a", { href, title }, 0]
-      },
-    } as MarkSpec,
-
-    /// An emphasis mark. Rendered as an `<em>` element. Has parse rules
-    /// that also match `<i>` and `font-style: italic`.
-    em: {
-      parseDOM: [
-        { tag: "i" },
-        { tag: "em" },
-        { style: "font-style=italic" },
-        { style: "font-style=normal", clearMark: m => m.type.name == "em" },
-      ],
-      toDOM() {
-        return emDOM
-      },
-    } as MarkSpec,
-
-    /// A strong mark. Rendered as `<strong>`, parse rules also match
-    /// `<b>` and `font-weight: bold`.
-    strong: {
-      parseDOM: [
-        { tag: "strong" },
-        // This works around a Google Docs misbehavior where
-        // pasted content will be inexplicably wrapped in `<b>`
-        // tags with a font-weight normal.
-        {
-          tag: "b",
-          getAttrs: (node: HTMLElement) =>
-            node.style.fontWeight != "normal" && null,
-        },
-        { style: "font-weight=400", clearMark: m => m.type.name == "strong" },
-        {
-          style: "font-weight",
-          getAttrs: (value: string) =>
-            /^(bold(er)?|[5-9]\d{2,})$/.test(value) && null,
-        },
-      ],
-      toDOM() {
-        return strongDOM
-      },
-    } as MarkSpec,
-
-    /// Code font mark. Represented as a `<code>` element.
-    code: {
-      parseDOM: [{ tag: "code" }],
-      toDOM() {
-        return codeDOM
-      },
-    } as MarkSpec,
-  },
-})
+  return pmMarks
+}

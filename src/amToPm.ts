@@ -1,11 +1,11 @@
 import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
-import { Fragment, Slice, Mark, Attrs, Schema } from "prosemirror-model"
+import { Fragment, Slice, Mark } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
-//import { MarkValue } from "./marks"
-import { amSpliceIdxToPmIdx, docFromSpans, pmRangeToAmRange } from "./traversal"
+import { amSpliceIdxToPmIdx, docFromSpans } from "./traversal"
 import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
 import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
 import { ReplaceStep } from "prosemirror-transform"
+import { pmMarksFromAmMarks, SchemaAdapter } from "./schema"
 
 type SpliceTextPatch = am.SpliceTextPatch
 
@@ -16,7 +16,7 @@ type MarkPatch = {
 }
 
 export default function (
-  schema: Schema,
+  adapter: SchemaAdapter,
   spansAtStart: am.Span[],
   patches: Array<Patch>,
   path: Prop[],
@@ -28,7 +28,7 @@ export default function (
     if (patchGroup.type === "text") {
       for (const patch of patchGroup.patches) {
         if (patch.action === "splice") {
-          result = handleSplice(schema, spansAtStart, patch, path, result)
+          result = handleSplice(adapter, spansAtStart, patch, path, result)
           //console.log(`patch: ${JSON.stringify(patch)}`)
           //console.log(`spans before patch: ${JSON.stringify(spansAtStart, null, 2)}`)
           patchSpans(path, spansAtStart, patch)
@@ -38,7 +38,7 @@ export default function (
           const block = findBlockAtCharIdx(spansAtStart, patchIndex)
           if (block != null) {
             result = handleBlockChange(
-              schema,
+              adapter,
               path,
               spansAtStart,
               patchIndex,
@@ -46,17 +46,17 @@ export default function (
               result,
             )
           } else {
-            result = handleDelete(schema, spansAtStart, patch, path, result)
+            result = handleDelete(adapter, spansAtStart, patch, path, result)
           }
           patchSpans(path, spansAtStart, patch)
         } else if (patch.action === "mark") {
-          result = handleMark(spansAtStart, schema, patch, path, result)
+          result = handleMark(adapter, spansAtStart, patch, path, result)
           patchSpans(path, spansAtStart, patch)
         }
       }
     } else {
       result = handleBlockChange(
-        schema,
+        adapter,
         path,
         spansAtStart,
         patchGroup.index,
@@ -69,7 +69,7 @@ export default function (
 }
 
 export function handleSplice(
-  schema: Schema,
+  adapter: SchemaAdapter,
   spans: am.Span[],
   patch: SpliceTextPatch,
   path: Prop[],
@@ -77,15 +77,15 @@ export function handleSplice(
 ): Transaction {
   const index = charPath(path, patch.path)
   if (index === null) return tx
-  const pmIdx = amSpliceIdxToPmIdx(spans, index)
+  const pmIdx = amSpliceIdxToPmIdx(adapter, spans, index)
   if (pmIdx == null) throw new Error("Invalid index")
-  const content = patchContentToFragment(schema, patch.value, patch.marks)
+  const content = patchContentToFragment(adapter, patch.value, patch.marks)
   tx = tx.step(new ReplaceStep(pmIdx, pmIdx, new Slice(content, 0, 0)))
   return tx
 }
 
 function handleDelete(
-  _schema: Schema,
+  adapter: SchemaAdapter,
   spans: am.Span[],
   patch: DelPatch,
   path: Prop[],
@@ -93,31 +93,29 @@ function handleDelete(
 ): Transaction {
   const index = charPath(path, patch.path)
   if (index === null) return tx
-  const start = amSpliceIdxToPmIdx(spans, index)
+  const start = amSpliceIdxToPmIdx(adapter, spans, index)
   if (start == null) throw new Error("Invalid index")
   const end = start + (patch.length || 1)
   return tx.delete(start, end)
 }
 
 function handleMark(
+  adapter: SchemaAdapter,
   spans: am.Span[],
-  schema: Schema,
   patch: MarkPatch,
   path: Prop[],
   tx: Transaction,
 ) {
   if (pathEquals(patch.path, path)) {
     for (const mark of patch.marks) {
-      const pmStart = amSpliceIdxToPmIdx(spans, mark.start)
-      const pmEnd = amSpliceIdxToPmIdx(spans, mark.end)
+      const pmStart = amSpliceIdxToPmIdx(adapter, spans, mark.start)
+      const pmEnd = amSpliceIdxToPmIdx(adapter, spans, mark.end)
       if (pmStart == null || pmEnd == null) throw new Error("Invalid index")
-      const markType = schema.marks[mark.name]
-      if (markType == null) continue
-      if (mark.value == null) {
-        tx = tx.removeMark(pmStart, pmEnd, markType)
-      } else {
-        const markAttrs = attrsFromMark(mark.name, mark.value)
-        tx = tx.addMark(pmStart, pmEnd, markType.create(markAttrs))
+      const pmMarks = pmMarksFromAmMarks(adapter, {
+        [mark.name]: mark.value,
+      })
+      for (const pmMark of pmMarks) {
+        tx = tx.addMark(pmStart, pmEnd, pmMark)
       }
     }
   }
@@ -125,7 +123,7 @@ function handleMark(
 }
 
 export function handleBlockChange(
-  _schema: Schema,
+  adapter: SchemaAdapter,
   atPath: am.Prop[],
   spans: am.Span[],
   _blockIdx: number,
@@ -136,7 +134,7 @@ export function handleBlockChange(
     patchSpans(atPath, spans, patch)
   }
   //console.log("spans after block change", spans)
-  const docAfter = docFromSpans(spans)
+  const docAfter = docFromSpans(adapter, spans)
   //console.log("doc after block change", docAfter)
   const change = findDiff(tx.doc.content, docAfter.content)
   if (change == null) return tx
@@ -236,59 +234,19 @@ function pathEquals(path1: Prop[], path2: Prop[]): boolean {
 }
 
 function patchContentToFragment(
-  schema: Schema,
+  adapter: SchemaAdapter,
   patchContent: string,
   marks?: am.MarkSet,
 ): Fragment {
   let pmMarks: Array<Mark> | undefined = undefined
   if (marks != null) {
-    pmMarks = Object.entries(marks).reduce(
-      (acc: Mark[], [name, value]: [string, am.MarkValue]) => {
-        // This should actually never be null because automerge only uses null
-        // as the value for a mark when a mark is being removed, which would only
-        // happen in a `AddMark` patch, not a `Insert` or `Splice` patch. But we
-        // appease typescript anyway
-        if (value != null) {
-          const markAttrs = attrsFromMark(name, value)
-          acc.push(schema.mark(name, markAttrs))
-        }
-        return acc
-      },
-      [],
-    )
+    pmMarks = pmMarksFromAmMarks(adapter, marks)
   }
 
   // Splice is only ever called once a block has already been created so we're
   // only inserting text. This means we don't have to think about openStart
   // and openEnd
-  return Fragment.from(schema.text(patchContent, pmMarks))
-}
-
-export function attrsFromMark(
-  markName: string,
-  mark: am.MarkValue,
-): Attrs | null {
-  if (markName === "link") {
-    let markAttrs = null
-    if (typeof mark === "string") {
-      try {
-        const markJson = JSON.parse(mark)
-        if (typeof markJson === "object") {
-          markAttrs = markJson as Attrs
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-    return markAttrs
-  } else if (markName === "strong" || markName === "em") {
-    if (typeof mark === "boolean") {
-      return {}
-    }
-    return {}
-  } else {
-    return {}
-  }
+  return Fragment.from(adapter.schema.text(patchContent, pmMarks))
 }
 
 type GatheredPatch = TextPatches | BlockPatches
@@ -370,34 +328,4 @@ function gatherPatches(textPath: am.Prop[], diff: am.Patch[]): GatheredPatch[] {
   }
   flush()
   return result
-}
-
-export function reconcileStoredMarks(
-  doc: am.Doc<unknown>,
-  path: am.Prop[],
-  spans: am.Span[],
-  tx: Transaction,
-): Transaction {
-  if (!tx.selection.empty) {
-    return tx
-  }
-  const amRange = pmRangeToAmRange(spans, {
-    from: tx.selection.from,
-    to: tx.selection.to,
-  })
-  if (amRange == null) {
-    return tx
-  }
-  // If we're inserting at the end of the document then the stored marks are
-  // (kind of) the marks on the previous character
-  const idx = Math.max(amRange.start - 1, 0)
-  const marks = am.marksAt(doc, path, idx)
-  if (marks == null) return tx
-  const expectedMarks = []
-  for (const [markName, markValue] of Object.entries(marks)) {
-    const markType = tx.doc.type.schema.marks[markName]
-    if (markType == null) continue
-    expectedMarks.push(markType.create(attrsFromMark(markName, markValue)))
-  }
-  return tx.setStoredMarks(expectedMarks)
 }
