@@ -56,7 +56,7 @@ const view = new EditorView(<whatever DOM element you are rendering to>, {
   state,
   dispatchTransaction: (tx: Transaction) => {
     // Here we intercept the transaction
-    let newState = autoMirror.intercept(automerge.getHeads(handle.doc), doChange, tx, view.state)
+    let newState = autoMirror.intercept(automerge.getHeads(handle.doc), tx, view.state)
     view.updateState(newState)
   }
 })
