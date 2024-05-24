@@ -46,7 +46,17 @@ leftHandle.change(d => {
 
 const rightHandle = rightRepo.find(leftHandle.url)
 
-function Playground() {
+type Props = {
+  /** If building for demo mode then just render a single side-by-side panel,
+   * otherwise render multiple tabs for different scenarios.
+   *
+   * This is so that the demo which we show on the blog post (which is just
+   * this playground) is simple.
+   * */
+  demoMode: boolean
+}
+
+function Playground({ demoMode }: Props) {
   const [connected, setConnected] = useState(true)
 
   useEffect(() => {
@@ -57,18 +67,36 @@ function Playground() {
     }
   }, [connected])
 
-  const tabs = [
-    {
-      label: "Same Schema",
-      content: <SameSchema leftHandle={leftHandle} rightHandle={rightHandle} />,
-    },
-    {
-      label: "Different Schema",
-      content: (
-        <DifferentSchema leftHandle={leftHandle} rightHandle={rightHandle} />
-      ),
-    },
-  ]
+  const sameSchema = (
+    <SameSchema
+      leftHandle={leftHandle}
+      rightHandle={rightHandle}
+      showTitle={!demoMode}
+    />
+  )
+
+  let content: JSX.Element
+  if (demoMode) {
+    content = sameSchema
+  } else {
+    const tabs = [
+      {
+        label: "Same Schema",
+        content: [sameSchema],
+      },
+      {
+        label: "Different Schema",
+        content: (
+          <DifferentSchema
+            leftHandle={leftHandle}
+            rightHandle={rightHandle}
+            showTitle={true}
+          />
+        ),
+      },
+    ]
+    content = <TabContainer tabs={tabs} />
+  }
 
   return (
     <div id="playground">
@@ -81,7 +109,7 @@ function Playground() {
           onChange={e => setConnected(e.target.checked)}
         />
       </label>
-      <TabContainer tabs={tabs} />
+      {content}
     </div>
   )
 }
@@ -89,12 +117,13 @@ function Playground() {
 type TabProps = {
   leftHandle: DocHandle<{ text: string }>
   rightHandle: DocHandle<{ text: string }>
+  showTitle: boolean
 }
 
-function SameSchema({ leftHandle, rightHandle }: TabProps) {
+function SameSchema({ leftHandle, rightHandle, showTitle }: TabProps) {
   return (
     <div>
-      <h2>Same Schema</h2>
+      {showTitle && <h2>Same Schema</h2>}
       <div id="editors">
         <div className="editor">
           <Editor
@@ -117,10 +146,10 @@ function SameSchema({ leftHandle, rightHandle }: TabProps) {
   )
 }
 
-function DifferentSchema({ leftHandle, rightHandle }: TabProps) {
+function DifferentSchema({ leftHandle, rightHandle, showTitle }: TabProps) {
   return (
     <div>
-      <h2>Same Schema</h2>
+      {showTitle && <h2>Different Schema</h2>}
       <div id="editors">
         <div className="editor">
           <Editor

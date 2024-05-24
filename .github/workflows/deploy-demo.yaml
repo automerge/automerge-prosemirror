@@ -28,6 +28,9 @@ jobs:
     env:
       # This is used in vanilla/vite.config.ts to set the base path
       GITHUB_PAGES: true
+      # This will turn on the demo mode in the playground so only a simple side
+      # by side demo is built
+      NODE_ENV: production
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
