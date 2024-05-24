@@ -52,7 +52,7 @@ let editorConfig = {
 let state = EditorState.create(editorConfig)
 
 
-const view = new EditorView(editorRoot.current, {
+const view = new EditorView(<whatever DOM element you are rendering to>, {
   state,
   dispatchTransaction: (tx: Transaction) => {
     // Here we intercept the transaction
