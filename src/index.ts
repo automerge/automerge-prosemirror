@@ -8,6 +8,4 @@ export {
   type BlockMappingSpec,
 } from "./schema"
 export { basicSchemaAdapter } from "./basicSchema"
-export { default as amToPm } from "./amToPm"
-export { default as pmToAm } from "./pmToAm"
-
+export { docFromSpans, blocksFromNode } from "./traversal"
