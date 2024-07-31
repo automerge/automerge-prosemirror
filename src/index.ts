@@ -8,3 +8,4 @@ export {
   type BlockMappingSpec,
 } from "./schema"
 export { basicSchemaAdapter } from "./basicSchema"
+export { docFromSpans, blocksFromNode } from "./traversal"
