@@ -264,9 +264,8 @@ export function pmMarksFromAmMarks(
   const pmMarks = []
 
   for (const [markName, markValue] of Object.entries(amMarks)) {
-		if (markValue == null) {
-			throw new Error("Cannot create pmMark from null markValue");
-		}
+    // Filter tombstoned marks (https://github.com/automerge/automerge/issues/715).
+		if (markValue == null) continue;
     const mapping = adapter.markMappings.find(
       m => m.automergeMarkName === markName,
     )
