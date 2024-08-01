@@ -264,6 +264,9 @@ export function pmMarksFromAmMarks(
   const pmMarks = []
 
   for (const [markName, markValue] of Object.entries(amMarks)) {
+		if (markValue == null) {
+			throw new Error("Cannot create pmMark from null markValue");
+		}
     const mapping = adapter.markMappings.find(
       m => m.automergeMarkName === markName,
     )
