@@ -111,11 +111,21 @@ function handleMark(
       const pmStart = amSpliceIdxToPmIdx(adapter, spans, mark.start)
       const pmEnd = amSpliceIdxToPmIdx(adapter, spans, mark.end)
       if (pmStart == null || pmEnd == null) throw new Error("Invalid index")
-      const pmMarks = pmMarksFromAmMarks(adapter, {
-        [mark.name]: mark.value,
-      })
-      for (const pmMark of pmMarks) {
-        tx = tx.addMark(pmStart, pmEnd, pmMark)
+      if (mark.value == null) {
+        const markMapping = adapter.markMappings.find(
+          m => m.automergeMarkName === mark.name,
+        )
+        const markType = markMapping
+          ? markMapping.prosemirrorMark
+          : adapter.unknownMark
+        tx = tx.removeMark(pmStart, pmEnd, markType)
+      } else {
+        const pmMarks = pmMarksFromAmMarks(adapter, {
+          [mark.name]: mark.value,
+        })
+        for (const pmMark of pmMarks) {
+          tx = tx.addMark(pmStart, pmEnd, pmMark)
+        }
       }
     }
   }
