@@ -32,19 +32,13 @@ export function intercept<T>(
   // Get the corresponding patches and turn them into a transaction to apply to the editorstate
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const diff = am.diff(handle.docSync()!, headsBefore, headsAfter)
-  //console.log("Intercept diff: ")
-  //console.log(diff)
 
   // Create a transaction which applies the diff and updates the doc and heads
   let tx = amToPm(adapter, materializedSpans, diff, path, state.tr)
   const nonInterceptedAfter = state.apply(intercepted)
   const selectionAfter = nonInterceptedAfter.selection
   try {
-    const resolvedSelectionAfter = new TextSelection(
-      tx.doc.resolve(selectionAfter.from),
-      tx.doc.resolve(selectionAfter.to),
-    )
-    tx = tx.setSelection(resolvedSelectionAfter)
+		tx.setSelection(Selection.fromJSON(tx.doc, selectionAfter.toJSON()));
   } catch (e) {
     if (e instanceof RangeError) {
       // Sometimes the selection can't be mapped for some reason so we just give up and hope for the best
@@ -52,9 +46,7 @@ export function intercept<T>(
       throw e
     }
   }
-
-  tx = tx.setStoredMarks(nonInterceptedAfter.storedMarks)
-
+  tx.setStoredMarks(nonInterceptedAfter.storedMarks)
   return state.apply(tx)
 }
 
