@@ -97,6 +97,12 @@ function turnSelectionIntoBlockquote(
   return true
 }
 
+declare global {
+  interface Node {
+    view?: EditorView
+  }
+}
+
 export function Editor({ handle, path, schemaAdapter }: EditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<EditorView | null>(null)
@@ -164,6 +170,8 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
 
     setView(view)
 
+    // Attach view to mount for testing
+    if (editorRoot.current) editorRoot.current.view = view
     return () => {
       handle.off("change", onPatch)
       view.destroy()

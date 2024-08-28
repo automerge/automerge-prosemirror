@@ -5,6 +5,7 @@ import { mount } from "cypress/react18"
 import "../playground/src/playground.css"
 import { Repo, DocHandle } from "@automerge/automerge-repo"
 import { basicSchemaAdapter } from "../src/basicSchema"
+import { EditorView } from "prosemirror-view"
 
 const repo = new Repo({ network: [] })
 
@@ -220,6 +221,53 @@ describe("<Editor />", () => {
         "have.html",
         expectedHtml(["Hello <strong>StrongWorld</strong>"]),
       )
+    })
+  })
+
+  describe("selection state", () => {
+    it("AllSelection kept on adding mark", () => {
+      const handle = makeHandle({ text: "Hello Happy World" })
+      mount(
+        <Editor
+          handle={handle}
+          path={["text"]}
+          schemaAdapter={basicSchemaAdapter}
+        />,
+      )
+      editorContents().should("have.html", expectedHtml(["Hello Happy World"]))
+
+      const isMac = Cypress.platform === "darwin"
+
+      const selectAllKey = isMac ? "{cmd}a" : "{ctrl}a"
+      cy.get("div#editor div[contenteditable=true]").type(selectAllKey, {
+        release: false,
+      })
+
+      cy.get("div#editor").then($el => {
+        const view = ($el[0] as { view: EditorView }).view
+        if (!view) {
+          throw new Error("Editor view not found")
+        }
+        expect(view.state.selection.toJSON().type).to.eq("all")
+      })
+
+      const boldKey = isMac ? "{cmd}b" : "{ctrl}b"
+      cy.get("div#editor div[contenteditable=true]").type(boldKey, {
+        release: false,
+      })
+
+      editorContents().should(
+        "have.html",
+        expectedHtml(["<strong>Hello Happy World</strong>"]),
+      )
+
+      cy.get("div#editor").then($el => {
+        const view = ($el[0] as { view: EditorView }).view
+        if (!view) {
+          throw new Error("Editor view not found")
+        }
+        expect(view.state.selection.toJSON().type).to.eq("all")
+      })
     })
   })
 })
