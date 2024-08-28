@@ -1,5 +1,5 @@
 import { next as am } from "@automerge/automerge"
-import { EditorState, Transaction, TextSelection } from "prosemirror-state"
+import { EditorState, Transaction, Selection } from "prosemirror-state"
 import pmToAm from "./pmToAm"
 import amToPm from "./amToPm"
 import { DocHandle } from "./types"
