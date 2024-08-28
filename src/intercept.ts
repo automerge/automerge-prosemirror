@@ -38,7 +38,7 @@ export function intercept<T>(
   const nonInterceptedAfter = state.apply(intercepted)
   const selectionAfter = nonInterceptedAfter.selection
   try {
-		tx.setSelection(Selection.fromJSON(tx.doc, selectionAfter.toJSON()));
+    tx.setSelection(Selection.fromJSON(tx.doc, selectionAfter.toJSON()))
   } catch (e) {
     if (e instanceof RangeError) {
       // Sometimes the selection can't be mapped for some reason so we just give up and hope for the best
