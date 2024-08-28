@@ -12,7 +12,6 @@ import {
 } from "../../src"
 import { Mark, Node } from "prosemirror-model"
 import { BlockMarker } from "../../src/types"
-import { next as am } from "@automerge/automerge"
 
 const { port1: leftToRight, port2: rightToLeft } = new MessageChannel()
 

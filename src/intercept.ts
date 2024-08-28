@@ -34,7 +34,7 @@ export function intercept<T>(
   const diff = am.diff(handle.docSync()!, headsBefore, headsAfter)
 
   // Create a transaction which applies the diff and updates the doc and heads
-  let tx = amToPm(adapter, materializedSpans, diff, path, state.tr)
+  const tx = amToPm(adapter, materializedSpans, diff, path, state.tr)
   const nonInterceptedAfter = state.apply(intercepted)
   const selectionAfter = nonInterceptedAfter.selection
   try {
