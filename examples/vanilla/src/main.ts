@@ -1,7 +1,11 @@
 import { EditorState, Transaction } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { exampleSetup } from "prosemirror-example-setup"
-import { syncPlugin, basicSchemaAdapter, docFromSpans } from "@automerge/prosemirror"
+import {
+  syncPlugin,
+  basicSchemaAdapter,
+  docFromSpans,
+} from "@automerge/prosemirror"
 import { DocHandle, Repo, isValidAutomergeUrl } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
@@ -33,6 +37,7 @@ const adapter = basicSchemaAdapter
 
 const view = new EditorView(document.querySelector("#editor"), {
   state: EditorState.create({
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     doc: docFromSpans(adapter, am.spans(handle.docSync()!, ["text"])),
     plugins: [
       ...exampleSetup({ schema: adapter.schema }),

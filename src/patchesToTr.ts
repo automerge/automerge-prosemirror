@@ -12,20 +12,17 @@ export function patchesToTr<T>({
   patches,
   state,
 }: {
-  adapter: SchemaAdapter,
-  path: am.Prop[],
-  before: am.Doc<T>,
-  after: am.Doc<T>,
-  patches: am.Patch[],
-  state: EditorState,
+  adapter: SchemaAdapter
+  path: am.Prop[]
+  before: am.Doc<T>
+  after: am.Doc<T>
+  patches: am.Patch[]
+  state: EditorState
 }): Transaction {
   const headsBefore = automerge.getHeads(before)
-  const spans = automerge.spans(
-    automerge.view(after, headsBefore),
-    path,
-  )
+  const spans = automerge.spans(automerge.view(after, headsBefore), path)
   const tr = amToPm(adapter, spans, patches, path, state.tr)
-  tr.setMeta('addToHistory', false) // remote changes should not be added to local stack
+  tr.setMeta("addToHistory", false) // remote changes should not be added to local stack
   return tr
 }
 

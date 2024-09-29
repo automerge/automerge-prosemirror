@@ -114,7 +114,7 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
       return
     }
 
-    const adapter = schemaAdapter;
+    const adapter = schemaAdapter
     const doc = docFromSpans(adapter, am.spans(handle.docSync(), path))
     const state = EditorState.create({
       schema: adapter.schema,
@@ -135,14 +135,14 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
           adapter: adapter,
           handle,
           path,
-        })
+        }),
       ],
       doc,
     })
 
     const editorView = new EditorView(editorRoot.current, {
       state,
-      dispatchTransaction(this, tr: Transaction) {
+      dispatchTransaction(this: EditorView, tr: Transaction) {
         const newState = this.state.apply(tr)
         this.updateState(newState)
         setMarkState(activeMarks(newState, adapter.schema))

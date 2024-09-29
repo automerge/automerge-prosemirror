@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react"
 import { EditorState, Transaction } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { exampleSetup } from "prosemirror-example-setup"
-import { syncPlugin, docFromSpans, basicSchemaAdapter } from "@automerge/prosemirror"
+import {
+  syncPlugin,
+  docFromSpans,
+  basicSchemaAdapter,
+} from "@automerge/prosemirror"
 import { next as am } from "@automerge/automerge"
 import "prosemirror-example-setup/style/style.css"
 import "prosemirror-menu/style/menu.css"
