@@ -7,6 +7,7 @@ import { AssertionError } from "assert"
 import { applyBlockPatch } from "../src/maintainSpans"
 import { next as am } from "@automerge/automerge"
 import { basicSchemaAdapter } from "../src/basicSchema"
+import { isArrayEqual, isPrefixOfArray } from "../src/utils"
 
 export type BlockDef = {
   type: string
@@ -152,7 +153,7 @@ export function assertSplitBlock(
   expected: BlockDef,
 ) {
   const start = diff.findIndex(
-    patch => patch.action === "insert" && pathEquals(patch.path, path),
+    patch => patch.action === "insert" && isArrayEqual(patch.path, path),
   )
   if (start === -1) {
     throw new AssertionError({
@@ -183,29 +184,10 @@ function interpretPatch(
   path: automerge.Prop[],
 ): { [key: string]: automerge.MaterializeValue } {
   const block = {}
-  const blockPatches = diff.filter(p => pathIsPrefixOf(path, p.path))
+  const blockPatches = diff.filter(p => isPrefixOfArray(path, p.path))
 
   for (const patch of blockPatches) {
     applyBlockPatch(path, patch, block)
   }
   return block
-}
-
-function pathEquals(left: automerge.Prop[], right: automerge.Prop[]): boolean {
-  if (left.length !== right.length) return false
-  for (let i = 0; i < left.length; i++) {
-    if (left[i] !== right[i]) return false
-  }
-  return true
-}
-
-function pathIsPrefixOf(
-  prefix: automerge.Prop[],
-  path: automerge.Prop[],
-): boolean {
-  if (prefix.length > path.length) return false
-  for (let i = 0; i < prefix.length; i++) {
-    if (prefix[i] !== path[i]) return false
-  }
-  return true
 }
