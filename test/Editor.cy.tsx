@@ -136,20 +136,20 @@ describe("<Editor />", () => {
         .then(() => am.spans(handle.docSync(), ["text"]))
         .should("deep.equal", [
           {
-            "type": "text",
-            "value": "Hello "
+            type: "text",
+            value: "Hello ",
           },
           {
-            "type": "text",
-            "value": "Happy",
-            "marks": {
-              "strong": true
-            }
+            type: "text",
+            value: "Happy",
+            marks: {
+              strong: true,
+            },
           },
           {
-            "type": "text",
-            "value": " World"
-          }
+            type: "text",
+            value: " World",
+          },
         ])
 
       cy.wait(100)
