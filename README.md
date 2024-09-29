@@ -16,12 +16,13 @@ The API for this library is based around an object called an `AutoMirror`. This 
 
 In order to edit rich text we need to know how to map from the [rich text schema](https://automerge.org/docs/under-the-hood/rich_text_schema/) to the ProseMirror schema you're using. This is done with a `SchemaAdapter`. We provide a built in `basicSchemaAdapter` which adapts the basic example schema which ships with ProseMirror, but you can provide your own as well.
 
-The workflow when using this library is to first create an `AutoMirror` object, then use `AutoMirror.initialize` to create an initial prosemirror document and `AutoMirror.schema` to get a schema which you pass to prosemirror. Then, you intercept transactions from prosemirror using `AutoMirror.intercept` and you reconcile patches from the network using `AutoMirror.reconcilePatch`.
+The workflow when using this library is to first create an `AutoMirror` object, then use `AutoMirror.initialize` to create an initial prosemirror document and `AutoMirror.schema` to get a schema which you pass to prosemirror. Then, you instantiate the syncPlugin.
 
 For example
 
 ```javascript
-import {AutoMirror, basicSchemaAdapter} from "@automerge/prosemirror"
+import {basicSchemaAdapter, syncPlugin, docFromSpans} from "@automerge/prosemirror"
+import { next as am } from "@automerge/automerge"
 
 //
 
@@ -29,12 +30,12 @@ const handle = repo.find("some-doc-url")
 // somehow wait for the handle to be ready before continuing
 await handle.whenReady()
 
-// Create an AutoMirror
-const autoMirror = new AutoMirror(["text"], basicSchemaAdapter)
+
+const adapter = basicSchemaAdapter
 
 // Create your prosemirror state
 let editorConfig = {
-  schema: autoMirror.schema, // This _must_ be the schema from the AutoMirror
+  schema: adapter.schema, // This _must_ be the schema from the AutoMirror
   ..., // whatever other stuff
   plugins: [
     keymap({
@@ -45,36 +46,21 @@ let editorConfig = {
       "Mod-y": redo,
       "Mod-Shift-z": redo,
     }),
+    syncPlugin({
+      adapter,
+      handle,
+      path: ["text"]
+    })
   ],
-  doc: autoMirror.initialize(handle.docSync())
+  doc: docFromSpans(adapter, am.spans(handle.docSync()!, ["text"]))
 }
 
 let state = EditorState.create(editorConfig)
 
 
 const view = new EditorView(<whatever DOM element you are rendering to>, {
-  state,
-  dispatchTransaction: (tx: Transaction) => {
-    // Here we intercept the transaction
-    let newState = autoMirror.intercept(automerge.getHeads(handle.doc), tx, view.state)
-    view.updateState(newState)
-  }
+  state
 })
-
-// This is a callback which you wire up to be called anytime there are changes
-// received from elsewhere. The type signature here assuems you're using
-// automerge-repo
-const onPatch = (p: DocHandlePatchPayload<any>) => {
-  const newState = autoMirror.reconcilePatch(
-    patchInfo.before,
-    doc,
-    patches,
-    view.state,
-  )
-  view.updateState(newState)
-}
-// somehow wire up the callback
-handle.on("change", onPatch)
 ```
 
 ## Schema Mapping
@@ -265,36 +251,6 @@ nodes: {
 ```
 
 ## API
-
-### `AutoMirror`
-
-#### `new AutoMirror<T>(path: (string | number)[], schemaAdapter: SchemaAdapter<T>)`
-
-Create a new `AutoMirror`. The `path` argument is the path in the automerge document where the text containing the rich text that is to be edited should be. For example, if your document has this type:
-
-```typescript
-type Doc = {
-  content: string
-}
-```
-
-Then you would pass `["text"]` to the `AutoMirror` constructor.
-
-#### `AutoMirror.initialize(doc: DocHandle<unknown>): Node`
-
-Create a new ProseMirror document from the given automerge document. This is the document you should pass to ProseMirror when creating a new editor.
-
-#### `AutoMirror.schema: Schema`
-
-The ProseMirror schema corresponding that should be used to initialize the ProseMirror editor.
-
-#### `AutoMirror.intercept(handle: DocHandle<unknown>, intercepted: Transaction, state: EditorState): EditorState`
-
-This function should be called inside `dispatchTransaction` in your ProseMirror editor. The incoming transaction is intercepted and applied to the automerge document and a new `EditorState` is returned which should be used to update the editor view.
-
-#### `AutoMirror.reconcilePatch(before: Doc<unknown>, docAfter: Doc<unknown>, patches: Patch[], state: EditorState): EditorState`
-
-This function shoul be called whenever a patch is received from the network. Typically you would call this in the `DocHandle.on("change", callback)` callback.
 
 ### `SchemaAdapter`
 

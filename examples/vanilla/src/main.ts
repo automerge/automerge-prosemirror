@@ -1,10 +1,11 @@
 import { EditorState, Transaction } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { exampleSetup } from "prosemirror-example-setup"
-import { AutoMirror } from "@automerge/prosemirror"
+import { syncPlugin, basicSchemaAdapter, docFromSpans } from "@automerge/prosemirror"
 import { DocHandle, Repo, isValidAutomergeUrl } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
+import { next as am } from "@automerge/automerge"
 import "prosemirror-example-setup/style/style.css"
 import "prosemirror-menu/style/menu.css"
 import "prosemirror-view/style/prosemirror.css"
@@ -28,25 +29,17 @@ if (docUrl && isValidAutomergeUrl(docUrl)) {
 }
 await handle.whenReady()
 
-const mirror = new AutoMirror(["text"])
+const adapter = basicSchemaAdapter
 
 const view = new EditorView(document.querySelector("#editor"), {
   state: EditorState.create({
-    doc: mirror.initialize(handle),
-    plugins: exampleSetup({ schema: mirror.schema }),
+    doc: docFromSpans(adapter, am.spans(handle.docSync()!, ["text"])),
+    plugins: [
+      ...exampleSetup({ schema: adapter.schema }),
+      syncPlugin({ adapter, handle, path: ["text"] }),
+    ],
   }),
   dispatchTransaction: (tx: Transaction) => {
-    const newState = mirror.intercept(handle, tx, view.state)
-    view.updateState(newState)
+    view.updateState(view.state.apply(tx))
   },
-})
-
-handle.on("change", d => {
-  const newState = mirror.reconcilePatch(
-    d.patchInfo.before,
-    d.doc,
-    d.patches,
-    view.state,
-  )
-  view.updateState(newState)
 })

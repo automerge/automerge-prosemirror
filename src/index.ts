@@ -1,4 +1,3 @@
-export { default as AutoMirror } from "./AutoMirror"
 export { type DocHandle } from "./types"
 export {
   SchemaAdapter,
@@ -9,3 +8,4 @@ export {
 } from "./schema"
 export { basicSchemaAdapter } from "./basicSchema"
 export { docFromSpans, blocksFromNode } from "./traversal"
+export { syncPlugin, syncPluginKey } from "./syncPlugin"
