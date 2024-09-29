@@ -100,7 +100,7 @@ export const syncPlugin = <T>({
       }
 
       const diff = pmChangeSet.changedRange(amChangeSet)
-      if (!diff) return undefined
+      if (!diff || diff.from === diff.to) return undefined
 
       // Replace the diff range in ProseMirror doc from the AutoMerge doc.
       const doc = docFromSpans(adapter, spansAfter)
