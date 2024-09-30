@@ -12,31 +12,25 @@ There is a fully functional editor in this repository, you can play with that by
 
 ## Example
 
-The API for this library is based around an object called an `AutoMirror`. This object is used to intercept transactions from Prosemirror and to handle changes received over the network. This is best used in tandem with `@automerge/automerge-repo`. See the `playground/src/Editor.tsx` file for a fully featured example.
+The API for this library is based around `syncPlugin`. This plugin is used to apply transactions from Prosemirror and to handle changes received over the network. This is best used in tandem with `@automerge/automerge-repo`. See the `playground/src/Editor.tsx` file for a fully featured example.
 
 In order to edit rich text we need to know how to map from the [rich text schema](https://automerge.org/docs/under-the-hood/rich_text_schema/) to the ProseMirror schema you're using. This is done with a `SchemaAdapter`. We provide a built in `basicSchemaAdapter` which adapts the basic example schema which ships with ProseMirror, but you can provide your own as well.
 
-The workflow when using this library is to first create an `AutoMirror` object, then use `AutoMirror.initialize` to create an initial prosemirror document and `AutoMirror.schema` to get a schema which you pass to prosemirror. Then, you instantiate the syncPlugin.
-
-For example
+Example setup
 
 ```javascript
 import {basicSchemaAdapter, syncPlugin, docFromSpans} from "@automerge/prosemirror"
 import { next as am } from "@automerge/automerge"
 
-//
-
 const handle = repo.find("some-doc-url")
 // somehow wait for the handle to be ready before continuing
 await handle.whenReady()
-
 
 const adapter = basicSchemaAdapter
 
 // Create your prosemirror state
 let editorConfig = {
-  schema: adapter.schema, // This _must_ be the schema from the AutoMirror
-  ..., // whatever other stuff
+  schema: adapter.schema,
   plugins: [
     keymap({
       ...baseKeymap,
@@ -56,7 +50,6 @@ let editorConfig = {
 }
 
 let state = EditorState.create(editorConfig)
-
 
 const view = new EditorView(<whatever DOM element you are rendering to>, {
   state
