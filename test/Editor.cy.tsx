@@ -7,6 +7,14 @@ import { basicSchemaAdapter } from "../src/basicSchema"
 
 const repo = new Repo({ network: [] })
 
+// Normalize mod key across browsers.
+// https://github.com/ProseMirror/prosemirror-keymap/blob/master/src/keymap.ts
+const mac =
+  typeof navigator != "undefined"
+    ? /Mac|iP(hone|[oa]d)/.test(navigator.platform)
+    : false
+const mod = mac ? "{meta}" : "{ctrl}"
+
 function makeHandle(contents: { text: string }): DocHandle<{ text: string }> {
   const handle = repo.create<{ text: string }>()
   handle.change((d: { text: string }) => {
@@ -262,16 +270,16 @@ describe("<Editor />", () => {
       editorContents().type(" " + "World")
       editorContents().should("have.html", expectedHtml(["Hello World"]))
 
-      editorContents().type("{meta}" + "z")
+      editorContents().type(mod + "z")
       editorContents().should("have.html", expectedHtml(["Hello"]))
 
-      editorContents().type("{meta}" + "z")
+      editorContents().type(mod + "z")
       editorContents().should("have.html", expectedHtml([null]))
 
-      editorContents().type("{shift}" + "{meta}" + "z")
+      editorContents().type("{shift}" + mod + "z")
       editorContents().should("have.html", expectedHtml(["Hello"]))
 
-      editorContents().type("{shift}" + "{meta}" + "z")
+      editorContents().type("{shift}" + mod + "z")
       editorContents().should("have.html", expectedHtml(["Hello World"]))
     })
   })
