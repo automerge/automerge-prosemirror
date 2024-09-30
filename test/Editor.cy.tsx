@@ -242,6 +242,38 @@ describe("<Editor />", () => {
         expectedHtml(["Hello <strong>StrongWorld</strong>"]),
       )
     })
+
+    it("handles undo redo with history plugin and keyboard shortcuts", () => {
+      const handle = makeHandle({ text: "" })
+      mount(
+        <Editor
+          handle={handle}
+          path={["text"]}
+          schemaAdapter={basicSchemaAdapter}
+        />,
+      )
+
+      editorContents().should("have.html", expectedHtml([null]))
+      editorContents().type("Hello")
+      editorContents().should("have.html", expectedHtml(["Hello"]))
+
+      // 500ms is the default newGroupDelay
+      cy.wait(500)
+      editorContents().type(" " + "World")
+      editorContents().should("have.html", expectedHtml(["Hello World"]))
+
+      editorContents().type("{meta}" + "z")
+      editorContents().should("have.html", expectedHtml(["Hello"]))
+
+      editorContents().type("{meta}" + "z")
+      editorContents().should("have.html", expectedHtml([null]))
+
+      editorContents().type("{shift}" + "{meta}" + "z")
+      editorContents().should("have.html", expectedHtml(["Hello"]))
+
+      editorContents().type("{shift}" + "{meta}" + "z")
+      editorContents().should("have.html", expectedHtml(["Hello World"]))
+    })
   })
 })
 

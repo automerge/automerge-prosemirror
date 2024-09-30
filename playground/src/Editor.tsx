@@ -10,6 +10,7 @@ import {
   wrapIn,
 } from "prosemirror-commands"
 import { buildKeymap } from "prosemirror-example-setup"
+import { history, undo, redo } from "prosemirror-history"
 import { MarkType, NodeType, Schema } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import {
@@ -120,6 +121,8 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
       schema: adapter.schema,
       plugins: [
         buildInputRules(adapter.schema),
+        history(),
+        keymap({"Mod-z": undo, "Mod-y": redo, "Shift-Mod-z": redo}),
         keymap({
           "Mod-b": toggleBold(adapter.schema),
           "Mod-i": toggleItalic(adapter.schema),
