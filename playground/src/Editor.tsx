@@ -122,7 +122,7 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
       plugins: [
         buildInputRules(adapter.schema),
         history(),
-        keymap({"Mod-z": undo, "Mod-y": redo, "Shift-Mod-z": redo}),
+        keymap({ "Mod-z": undo, "Mod-y": redo, "Shift-Mod-z": redo }),
         keymap({
           "Mod-b": toggleBold(adapter.schema),
           "Mod-i": toggleItalic(adapter.schema),
