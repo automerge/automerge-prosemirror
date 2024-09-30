@@ -102,6 +102,15 @@ export const syncPlugin = <T>({
       const diff = pmChangeSet.changedRange(amChangeSet)
       if (!diff || diff.from === diff.to) return undefined
 
+      console.warn(
+        "Warning: ProseMirror doc doesn't match AutoMerge spans.\n\n" +
+          "State will be automatically fixed with a tr. File an issue at https://github.com/automerge/automerge-repo.\n",
+        {
+          spansBefore,
+          steps: transactions.map(tr => tr.steps.map(s => s.toJSON())),
+        },
+      )
+
       // Replace the diff range in ProseMirror doc from the AutoMerge doc.
       const doc = docFromSpans(adapter, spansAfter)
       const slice = doc.slice(diff.from, diff.to)
