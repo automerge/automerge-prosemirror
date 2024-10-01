@@ -4,7 +4,7 @@ import { exampleSetup } from "prosemirror-example-setup"
 import {
   syncPlugin,
   basicSchemaAdapter,
-  docFromSpans,
+  pmDocFromSpans,
 } from "@automerge/prosemirror"
 import { DocHandle, Repo, isValidAutomergeUrl } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
@@ -38,7 +38,7 @@ const adapter = basicSchemaAdapter
 const view = new EditorView(document.querySelector("#editor"), {
   state: EditorState.create({
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    doc: docFromSpans(adapter, am.spans(handle.docSync()!, ["text"])),
+    doc: pmDocFromSpans(adapter, am.spans(handle.docSync()!, ["text"])),
     plugins: [
       ...exampleSetup({ schema: adapter.schema }),
       syncPlugin({ adapter, handle, path: ["text"] }),

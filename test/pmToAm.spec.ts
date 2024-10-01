@@ -4,7 +4,7 @@ import { AddMarkStep, ReplaceStep, Step } from "prosemirror-transform"
 import { default as pmToAm } from "../src/pmToAm"
 import { next as am } from "@automerge/automerge"
 import { assert } from "chai"
-import { docFromSpans } from "../src/traversal"
+import { pmDocFromSpans } from "../src/traversal"
 import { EditorState } from "prosemirror-state"
 import { basicSchemaAdapter } from "../src/basicSchema"
 
@@ -203,7 +203,7 @@ describe("when converting a ReplaceStep to a change", () => {
       )
     })
     const spans = am.spans(doc, ["text"])
-    const pmDoc = docFromSpans(basicSchemaAdapter, spans)
+    const pmDoc = pmDocFromSpans(basicSchemaAdapter, spans)
     const editor = EditorState.create({ schema, doc: pmDoc })
     updateDoc(doc, editor.doc, [
       new ReplaceStep(

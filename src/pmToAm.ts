@@ -7,7 +7,7 @@ import {
 } from "prosemirror-transform"
 import { Mark, MarkType, Node } from "prosemirror-model"
 import { Prop, next as automerge } from "@automerge/automerge"
-import { blocksFromNode, pmRangeToAmRange } from "./traversal"
+import { pmNodeToSpans, pmRangeToAmRange } from "./traversal"
 import { next as am } from "@automerge/automerge"
 import { SchemaAdapter, amMarksFromPmMarks } from "./schema"
 
@@ -118,10 +118,8 @@ function replaceStep(
   if (applied == null) {
     throw new Error("Could not apply step to document")
   }
-  //console.log(JSON.stringify(applied, null, 2))
-  const newBlocks = blocksFromNode(adapter, applied)
-  //console.log(JSON.stringify(newBlocks, null, 2))
-  automerge.updateSpans(doc, field, newBlocks)
+  const newSpans = pmNodeToSpans(adapter, applied)
+  automerge.updateSpans(doc, field, newSpans)
 }
 
 function replaceAroundStep(
@@ -134,13 +132,10 @@ function replaceAroundStep(
 ) {
   const applied = step.apply(pmDoc).doc
   if (applied == null) {
-    //console.log(step)
     throw new Error("Could not apply step to document")
   }
-  //console.log(applied)
-  const newBlocks = blocksFromNode(adapter, applied)
-  //console.log(newBlocks)
-  automerge.updateSpans(doc, field, newBlocks)
+  const newSpans = pmNodeToSpans(adapter, applied)
+  automerge.updateSpans(doc, field, newSpans)
 }
 
 function applyAddMarkSteps(

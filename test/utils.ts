@@ -1,7 +1,7 @@
 import { assert } from "chai"
 import { next as automerge } from "@automerge/automerge"
 import { EditorState } from "prosemirror-state"
-import { docFromSpans } from "../src/traversal"
+import { pmDocFromSpans } from "../src/traversal"
 import { Node } from "prosemirror-model"
 import { AssertionError } from "assert"
 import { applyBlockPatch } from "../src/maintainSpans"
@@ -50,7 +50,7 @@ export function makeDoc(
   editor: EditorState
 } {
   const { spans, doc } = docFromBlocksNotation(defs)
-  const pmDoc = docFromSpans(adapter, spans)
+  const pmDoc = pmDocFromSpans(adapter, spans)
   const editor = EditorState.create({ schema: adapter.schema, doc: pmDoc })
   return { spans, doc, editor }
 }

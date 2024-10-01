@@ -19,7 +19,7 @@ In order to edit rich text we need to know how to map from the [rich text schema
 Example setup
 
 ```javascript
-import {basicSchemaAdapter, syncPlugin, docFromSpans} from "@automerge/prosemirror"
+import {basicSchemaAdapter, syncPlugin, pmDocFromSpans} from "@automerge/prosemirror"
 import { next as am } from "@automerge/automerge"
 
 const handle = repo.find("some-doc-url")
@@ -46,7 +46,7 @@ let editorConfig = {
       path: ["text"]
     })
   ],
-  doc: docFromSpans(adapter, am.spans(handle.docSync()!, ["text"]))
+  doc: pmDocFromSpans(adapter, am.spans(handle.docSync()!, ["text"]))
 }
 
 let state = EditorState.create(editorConfig)

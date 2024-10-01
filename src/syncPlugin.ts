@@ -3,7 +3,7 @@ import { next as am } from "@automerge/automerge"
 import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo"
 import pmToAm from "./pmToAm"
 import amToPm from "./amToPm"
-import { docFromSpans } from "./traversal"
+import { pmDocFromSpans } from "./traversal"
 import { patchesToTr } from "./patchesToTr"
 import { ChangeSet } from "prosemirror-changeset"
 import { SchemaAdapter } from "./schema"
@@ -112,7 +112,7 @@ export const syncPlugin = <T>({
       )
 
       // Replace the diff range in ProseMirror doc from the AutoMerge doc.
-      const doc = docFromSpans(adapter, spansAfter)
+      const doc = pmDocFromSpans(adapter, spansAfter)
       const slice = doc.slice(diff.from, diff.to)
       const tr = state.tr
       tr.replace(diff.from, diff.to, slice)

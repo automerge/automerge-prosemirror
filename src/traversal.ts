@@ -44,7 +44,7 @@ export type TraversalEvent =
  * @param spans
  * @returns
  */
-export function docFromSpans(adapter: SchemaAdapter, spans: am.Span[]): Node {
+export function pmDocFromSpans(adapter: SchemaAdapter, spans: am.Span[]): Node {
   const events = traverseSpans(adapter, spans)
   type StackItem = {
     tag: string
@@ -934,7 +934,7 @@ export function blockAtIdx(
   return block
 }
 
-export function blocksFromNode(
+export function pmNodeToSpans(
   adapter: SchemaAdapter,
   node: Node,
 ): (

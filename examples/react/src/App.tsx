@@ -6,7 +6,7 @@ import { EditorView } from "prosemirror-view"
 import { exampleSetup } from "prosemirror-example-setup"
 import {
   syncPlugin,
-  docFromSpans,
+  pmDocFromSpans,
   basicSchemaAdapter,
 } from "@automerge/prosemirror"
 import { next as am } from "@automerge/automerge"
@@ -41,7 +41,7 @@ function App({ docUrl }: { docUrl: AutomergeUrl }) {
             syncPlugin({ adapter, handle, path: ["text"] }),
           ],
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          doc: docFromSpans(adapter, am.spans(handle.docSync()!, ["text"])),
+          doc: pmDocFromSpans(adapter, am.spans(handle.docSync()!, ["text"])),
         }),
         dispatchTransaction: (tx: Transaction) => {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

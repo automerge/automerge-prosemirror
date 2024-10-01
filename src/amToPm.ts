@@ -1,7 +1,7 @@
 import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
 import { Fragment, Slice, Mark } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
-import { amSpliceIdxToPmIdx, docFromSpans } from "./traversal"
+import { amSpliceIdxToPmIdx, pmDocFromSpans } from "./traversal"
 import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
 import { isPrefixOfArray, isArrayEqual } from "./utils"
 import { ReplaceStep } from "prosemirror-transform"
@@ -144,7 +144,7 @@ export function handleBlockChange(
     patchSpans(atPath, spans, patch)
   }
   //console.log("spans after block change", spans)
-  const docAfter = docFromSpans(adapter, spans)
+  const docAfter = pmDocFromSpans(adapter, spans)
   //console.log("doc after block change", docAfter)
   const change = findDiff(tx.doc.content, docAfter.content)
   if (change == null) return tx

@@ -23,7 +23,7 @@ import {
 } from "prosemirror-inputrules"
 import "prosemirror-view/style/prosemirror.css"
 import { Prop, next as am } from "@automerge/automerge"
-import { docFromSpans, SchemaAdapter } from "../../src"
+import { pmDocFromSpans, SchemaAdapter } from "../../src"
 import { DocHandle } from "@automerge/automerge-repo"
 import {
   wrapInList,
@@ -116,7 +116,7 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
     }
 
     const adapter = schemaAdapter
-    const doc = docFromSpans(adapter, am.spans(handle.docSync(), path))
+    const doc = pmDocFromSpans(adapter, am.spans(handle.docSync(), path))
     const state = EditorState.create({
       schema: adapter.schema,
       plugins: [
