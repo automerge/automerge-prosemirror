@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react"
+import React, { useState, useRef, useLayoutEffect } from "react"
 
 import { Command, EditorState, Transaction } from "prosemirror-state"
 import { keymap } from "prosemirror-keymap"
@@ -10,6 +10,7 @@ import {
   wrapIn,
 } from "prosemirror-commands"
 import { buildKeymap } from "prosemirror-example-setup"
+import { history, undo, redo } from "prosemirror-history"
 import { MarkType, NodeType, Schema } from "prosemirror-model"
 import { EditorView } from "prosemirror-view"
 import {
@@ -21,9 +22,9 @@ import {
   emDash,
 } from "prosemirror-inputrules"
 import "prosemirror-view/style/prosemirror.css"
-import { Prop } from "@automerge/automerge"
-import { AutoMirror, SchemaAdapter } from "../../src"
-import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo"
+import { Prop, next as am } from "@automerge/automerge"
+import { pmDocFromSpans, SchemaAdapter } from "../../src"
+import { DocHandle } from "@automerge/automerge-repo"
 import {
   wrapInList,
   splitListItem,
@@ -52,6 +53,7 @@ import {
 import Modal from "./Modal"
 import ImageForm from "./ImageForm"
 import LinkForm from "./LinkForm"
+import { syncPlugin } from "../../src/syncPlugin"
 
 export type EditorProps = {
   name?: string
@@ -108,65 +110,51 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
     emActive: false,
   })
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!handleReady) {
       return
     }
-    const autoMirror = new AutoMirror(path, schemaAdapter)
 
-    const initialDoc = autoMirror.initialize(handle)
-    const editorConfig = {
-      schema: autoMirror.schema,
-      history,
+    const adapter = schemaAdapter
+    const doc = pmDocFromSpans(adapter, am.spans(handle.docSync(), path))
+    const state = EditorState.create({
+      schema: adapter.schema,
       plugins: [
-        buildInputRules(autoMirror.schema),
+        buildInputRules(adapter.schema),
+        history(),
+        keymap({ "Mod-z": undo, "Mod-y": redo, "Shift-Mod-z": redo }),
         keymap({
-          "Mod-b": toggleBold(autoMirror.schema),
-          "Mod-i": toggleItalic(autoMirror.schema),
-          "Mod-l": toggleMark(autoMirror.schema.marks.link, {
+          "Mod-b": toggleBold(adapter.schema),
+          "Mod-i": toggleItalic(adapter.schema),
+          "Mod-l": toggleMark(adapter.schema.marks.link, {
             href: "https://example.com",
             title: "example",
           }),
-          Enter: splitListItem(autoMirror.schema.nodes.list_item),
+          Enter: splitListItem(adapter.schema.nodes.list_item),
         }),
-        keymap(buildKeymap(autoMirror.schema)),
+        keymap(buildKeymap(adapter.schema)),
         keymap(baseKeymap),
+        syncPlugin({
+          adapter: adapter,
+          handle,
+          path,
+        }),
       ],
-      doc: initialDoc,
-    }
+      doc,
+    })
 
-    const state = EditorState.create(editorConfig)
-    const view = new EditorView(editorRoot.current, {
+    const editorView = new EditorView(editorRoot.current, {
       state,
-      dispatchTransaction: (tx: Transaction) => {
-        //console.log(`${name}: dispatchTransaction`, tx)
-        const newState = autoMirror.intercept(handle, tx, view.state)
-        view.updateState(newState)
-        setMarkState(activeMarks(newState, autoMirror.schema))
+      dispatchTransaction(this: EditorView, tr: Transaction) {
+        const newState = this.state.apply(tr)
+        this.updateState(newState)
+        setMarkState(activeMarks(newState, adapter.schema))
       },
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const onPatch: (args: DocHandleChangePayload<unknown>) => void = ({
-      doc,
-      patches,
-      patchInfo,
-    }) => {
-      //console.log(`${name}: patch received`)
-      const newState = autoMirror.reconcilePatch(
-        patchInfo.before,
-        doc,
-        patches,
-        view.state,
-      )
-      view.updateState(newState)
-    }
-    handle.on("change", onPatch)
 
-    setView(view)
-
+    setView(editorView)
     return () => {
-      handle.off("change", onPatch)
-      view.destroy()
+      editorView.destroy()
     }
   }, [handleReady])
 

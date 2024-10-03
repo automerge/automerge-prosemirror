@@ -1,12 +1,19 @@
-import React from "react"
 import { Editor } from "../playground/src/Editor"
-import { next as automerge } from "@automerge/automerge"
+import { next as am } from "@automerge/automerge"
 import { mount } from "cypress/react18"
 import "../playground/src/playground.css"
 import { Repo, DocHandle } from "@automerge/automerge-repo"
 import { basicSchemaAdapter } from "../src/basicSchema"
 
 const repo = new Repo({ network: [] })
+
+// Normalize mod key across browsers.
+// https://github.com/ProseMirror/prosemirror-keymap/blob/master/src/keymap.ts
+const mac =
+  typeof navigator != "undefined"
+    ? /Mac|iP(hone|[oa]d)/.test(navigator.platform)
+    : false
+const mod = mac ? "{meta}" : "{ctrl}"
 
 function makeHandle(contents: { text: string }): DocHandle<{ text: string }> {
   const handle = repo.create<{ text: string }>()
@@ -48,8 +55,13 @@ describe("<Editor />", () => {
       editorContents().should("have.html", expectedHtml(["Hello World!"]))
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
-        .then(() => handle.docSync().text)
-        .should("equal", "Hello World!")
+        .then(() => am.spans(handle.docSync(), ["text"]))
+        .should("deep.equal", [
+          {
+            type: "text",
+            value: "Hello World!",
+          },
+        ])
     })
 
     it("handles inserting two newlines", () => {
@@ -76,12 +88,12 @@ describe("<Editor />", () => {
       )
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
-        .then(() => automerge.spans(handle.docSync(), ["text"]))
+        .then(() => am.spans(handle.docSync(), ["text"]))
         .should("deep.equal", [
           {
             type: "block",
             value: {
-              type: new automerge.RawString("paragraph"),
+              type: new am.RawString("paragraph"),
               parents: [],
               attrs: {},
               isEmbed: false,
@@ -91,7 +103,7 @@ describe("<Editor />", () => {
           {
             type: "block",
             value: {
-              type: new automerge.RawString("paragraph"),
+              type: new am.RawString("paragraph"),
               parents: [],
               attrs: {},
               isEmbed: false,
@@ -100,7 +112,7 @@ describe("<Editor />", () => {
           {
             type: "block",
             value: {
-              type: new automerge.RawString("paragraph"),
+              type: new am.RawString("paragraph"),
               parents: [],
               attrs: {},
               isEmbed: false,
@@ -129,11 +141,28 @@ describe("<Editor />", () => {
       )
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
-        .then(() => handle.docSync().text)
-        .should("equal", "Hello Happy World")
+        .then(() => am.spans(handle.docSync(), ["text"]))
+        .should("deep.equal", [
+          {
+            type: "text",
+            value: "Hello ",
+          },
+          {
+            type: "text",
+            value: "Happy",
+            marks: {
+              strong: true,
+            },
+          },
+          {
+            type: "text",
+            value: " World",
+          },
+        ])
+
       cy.wait(100)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        .then(() => automerge.marks(handle.docSync()!, ["text"]))
+        .then(() => am.marks(handle.docSync()!, ["text"]))
         .should("deep.equal", [
           { name: "strong", value: true, start: 6, end: 11 },
         ])
@@ -164,7 +193,7 @@ describe("<Editor />", () => {
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        .then(() => automerge.marks(handle.docSync()!, ["text"]))
+        .then(() => am.marks(handle.docSync()!, ["text"]))
         .should("deep.equal", [
           {
             name: "link",
@@ -190,7 +219,7 @@ describe("<Editor />", () => {
         />,
       )
       handle.change((d: { text: string }) =>
-        automerge.splice(d, ["text"], 5, 0, " Happy"),
+        am.splice(d, ["text"], 5, 0, " Happy"),
       )
       editorContents().should("have.html", expectedHtml(["Hello Happy World"]))
     })
@@ -198,7 +227,7 @@ describe("<Editor />", () => {
     it("handles text inserted inside a mark", () => {
       const handle = makeHandle({ text: "Hello World" })
       handle.change((d: { text: string }) => {
-        automerge.mark(
+        am.mark(
           d,
           ["text"],
           { start: 6, end: 11, expand: "before" },
@@ -214,12 +243,44 @@ describe("<Editor />", () => {
         />,
       )
       handle.change((d: { text: string }) =>
-        automerge.splice(d, ["text"], 6, 0, "Strong"),
+        am.splice(d, ["text"], 6, 0, "Strong"),
       )
       editorContents().should(
         "have.html",
         expectedHtml(["Hello <strong>StrongWorld</strong>"]),
       )
+    })
+
+    it("handles undo redo with history plugin and keyboard shortcuts", () => {
+      const handle = makeHandle({ text: "" })
+      mount(
+        <Editor
+          handle={handle}
+          path={["text"]}
+          schemaAdapter={basicSchemaAdapter}
+        />,
+      )
+
+      editorContents().should("have.html", expectedHtml([null]))
+      editorContents().type("Hello")
+      editorContents().should("have.html", expectedHtml(["Hello"]))
+
+      // 500ms is the default newGroupDelay
+      cy.wait(500)
+      editorContents().type(" " + "World")
+      editorContents().should("have.html", expectedHtml(["Hello World"]))
+
+      editorContents().type(mod + "z")
+      editorContents().should("have.html", expectedHtml(["Hello"]))
+
+      editorContents().type(mod + "z")
+      editorContents().should("have.html", expectedHtml([null]))
+
+      editorContents().type("{shift}" + mod + "z")
+      editorContents().should("have.html", expectedHtml(["Hello"]))
+
+      editorContents().type("{shift}" + mod + "z")
+      editorContents().should("have.html", expectedHtml(["Hello World"]))
     })
   })
 })

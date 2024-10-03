@@ -38,7 +38,13 @@ export type TraversalEvent =
       }
     }
 
-export function docFromSpans(adapter: SchemaAdapter, spans: am.Span[]): Node {
+/**
+ * Convert an array of AutoMerge spans into a ProseMirror doc.
+ * @param adapter
+ * @param spans
+ * @returns
+ */
+export function pmDocFromSpans(adapter: SchemaAdapter, spans: am.Span[]): Node {
   const events = traverseSpans(adapter, spans)
   type StackItem = {
     tag: string
@@ -928,7 +934,7 @@ export function blockAtIdx(
   return block
 }
 
-export function blocksFromNode(
+export function pmNodeToSpans(
   adapter: SchemaAdapter,
   node: Node,
 ): (

@@ -6,8 +6,8 @@ import {
   pmRangeToAmRange,
   traverseSpans,
   amIdxToPmBlockIdx,
-  docFromSpans,
-  blocksFromNode,
+  pmDocFromSpans,
+  pmNodeToSpans,
   traverseNode,
   eventsWithIndexChanges,
 } from "../src/traversal"
@@ -2699,7 +2699,7 @@ describe("the traversal API", () => {
       assert.equal(amIdxToPmBlockIdx(basicSchemaAdapter, spans, 6), 2)
     })
   })
-  describe("the docFromSpans function", () => {
+  describe("the pmDocFromSpans function", () => {
     const schema = basicSchemaAdapter.schema
     it("should construct a documnt with extra render-only paragraphs for nested list items", () => {
       const spans: am.Span[] = [
@@ -2713,7 +2713,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 1" },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2753,7 +2753,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 2" },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2800,7 +2800,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 3" },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
 
       assert.isTrue(
         doc.eq(
@@ -2854,7 +2854,7 @@ describe("the traversal API", () => {
         },
       ]
 
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
 
       assert.isTrue(
         doc.eq(
@@ -2918,7 +2918,7 @@ describe("the traversal API", () => {
         },
       ]
 
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2961,7 +2961,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 2" },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -2999,7 +2999,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "item 2" },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
 
       assert.isTrue(
         doc.eq(
@@ -3026,7 +3026,7 @@ describe("the traversal API", () => {
           value: { type: new am.RawString("aside"), parents: [], attrs: {} },
         },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -3064,7 +3064,7 @@ describe("the traversal API", () => {
         { type: "text", value: "next line" },
       ]
 
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -3102,7 +3102,7 @@ describe("the traversal API", () => {
         { type: "text", value: "world" },
       ]
 
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -3141,7 +3141,7 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -3184,7 +3184,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "world" },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -3225,7 +3225,7 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "more quote" },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -3279,7 +3279,7 @@ describe("the traversal API", () => {
         },
       ]
 
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       assert.isTrue(
         doc.eq(
           schema.node("doc", null, [
@@ -3316,7 +3316,7 @@ describe("the traversal API", () => {
           },
           { type: "text", value: "hello" },
         ]
-        const doc = docFromSpans(basicSchemaAdapter, spans)
+        const doc = pmDocFromSpans(basicSchemaAdapter, spans)
         assert.isTrue(
           doc.eq(
             schema.node("doc", null, [
@@ -3350,7 +3350,7 @@ describe("the traversal API", () => {
           },
           { type: "text", value: "hello" },
         ]
-        const doc = docFromSpans(basicSchemaAdapter, spans)
+        const doc = pmDocFromSpans(basicSchemaAdapter, spans)
         const expected = schema.node("doc", null, [
           schema.node("unknownBlock", { unknownParentBlock: "unknown" }, [
             schema.node(
@@ -3373,7 +3373,7 @@ describe("the traversal API", () => {
     })
   })
 
-  describe("the blocksFromNode function", () => {
+  describe("the pmNodeToSpans function", () => {
     const schema = basicSchemaAdapter.schema
     it("should return the correct blocks for a document with a list containing a paragraph", () => {
       const doc = schema.node("doc", null, [
@@ -3386,7 +3386,7 @@ describe("the traversal API", () => {
           schema.node("list_item", null, [schema.node("paragraph", null, [])]),
         ]),
       ])
-      const blocks = Array.from(blocksFromNode(basicSchemaAdapter, doc))
+      const blocks = Array.from(pmNodeToSpans(basicSchemaAdapter, doc))
       assert.deepStrictEqual(blocks, [
         {
           type: "block",
@@ -3428,7 +3428,7 @@ describe("the traversal API", () => {
           ]),
         ]),
       ])
-      const blocks = Array.from(blocksFromNode(basicSchemaAdapter, doc))
+      const blocks = Array.from(pmNodeToSpans(basicSchemaAdapter, doc))
       assert.deepStrictEqual(blocks, [
         {
           type: "block",
@@ -3475,7 +3475,7 @@ describe("the traversal API", () => {
         ]),
       ]),
     ])
-    const blocks = Array.from(blocksFromNode(basicSchemaAdapter, doc))
+    const blocks = Array.from(pmNodeToSpans(basicSchemaAdapter, doc))
     assert.deepStrictEqual(blocks, [
       {
         type: "block",
@@ -3513,9 +3513,9 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "hello", marks: {} },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       const blocks: am.Span[] = Array.from(
-        blocksFromNode(basicSchemaAdapter, doc),
+        pmNodeToSpans(basicSchemaAdapter, doc),
       )
       assert.deepStrictEqual(blocks, spans)
     })
@@ -3533,9 +3533,9 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "hello", marks: {} },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       const blocks: am.Span[] = Array.from(
-        blocksFromNode(basicSchemaAdapter, doc),
+        pmNodeToSpans(basicSchemaAdapter, doc),
       )
       assert.deepStrictEqual(blocks, spans)
     })
@@ -3553,9 +3553,9 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "hello", marks: {} },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       const blocks: am.Span[] = Array.from(
-        blocksFromNode(basicSchemaAdapter, doc),
+        pmNodeToSpans(basicSchemaAdapter, doc),
       )
       assert.deepStrictEqual(blocks, spans)
     })
@@ -3577,9 +3577,9 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "hello", marks: {} },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       const blocks: am.Span[] = Array.from(
-        blocksFromNode(basicSchemaAdapter, doc),
+        pmNodeToSpans(basicSchemaAdapter, doc),
       )
       assert.deepStrictEqual(blocks, spans)
     })
@@ -3601,9 +3601,9 @@ describe("the traversal API", () => {
         },
         { type: "text", value: "hello", marks: {} },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       const blocks: am.Span[] = Array.from(
-        blocksFromNode(basicSchemaAdapter, doc),
+        pmNodeToSpans(basicSchemaAdapter, doc),
       )
       assert.deepStrictEqual(blocks, spans)
     })
@@ -3624,9 +3624,9 @@ describe("the traversal API", () => {
           },
         },
       ]
-      const doc = docFromSpans(basicSchemaAdapter, spans)
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
       const blocks: am.Span[] = Array.from(
-        blocksFromNode(basicSchemaAdapter, doc),
+        pmNodeToSpans(basicSchemaAdapter, doc),
       )
       assert.deepStrictEqual(blocks, spans)
     })

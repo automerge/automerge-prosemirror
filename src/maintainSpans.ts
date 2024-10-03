@@ -1,18 +1,18 @@
 import { next as am } from "@automerge/automerge"
-import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
+import { isPrefixOfArray, isArrayEqual } from "./utils"
 
 export function patchSpans(
   atPath: am.Prop[],
   spans: am.Span[],
   patch: am.Patch,
 ) {
-  if (pathsEqual(atPath, patch.path)) {
+  if (isArrayEqual(atPath, patch.path)) {
     if (patch.action === "mark") {
       for (const mark of patch.marks) {
         markSpans(spans, mark)
       }
     }
-  } else if (pathIsPrefixOf(atPath, patch.path)) {
+  } else if (isPrefixOfArray(atPath, patch.path)) {
     if (patch.path.length === atPath.length + 1) {
       // This is either an insert or delete of a block
       if (patch.action === "insert") {

@@ -1,9 +1,9 @@
 import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
 import { Fragment, Slice, Mark } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
-import { amSpliceIdxToPmIdx, docFromSpans } from "./traversal"
+import { amSpliceIdxToPmIdx, pmDocFromSpans } from "./traversal"
 import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
-import { pathIsPrefixOf, pathsEqual } from "./pathUtils"
+import { isPrefixOfArray, isArrayEqual } from "./utils"
 import { ReplaceStep } from "prosemirror-transform"
 import { pmMarksFromAmMarks, SchemaAdapter } from "./schema"
 
@@ -106,7 +106,7 @@ function handleMark(
   path: Prop[],
   tx: Transaction,
 ) {
-  if (pathEquals(patch.path, path)) {
+  if (isArrayEqual(patch.path, path)) {
     for (const mark of patch.marks) {
       const pmStart = amSpliceIdxToPmIdx(adapter, spans, mark.start)
       const pmEnd = amSpliceIdxToPmIdx(adapter, spans, mark.end)
@@ -144,7 +144,7 @@ export function handleBlockChange(
     patchSpans(atPath, spans, patch)
   }
   //console.log("spans after block change", spans)
-  const docAfter = docFromSpans(adapter, spans)
+  const docAfter = pmDocFromSpans(adapter, spans)
   //console.log("doc after block change", docAfter)
   const change = findDiff(tx.doc.content, docAfter.content)
   if (change == null) return tx
@@ -235,14 +235,6 @@ function charPath(textPath: Prop[], candidatePath: Prop[]): number | null {
   return null
 }
 
-function pathEquals(path1: Prop[], path2: Prop[]): boolean {
-  if (path1.length !== path2.length) return false
-  for (let i = 0; i < path1.length; i++) {
-    if (path1[i] !== path2[i]) return false
-  }
-  return true
-}
-
 function patchContentToFragment(
   adapter: SchemaAdapter,
   patchContent: string,
@@ -298,10 +290,10 @@ function gatherPatches(textPath: am.Prop[], diff: am.Patch[]): GatheredPatch[] {
   }
 
   for (const patch of diff) {
-    if (!pathIsPrefixOf(textPath, patch.path)) {
+    if (!isPrefixOfArray(textPath, patch.path)) {
       continue
     }
-    if (pathsEqual(textPath, patch.path) && patch.action === "mark") {
+    if (isArrayEqual(textPath, patch.path) && patch.action === "mark") {
       if (state.type === "gatheringText") {
         state.gathered.push(patch)
       } else {
