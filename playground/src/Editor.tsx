@@ -22,8 +22,8 @@ import {
   emDash,
 } from "prosemirror-inputrules"
 import "prosemirror-view/style/prosemirror.css"
-import { Prop, next as am } from "@automerge/automerge"
-import { pmDocFromSpans, SchemaAdapter } from "../../src/index.js"
+import { Prop } from "@automerge/automerge"
+import { init, SchemaAdapter } from "../../src/index.js"
 import { DocHandle } from "@automerge/automerge-repo"
 import {
   wrapInList,
@@ -53,7 +53,6 @@ import {
 import Modal from "./Modal.js"
 import ImageForm from "./ImageForm.js"
 import LinkForm from "./LinkForm.js"
-import { syncPlugin } from "../../src/syncPlugin.js"
 
 export type EditorProps = {
   name?: string
@@ -115,32 +114,31 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
       return
     }
 
-    const adapter = schemaAdapter
-    const doc = pmDocFromSpans(adapter, am.spans(handle.docSync()!, path))
+    const {
+      schema,
+      pmDoc,
+      plugin: syncPlugin,
+    } = init(handle, path, { schemaAdapter })
     const state = EditorState.create({
-      schema: adapter.schema,
+      schema,
       plugins: [
-        buildInputRules(adapter.schema),
+        buildInputRules(schema),
         history(),
         keymap({ "Mod-z": undo, "Mod-y": redo, "Shift-Mod-z": redo }),
         keymap({
-          "Mod-b": toggleBold(adapter.schema),
-          "Mod-i": toggleItalic(adapter.schema),
-          "Mod-l": toggleMark(adapter.schema.marks.link, {
+          "Mod-b": toggleBold(schema),
+          "Mod-i": toggleItalic(schema),
+          "Mod-l": toggleMark(schema.marks.link, {
             href: "https://example.com",
             title: "example",
           }),
-          Enter: splitListItem(adapter.schema.nodes.list_item),
+          Enter: splitListItem(schema.nodes.list_item),
         }),
-        keymap(buildKeymap(adapter.schema)),
+        keymap(buildKeymap(schema)),
         keymap(baseKeymap),
-        syncPlugin({
-          adapter: adapter,
-          handle,
-          path,
-        }),
+        syncPlugin,
       ],
-      doc,
+      doc: pmDoc,
     })
 
     const editorView = new EditorView(editorRoot.current, {
@@ -148,7 +146,7 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
       dispatchTransaction(this: EditorView, tr: Transaction) {
         const newState = this.state.apply(tr)
         this.updateState(newState)
-        setMarkState(activeMarks(newState, adapter.schema))
+        setMarkState(activeMarks(newState, schema))
       },
     })
 
