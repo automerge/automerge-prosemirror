@@ -7,8 +7,6 @@
   ],
   "extends": "./tsconfig/tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node", "cypress"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext"
+    "types": ["node", "cypress"]
   }
 }
