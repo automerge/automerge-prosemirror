@@ -5,9 +5,9 @@ import {
   Node,
   NodeSpec,
 } from "prosemirror-model"
-import { MappedSchemaSpec, SchemaAdapter } from "./schema"
-import { BlockMarker } from "./types"
-import { next as am } from "@automerge/automerge"
+import { MappedSchemaSpec, SchemaAdapter } from "./schema.js"
+import { BlockMarker } from "./types.js"
+import { next as am } from "@automerge/automerge/slim"
 
 // basics
 const pDOM: DOMOutputSpec = ["p", 0]

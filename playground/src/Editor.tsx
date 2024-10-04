@@ -23,7 +23,7 @@ import {
 } from "prosemirror-inputrules"
 import "prosemirror-view/style/prosemirror.css"
 import { Prop, next as am } from "@automerge/automerge"
-import { pmDocFromSpans, SchemaAdapter } from "../../src"
+import { pmDocFromSpans, SchemaAdapter } from "../../src/index.js"
 import { DocHandle } from "@automerge/automerge-repo"
 import {
   wrapInList,
@@ -31,7 +31,7 @@ import {
   sinkListItem,
   liftListItem,
 } from "prosemirror-schema-list"
-import { useHandleReady } from "./useHandleReady"
+import { useHandleReady } from "./useHandleReady.js"
 import {
   Bold,
   Braces,
@@ -50,10 +50,10 @@ import {
   Outdent,
   Image,
 } from "lucide-react"
-import Modal from "./Modal"
-import ImageForm from "./ImageForm"
-import LinkForm from "./LinkForm"
-import { syncPlugin } from "../../src/syncPlugin"
+import Modal from "./Modal.js"
+import ImageForm from "./ImageForm.js"
+import LinkForm from "./LinkForm.js"
+import { syncPlugin } from "../../src/syncPlugin.js"
 
 export type EditorProps = {
   name?: string
@@ -116,7 +116,7 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
     }
 
     const adapter = schemaAdapter
-    const doc = pmDocFromSpans(adapter, am.spans(handle.docSync(), path))
+    const doc = pmDocFromSpans(adapter, am.spans(handle.docSync()!, path))
     const state = EditorState.create({
       schema: adapter.schema,
       plugins: [

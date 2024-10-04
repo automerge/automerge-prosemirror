@@ -8,8 +8,8 @@ import {
   NodeType,
   Node,
 } from "prosemirror-model"
-import { next as am } from "@automerge/automerge"
-import { BlockMarker } from "./types"
+import { next as am } from "@automerge/automerge/slim"
+import { BlockMarker } from "./types.js"
 
 export interface MappedSchemaSpec {
   nodes: { [key: string]: MappedNodeSpec }

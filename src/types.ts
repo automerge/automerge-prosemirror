@@ -1,4 +1,4 @@
-import { next as am } from "@automerge/automerge"
+import { next as am } from "@automerge/automerge/slim"
 
 export interface DocHandle<T> {
   docSync: () => am.Doc<T> | undefined

@@ -1,11 +1,11 @@
-export { type DocHandle } from "./types"
+export { type DocHandle } from "./types.js"
 export {
   SchemaAdapter,
   type MappedSchemaSpec,
   type MappedNodeSpec,
   type MappedMarkSpec,
   type BlockMappingSpec,
-} from "./schema"
-export { basicSchemaAdapter } from "./basicSchema"
-export { pmDocFromSpans, pmNodeToSpans } from "./traversal"
-export { syncPlugin, syncPluginKey } from "./syncPlugin"
+} from "./schema.js"
+export { basicSchemaAdapter } from "./basicSchema.js"
+export { pmDocFromSpans, pmNodeToSpans } from "./traversal.js"
+export { syncPlugin, syncPluginKey } from "./syncPlugin.js"

@@ -1,13 +1,13 @@
 import { assert } from "chai"
 import { next as automerge } from "@automerge/automerge"
 import { EditorState } from "prosemirror-state"
-import { pmDocFromSpans } from "../src/traversal"
+import { pmDocFromSpans } from "../src/traversal.js"
 import { Node } from "prosemirror-model"
 import { AssertionError } from "assert"
-import { applyBlockPatch } from "../src/maintainSpans"
+import { applyBlockPatch } from "../src/maintainSpans.js"
 import { next as am } from "@automerge/automerge"
-import { basicSchemaAdapter } from "../src/basicSchema"
-import { isArrayEqual, isPrefixOfArray } from "../src/utils"
+import { basicSchemaAdapter } from "../src/basicSchema.js"
+import { isArrayEqual, isPrefixOfArray } from "../src/utils.js"
 
 export type BlockDef = {
   type: string

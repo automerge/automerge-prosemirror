@@ -1,11 +1,16 @@
-import { next as am, DelPatch, Patch, type Prop } from "@automerge/automerge"
+import {
+  next as am,
+  DelPatch,
+  Patch,
+  type Prop,
+} from "@automerge/automerge/slim"
 import { Fragment, Slice, Mark } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
-import { amSpliceIdxToPmIdx, pmDocFromSpans } from "./traversal"
-import { findBlockAtCharIdx, patchSpans } from "./maintainSpans"
-import { isPrefixOfArray, isArrayEqual } from "./utils"
+import { amSpliceIdxToPmIdx, pmDocFromSpans } from "./traversal.js"
+import { findBlockAtCharIdx, patchSpans } from "./maintainSpans.js"
+import { isPrefixOfArray, isArrayEqual } from "./utils.js"
 import { ReplaceStep } from "prosemirror-transform"
-import { pmMarksFromAmMarks, SchemaAdapter } from "./schema"
+import { pmMarksFromAmMarks, SchemaAdapter } from "./schema.js"
 
 type SpliceTextPatch = am.SpliceTextPatch
 
