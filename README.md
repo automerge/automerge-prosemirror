@@ -12,25 +12,23 @@ There is a fully functional editor in this repository, you can play with that by
 
 ## Example
 
-The API for this library is based around `syncPlugin`. This plugin is used to apply transactions from Prosemirror and to handle changes received over the network. This is best used in tandem with `@automerge/automerge-repo`. See the `playground/src/Editor.tsx` file for a fully featured example.
-
-In order to edit rich text we need to know how to map from the [rich text schema](https://automerge.org/docs/under-the-hood/rich_text_schema/) to the ProseMirror schema you're using. This is done with a `SchemaAdapter`. We provide a built in `basicSchemaAdapter` which adapts the basic example schema which ships with ProseMirror, but you can provide your own as well.
-
-Example setup
+This library provides a plugin which maps between Automerge documents and ProseMirror documents. This plugin relies on two things: firstly that the schema you use be a very specific subset of the ProseMirror schema which is mapped to the Automerge rich text schema (more on this later), and secondly that you initialize the ProseMirror document from the Automerge document. Thus, we provide a simple entrypoint which does all these things for you:
 
 ```javascript
-import {basicSchemaAdapter, syncPlugin, pmDocFromSpans} from "@automerge/prosemirror"
-import { next as am } from "@automerge/automerge"
+import { init } from "@automerge/prosemirror"
 
+// Obtain a DocHandle somehow
 const handle = repo.find("some-doc-url")
-// somehow wait for the handle to be ready before continuing
+// wait for the handle to be ready before continuing
 await handle.whenReady()
 
-const adapter = basicSchemaAdapter
+// This is the important part, we initialize the plugin with the handle and the path to the text field in the document
+// and we get back a schema, a ProseMirror document, and a plugin
+const { schema, pmDoc, plugin } = init(handle, ["text"])
 
-// Create your prosemirror state
+// Create your prosemirror state with the schema, plugin, and document
 let editorConfig = {
-  schema: adapter.schema,
+  schema,
   plugins: [
     keymap({
       ...baseKeymap,
@@ -40,13 +38,9 @@ let editorConfig = {
       "Mod-y": redo,
       "Mod-Shift-z": redo,
     }),
-    syncPlugin({
-      adapter,
-      handle,
-      path: ["text"]
-    })
+    plugin,
   ],
-  doc: pmDocFromSpans(adapter, am.spans(handle.docSync()!, ["text"]))
+  doc: pmDoc
 }
 
 let state = EditorState.create(editorConfig)
@@ -55,6 +49,8 @@ const view = new EditorView(<whatever DOM element you are rendering to>, {
   state
 })
 ```
+
+See the `playground/src/Editor.tsx` file for a fully featured example.
 
 ## Schema Mapping
 
@@ -86,6 +82,12 @@ const adapter = new SchemaAdapter({
         } as NodeSpec,
     }
 })
+```
+
+This schema adapter can then be passed to `init` as an option:
+
+```typescript
+const { pmDoc, schema, plugin } = init(handle, ["text"], { schemaAdapter: adapter })
 ```
 
 There are a number of keys available in the `automerge` mapping. To understand what they all mean you need to understand the goals of schema mapping:
