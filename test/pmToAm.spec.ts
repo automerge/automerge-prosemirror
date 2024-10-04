@@ -1,12 +1,12 @@
 import { Fragment, Slice, Node } from "prosemirror-model"
-import { assertSplitBlock, makeDoc } from "./utils"
+import { assertSplitBlock, makeDoc } from "./utils.js"
 import { AddMarkStep, ReplaceStep, Step } from "prosemirror-transform"
-import { default as pmToAm } from "../src/pmToAm"
+import { default as pmToAm } from "../src/pmToAm.js"
 import { next as am } from "@automerge/automerge"
 import { assert } from "chai"
-import { pmDocFromSpans } from "../src/traversal"
+import { pmDocFromSpans } from "../src/traversal.js"
 import { EditorState } from "prosemirror-state"
-import { basicSchemaAdapter } from "../src/basicSchema"
+import { basicSchemaAdapter } from "../src/basicSchema.js"
 
 const schema = basicSchemaAdapter.schema
 

@@ -1,13 +1,13 @@
 import { Plugin, PluginKey, Selection } from "prosemirror-state"
-import { next as am } from "@automerge/automerge"
-import { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo"
-import pmToAm from "./pmToAm"
-import amToPm from "./amToPm"
-import { pmDocFromSpans } from "./traversal"
-import { patchesToTr } from "./patchesToTr"
+import { next as am } from "@automerge/automerge/slim"
+import pmToAm from "./pmToAm.js"
+import amToPm from "./amToPm.js"
+import { pmDocFromSpans } from "./traversal.js"
+import { patchesToTr } from "./patchesToTr.js"
 import { ChangeSet } from "prosemirror-changeset"
-import { SchemaAdapter } from "./schema"
-import { isArrayEqual } from "./utils"
+import { SchemaAdapter } from "./schema.js"
+import { isArrayEqual } from "./utils.js"
+import { DocHandle, DocHandleChangePayload } from "./DocHandle.js"
 
 export const syncPluginKey = new PluginKey("automerge-sync")
 

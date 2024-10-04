@@ -1,7 +1,7 @@
 import { assert } from "chai"
 import { next as am } from "@automerge/automerge"
-import { patchSpans } from "../src/maintainSpans"
-import { splitBlock } from "./utils"
+import { patchSpans } from "../src/maintainSpans.js"
+import { splitBlock } from "./utils.js"
 import * as fc from "fast-check"
 
 describe("the patchSpans function", () => {

@@ -1,5 +1,5 @@
-import { next as am } from "@automerge/automerge"
-import { isPrefixOfArray, isArrayEqual } from "./utils"
+import { next as am } from "@automerge/automerge/slim"
+import { isPrefixOfArray, isArrayEqual } from "./utils.js"
 
 export function patchSpans(
   atPath: am.Prop[],

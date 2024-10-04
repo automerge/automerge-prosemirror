@@ -6,10 +6,10 @@ import {
   Step,
 } from "prosemirror-transform"
 import { Mark, MarkType, Node } from "prosemirror-model"
-import { Prop, next as automerge } from "@automerge/automerge"
-import { pmNodeToSpans, pmRangeToAmRange } from "./traversal"
-import { next as am } from "@automerge/automerge"
-import { SchemaAdapter, amMarksFromPmMarks } from "./schema"
+import { Prop, next as automerge } from "@automerge/automerge/slim"
+import { pmNodeToSpans, pmRangeToAmRange } from "./traversal.js"
+import { next as am } from "@automerge/automerge/slim"
+import { SchemaAdapter, amMarksFromPmMarks } from "./schema.js"
 
 export type ChangeFn<T> = (doc: T, field: string) => void
 

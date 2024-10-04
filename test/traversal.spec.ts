@@ -10,11 +10,11 @@ import {
   pmNodeToSpans,
   traverseNode,
   eventsWithIndexChanges,
-} from "../src/traversal"
+} from "../src/traversal.js"
 import { next as am } from "@automerge/automerge"
-import { docFromBlocksNotation, makeDoc } from "./utils"
+import { docFromBlocksNotation, makeDoc } from "./utils.js"
 import { AssertionError } from "assert"
-import { basicSchemaAdapter } from "../src/basicSchema"
+import { basicSchemaAdapter } from "../src/basicSchema.js"
 
 describe("the traversal API", () => {
   describe("the amSpliceIdxToPmIdx function", () => {

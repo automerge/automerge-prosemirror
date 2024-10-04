@@ -1,4 +1,4 @@
-import { next as am } from "@automerge/automerge"
+import { next as am } from "@automerge/automerge/slim"
 import {
   ContentMatch,
   Fragment,
@@ -6,13 +6,13 @@ import {
   NodeType,
   Schema,
 } from "prosemirror-model"
-import { isBlockMarker, BlockMarker, amSpanToSpan } from "./types"
+import { isBlockMarker, BlockMarker, amSpanToSpan } from "./types.js"
 import {
   NodeMapping,
   SchemaAdapter,
   amMarksFromPmMarks,
   pmMarksFromAmMarks,
-} from "./schema"
+} from "./schema.js"
 
 type RenderRole = "explicit" | "render-only"
 

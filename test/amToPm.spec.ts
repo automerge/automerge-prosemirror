@@ -1,9 +1,9 @@
 import { assert } from "chai"
-import { default as amToPm } from "../src/amToPm"
+import { default as amToPm } from "../src/amToPm.js"
 import { EditorState } from "prosemirror-state"
-import { BlockDef, makeDoc, splitBlock, updateBlockType } from "./utils"
+import { BlockDef, makeDoc, splitBlock, updateBlockType } from "./utils.js"
 import { next as am } from "@automerge/automerge"
-import { basicSchemaAdapter } from "../src/basicSchema"
+import { basicSchemaAdapter } from "../src/basicSchema.js"
 
 const schema = basicSchemaAdapter.schema
 

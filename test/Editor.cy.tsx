@@ -1,9 +1,9 @@
-import { Editor } from "../playground/src/Editor"
+import { Editor } from "../playground/src/Editor.js"
 import { next as am } from "@automerge/automerge"
 import { mount } from "cypress/react18"
 import "../playground/src/playground.css"
 import { Repo, DocHandle } from "@automerge/automerge-repo"
-import { basicSchemaAdapter } from "../src/basicSchema"
+import { basicSchemaAdapter } from "../src/basicSchema.js"
 
 const repo = new Repo({ network: [] })
 
@@ -55,7 +55,7 @@ describe("<Editor />", () => {
       editorContents().should("have.html", expectedHtml(["Hello World!"]))
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
-        .then(() => am.spans(handle.docSync(), ["text"]))
+        .then(() => am.spans(handle.docSync()!, ["text"]))
         .should("deep.equal", [
           {
             type: "text",
@@ -88,7 +88,7 @@ describe("<Editor />", () => {
       )
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
-        .then(() => am.spans(handle.docSync(), ["text"]))
+        .then(() => am.spans(handle.docSync()!, ["text"]))
         .should("deep.equal", [
           {
             type: "block",
@@ -141,7 +141,7 @@ describe("<Editor />", () => {
       )
       // Wait for a bit so automerge-repo gets a chance to run
       cy.wait(100)
-        .then(() => am.spans(handle.docSync(), ["text"]))
+        .then(() => am.spans(handle.docSync()!, ["text"]))
         .should("deep.equal", [
           {
             type: "text",

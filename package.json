@@ -18,7 +18,7 @@
     "dist/*"
   ],
   "dependencies": {
-    "@automerge/automerge": "2.2.1",
+    "@automerge/automerge": "^2.2.3",
     "ordered-map": "^0.1.0",
     "prosemirror-changeset": "^2.2.1",
     "prosemirror-history": "^1.4.1",
@@ -29,14 +29,10 @@
     "prosemirror-transform": "^1.7.3",
     "prosemirror-view": "^1.33.1"
   },
-  "overrides": {
-    "@automerge/automerge-repo": {
-      "@automerge/automerge": "2.2.1"
-    }
-  },
   "devDependencies": {
-    "@automerge/automerge-repo": "^1.1.5",
+    "@automerge/automerge-repo": "^2.0.0-alpha.13",
     "@automerge/automerge-repo-network-messagechannel": "^1.1.5",
+    "@eslint/js": "^9.11.1",
     "@types/debug": "^4.1.12",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.12.10",
