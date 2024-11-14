@@ -81,7 +81,7 @@ export function init(
     )
   }
   const spans = A.spans(doc, pathToTextField)
-  const pmDoc = pmDocFromSpans(adapter, spans)
+  const doc = pmDocFromSpans(adapter, spans)
   const plugin = syncPlugin({ adapter, handle, path: pathToTextField })
-  return { schema: adapter.schema, pmDoc, plugin }
+  return { schema: adapter.schema, doc, plugin }
 }
