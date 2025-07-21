@@ -1,15 +1,10 @@
 import { AutomergeUrl } from "@automerge/automerge-repo"
-import { useHandle } from "@automerge/automerge-repo-react-hooks"
-import { useEffect, useRef, useState } from "react"
+import { useDocHandle } from "@automerge/automerge-repo-react-hooks"
+import { useEffect, useRef } from "react"
 import { EditorState, Transaction } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { exampleSetup } from "prosemirror-example-setup"
-import {
-  syncPlugin,
-  pmDocFromSpans,
-  basicSchemaAdapter,
-} from "@automerge/prosemirror"
-import { next as am } from "@automerge/automerge"
+import { init, basicSchemaAdapter } from "@automerge/prosemirror"
 import "prosemirror-example-setup/style/style.css"
 import "prosemirror-menu/style/menu.css"
 import "prosemirror-view/style/prosemirror.css"
@@ -17,31 +12,21 @@ import "./App.css"
 
 function App({ docUrl }: { docUrl: AutomergeUrl }) {
   const editorRoot = useRef<HTMLDivElement>(null)
-  const handle = useHandle<{ text: string }>(docUrl)
-  const [loaded, setLoaded] = useState(handle && handle.docSync() != null)
-  useEffect(() => {
-    if (handle != null) {
-      handle.whenReady().then(() => {
-        if (handle.docSync() != null) {
-          setLoaded(true)
-        }
-      })
-    }
-  }, [handle])
+  const handle = useDocHandle<{ text: string }>(docUrl)
 
   useEffect(() => {
-    const adapter = basicSchemaAdapter
     let view: EditorView
-    if (editorRoot.current != null && loaded) {
+
+    if (editorRoot.current != null && handle != null) {
+      const { pmDoc, schema, plugin } = init(handle, ["text"], {
+        schemaAdapter: basicSchemaAdapter,
+      })
       view = new EditorView(editorRoot.current, {
         state: EditorState.create({
-          schema: adapter.schema, // It's important that we use the schema from the mirror
-          plugins: [
-            ...exampleSetup({ schema: adapter.schema }),
-            syncPlugin({ adapter, handle, path: ["text"] }),
-          ],
+          schema, // It's important that we use the schema from the mirror
+          plugins: [...exampleSetup({ schema }), plugin],
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          doc: pmDocFromSpans(adapter, am.spans(handle.docSync()!, ["text"])),
+          doc: pmDoc,
         }),
         dispatchTransaction: (tx: Transaction) => {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -54,7 +39,7 @@ function App({ docUrl }: { docUrl: AutomergeUrl }) {
         view.destroy()
       }
     }
-  }, [editorRoot, loaded, handle])
+  }, [editorRoot, handle])
 
   return <div id="editor" ref={editorRoot}></div>
 }

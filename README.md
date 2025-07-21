@@ -87,7 +87,9 @@ const adapter = new SchemaAdapter({
 This schema adapter can then be passed to `init` as an option:
 
 ```typescript
-const { pmDoc, schema, plugin } = init(handle, ["text"], { schemaAdapter: adapter })
+const { pmDoc, schema, plugin } = init(handle, ["text"], {
+  schemaAdapter: adapter,
+})
 ```
 
 There are a number of keys available in the `automerge` mapping. To understand what they all mean you need to understand the goals of schema mapping:

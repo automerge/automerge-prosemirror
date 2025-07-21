@@ -27,12 +27,12 @@ const rightRepo = new Repo({
   network: [rightAdapter],
 })
 
-const leftHandle = leftRepo.create()
-leftHandle.change(d => {
-  d.text = ""
-})
+const leftHandle = leftRepo.create({ text: "" })
 
-const rightHandle = rightRepo.find(leftHandle.url)
+const rightHandle = await rightRepo.find<{ text: string }>(leftHandle.url)
+if (rightHandle == null) {
+  throw new Error("unable to find right handle")
+}
 
 type Props = {
   /** If building for demo mode then just render a single side-by-side panel,

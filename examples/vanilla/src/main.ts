@@ -26,7 +26,7 @@ let handle: DocHandle<{ text: string }>
 // a new document and update the URL fragment to match.
 const docUrl = window.location.hash.slice(1)
 if (docUrl && isValidAutomergeUrl(docUrl)) {
-  handle = repo.find(docUrl)
+  handle = await repo.find(docUrl)
 } else {
   handle = repo.create({ text: "" })
   window.location.hash = handle.url
