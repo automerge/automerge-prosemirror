@@ -811,7 +811,7 @@ function blockEvent(
 
   const attrs = { ...block.attrs }
   for (const [key, value] of Object.entries(attrs)) {
-    if (value instanceof am.RawString) {
+    if (am.isImmutableString(value)) {
       attrs[key] = value.val
     }
   }
@@ -941,8 +941,8 @@ export function pmNodeToSpans(
   | {
       type: "block"
       value: {
-        type: am.RawString
-        parents: am.RawString[]
+        type: am.ImmutableString
+        parents: am.ImmutableString[]
         attrs: { [key: string]: am.MaterializeValue }
         isEmbed: boolean
       }
@@ -954,8 +954,8 @@ export function pmNodeToSpans(
     | {
         type: "block"
         value: {
-          type: am.RawString
-          parents: am.RawString[]
+          type: am.ImmutableString
+          parents: am.ImmutableString[]
           attrs: { [key: string]: am.MaterializeValue }
           isEmbed: boolean
         }
@@ -969,8 +969,8 @@ export function pmNodeToSpans(
       result.push({
         type: "block",
         value: {
-          type: new am.RawString(event.block.type),
-          parents: event.block.parents.map(p => new am.RawString(p)),
+          type: new am.ImmutableString(event.block.type),
+          parents: event.block.parents.map(p => new am.ImmutableString(p)),
           attrs,
           isEmbed: event.block.isEmbed,
         },

@@ -31,7 +31,6 @@ import {
   sinkListItem,
   liftListItem,
 } from "prosemirror-schema-list"
-import { useHandleReady } from "./useHandleReady.js"
 import {
   Bold,
   Braces,
@@ -101,7 +100,6 @@ function turnSelectionIntoBlockquote(
 export function Editor({ handle, path, schemaAdapter }: EditorProps) {
   const editorRoot = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<EditorView | null>(null)
-  const handleReady = useHandleReady(handle)
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [linkModalOpen, setLinkModalOpen] = useState(false)
   const [{ boldActive, emActive }, setMarkState] = useState({
@@ -110,10 +108,6 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
   })
 
   useLayoutEffect(() => {
-    if (!handleReady) {
-      return
-    }
-
     const {
       schema,
       pmDoc,
@@ -154,7 +148,7 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
     return () => {
       editorView.destroy()
     }
-  }, [handleReady])
+  }, [handle, path, schemaAdapter])
 
   let onBoldClicked = null
   if (view && view.state.schema.marks.strong) {
@@ -324,10 +318,6 @@ export function Editor({ handle, path, schemaAdapter }: EditorProps) {
         )
       }
     }
-  }
-
-  if (!handleReady) {
-    return <div>Loading...</div>
   }
 
   return (

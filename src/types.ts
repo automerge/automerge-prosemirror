@@ -1,4 +1,4 @@
-import { next as am } from "@automerge/automerge/slim"
+import * as am from "@automerge/automerge/slim"
 
 export interface DocHandle<T> {
   docSync: () => am.Doc<T> | undefined
@@ -32,7 +32,7 @@ export function isBlockMarker(obj: unknown): obj is BlockMarker {
 }
 
 export function validBlockType(type: unknown): type is BlockType {
-  if (!(type instanceof am.RawString)) {
+  if (!am.isImmutableString(type)) {
     return false
   }
   return [
@@ -47,8 +47,8 @@ export function validBlockType(type: unknown): type is BlockType {
 }
 
 export type BlockMarker = {
-  type: am.RawString
-  parents: am.RawString[]
+  type: am.ImmutableString
+  parents: am.ImmutableString[]
   attrs: { [key: string]: am.MaterializeValue }
   isEmbed?: boolean
 }
@@ -63,8 +63,8 @@ export function blockSpanToBlockMarker(span: {
     isEmbed: spanIsEmbed,
   } = span
   let type
-  if (!(spanType instanceof am.RawString)) {
-    type = new am.RawString("paragraph")
+  if (!am.isImmutableString(spanType)) {
+    type = new am.ImmutableString("paragraph")
   } else {
     type = spanType
   }
@@ -74,8 +74,8 @@ export function blockSpanToBlockMarker(span: {
       attrs[key] = value
     }
   }
-  let parents: am.RawString[]
-  if (!isArrayOfRawString(spanParents)) {
+  let parents: am.ImmutableString[]
+  if (!isArrayOfImmutableString(spanParents)) {
     parents = []
   } else {
     parents = spanParents
@@ -84,12 +84,12 @@ export function blockSpanToBlockMarker(span: {
   return { type, parents, attrs, isEmbed }
 }
 
-function isArrayOfRawString(obj: unknown): obj is am.RawString[] {
+function isArrayOfImmutableString(obj: unknown): obj is am.ImmutableString[] {
   if (!Array.isArray(obj)) {
     return false
   }
   for (const item of obj) {
-    if (!(item instanceof am.RawString)) {
+    if (!am.isImmutableString(item)) {
       return false
     }
   }

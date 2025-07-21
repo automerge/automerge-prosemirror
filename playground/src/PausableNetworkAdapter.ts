@@ -18,14 +18,23 @@ export class PausableNetworkAdapter
   messagePort: MessagePort
   peerId?: PeerId
   peerMetadata?: PeerMetadata
-  #startupComplete = false
   #log: debug.Debugger
   #connectedPeers: Set<PeerId> = new Set()
+  #startupComplete = false
+  #readyPromise: Promise<void>
 
   constructor(messagePort: MessagePort) {
     super()
     this.#log = debug("prosemirror-playground:pausable")
     this.messagePort = messagePort
+  }
+
+  isReady(): boolean {
+    return this.#startupComplete
+  }
+
+  whenReady(): Promise<void> {
+    return this.#readyPromise
   }
 
   connect(peerId: PeerId, peerMetadata?: PeerMetadata) {
@@ -97,12 +106,14 @@ export class PausableNetworkAdapter
     // Mark this messagechannel as ready after 50 ms, at this point there
     // must be something weird going on on the other end to cause us to receive
     // no response
-    setTimeout(() => {
-      if (!this.#startupComplete) {
-        this.#startupComplete = true
-        this.emit("ready", { network: this })
-      }
-    }, 100)
+    this.#readyPromise = new Promise(resolve => {
+      setTimeout(() => {
+        if (!this.#startupComplete) {
+          this.#startupComplete = true
+          resolve()
+        }
+      }, 100)
+    })
   }
 
   send(message: RepoMessage) {
@@ -125,10 +136,6 @@ export class PausableNetworkAdapter
   }
 
   announceConnection(peerId: PeerId, peerMetadata: PeerMetadata) {
-    if (!this.#startupComplete) {
-      this.#startupComplete = true
-      this.emit("ready", { network: this })
-    }
     this.emit("peer-candidate", { peerId, peerMetadata })
   }
 

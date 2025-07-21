@@ -21,5 +21,6 @@ let editorConfig = {
 ```
 
 ## Contributors
+
 - @alexjg
 - @brianhung

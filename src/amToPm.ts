@@ -1,9 +1,5 @@
-import {
-  next as am,
-  DelPatch,
-  Patch,
-  type Prop,
-} from "@automerge/automerge/slim"
+import * as am from "@automerge/automerge/slim"
+import { DelPatch, Patch, type Prop } from "@automerge/automerge/slim"
 import { Fragment, Slice, Mark } from "prosemirror-model"
 import { Transaction } from "prosemirror-state"
 import { amSpliceIdxToPmIdx, pmDocFromSpans } from "./traversal.js"
@@ -260,7 +256,7 @@ type GatheredPatch = TextPatches | BlockPatches
 
 type TextPatches = {
   type: "text"
-  patches: (am.SpliceTextPatch | am.DelPatch | am.MarkPatch)[]
+  patches: (am.SpliceTextPatch | am.DelPatch | MarkPatch)[]
 }
 
 type BlockPatches = {
@@ -276,7 +272,7 @@ function gatherPatches(textPath: am.Prop[], diff: am.Patch[]): GatheredPatch[] {
     | { type: "gatheringBlock"; index: number; gathered: am.Patch[] }
     | {
         type: "gatheringText"
-        gathered: (am.SpliceTextPatch | am.DelPatch | am.MarkPatch)[]
+        gathered: (am.SpliceTextPatch | am.DelPatch | MarkPatch)[]
       }
     | { type: "transitioning" }
   let state: State = { type: "gatheringText", gathered: [] }

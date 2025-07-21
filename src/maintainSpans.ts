@@ -311,7 +311,7 @@ function deleteSpans(spans: am.Span[], patch: am.DelPatch): void {
             }),
           )
           i++
-          ;(textPos += startOffset), (deleteCount += endOffset - startOffset)
+          ;((textPos += startOffset), (deleteCount += endOffset - startOffset))
         } else if (startOffset > 0) {
           deleteCount += span.value.length - startOffset
           // Truncate the end of the span
@@ -363,7 +363,7 @@ export function applyBlockPatch(
     const key = patch.path[patch.path.length - 1]
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    target[key] = copyValue(patch.value)
+    target[key] = deepCopy(patch.value)
   } else if (patch.action === "insert") {
     const target = resolveTarget(block, pathInBlock.slice(0, -2))
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -376,7 +376,7 @@ export function applyBlockPatch(
     if (!Array.isArray(arr)) {
       throw new Error("Invalid path: expected array when inserting")
     }
-    arr.splice(insertAt, 0, ...copyValues(patch.values))
+    arr.splice(insertAt, 0, ...deepCopy(patch.values))
   } else if (patch.action === "splice") {
     const target = resolveTarget(block, pathInBlock.slice(0, -2))
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -402,17 +402,23 @@ export function applyBlockPatch(
   }
 }
 
-function copyValues(vals: am.MaterializeValue[]): am.MaterializeValue[] {
-  // Copy RawString by value because otherwise instanceof fails
-  return vals.map(val => copyValue(val))
-}
-
-function copyValue(val: am.MaterializeValue): am.MaterializeValue {
-  // Copy RawString by value because otherwise instanceof fails
-  if (val instanceof am.RawString) {
-    return new am.RawString(val.toString())
+function deepCopy<T>(val: T): T {
+  if (Array.isArray(val)) {
+    return val.map(deepCopy) as T
+  } else if (am.isImmutableString(val)) {
+    return val as T
+  } else if (val instanceof Date) {
+    return new Date(val.getTime()) as T
+  } else if (typeof val === "object" && val !== null) {
+    const copy: { [key: string]: any } = {}
+    // Use Object.keys() to preserve property order
+    for (const key of Object.keys(val)) {
+      copy[key] = deepCopy((val as any)[key])
+    }
+    return copy as T
+  } else {
+    return val
   }
-  return structuredClone(val)
 }
 
 function resolveTarget(

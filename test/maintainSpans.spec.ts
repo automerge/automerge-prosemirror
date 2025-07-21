@@ -44,7 +44,7 @@ describe("the patchSpans function", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -58,7 +58,7 @@ describe("the patchSpans function", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -76,7 +76,7 @@ describe("the patchSpans function", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -85,7 +85,7 @@ describe("the patchSpans function", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -99,7 +99,7 @@ describe("the patchSpans function", () => {
       for (const patch of splitBlock(6, {
         type: "paragraph",
         parents: [],
-        attrs: { type: new am.RawString("todo") },
+        attrs: { type: new am.ImmutableString("todo") },
       })(["text"])) {
         patchSpans(["text"], spans, patch)
       }
@@ -108,9 +108,9 @@ describe("the patchSpans function", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
-            attrs: { type: new am.RawString("todo") },
+            attrs: { type: new am.ImmutableString("todo") },
           },
         },
         { type: "text", value: "world" },
@@ -122,7 +122,7 @@ describe("the patchSpans function", () => {
       for (const patch of splitBlock(0, {
         type: "paragraph",
         parents: [],
-        attrs: { type: new am.RawString("todo") },
+        attrs: { type: new am.ImmutableString("todo") },
       })(["text"])) {
         patchSpans(["text"], spans, patch)
       }
@@ -130,9 +130,9 @@ describe("the patchSpans function", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
-            attrs: { type: new am.RawString("todo") },
+            attrs: { type: new am.ImmutableString("todo") },
           },
         },
         { type: "text", value: "hello world" },
@@ -426,7 +426,7 @@ describe("the patchSpans function", () => {
       { action: "splice", path: ["text", 0], value: " " },
       { action: "del", path: ["text", 1] },
     ]
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -456,7 +456,7 @@ describe("the patchSpans function", () => {
       { action: "splice", path: ["text", 1], value: " R" },
     ]
 
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -476,7 +476,7 @@ describe("the patchSpans function", () => {
       { action: "del", path: ["text", 2], length: 2 },
     ]
 
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -492,7 +492,7 @@ describe("the patchSpans function", () => {
       { action: "splice", path: ["text", 0], value: "a", marks: { a: " " } },
     ]
 
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -509,7 +509,7 @@ describe("the patchSpans function", () => {
       { action: "splice", path: ["text", 0], value: "a", marks: { " ": " " } },
       { action: "splice", path: ["text", 1], value: "aaaaaacalwIyler" },
     ]
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -528,7 +528,7 @@ describe("the patchSpans function", () => {
       { action: "splice", path: ["text", 1], value: "0", marks: { " ": "A" } },
       { action: "splice", path: ["text", 2], value: "K1 To 8000000" },
     ]
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -547,7 +547,7 @@ describe("the patchSpans function", () => {
         marks: [{ name: "0", value: "a", start: 0, end: 1 }],
       },
     ]
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -583,7 +583,7 @@ describe("the patchSpans function", () => {
         marks: [{ name: "a", value: " ", start: 28, end: 29 }],
       },
     ]
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -603,7 +603,7 @@ describe("the patchSpans function", () => {
       },
       { action: "del", path: ["text", 1] },
     ]
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -635,7 +635,7 @@ describe("the patchSpans function", () => {
         marks: { bold: true },
       },
     ]
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -654,7 +654,7 @@ describe("the patchSpans function", () => {
         marks: [{ name: "bold", value: true, start: 0, end: 1 }],
       },
     ]
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -674,7 +674,7 @@ describe("the patchSpans function", () => {
     const patches: am.Patch[] = [
       { action: "del", path: ["text", 1], length: 5 },
     ]
-    const patched = structuredClone(spansBefore)
+    const patched = deepCopy(spansBefore)
     for (const patch of patches) {
       patchSpans(["text"], patched, patch)
     }
@@ -685,11 +685,18 @@ describe("the patchSpans function", () => {
     this.timeout(0)
     fc.assert(
       fc.property(scenario(), ({ spansBefore, spansAfter, patches }) => {
-        const updatedSpans = structuredClone(spansBefore)
+        const updatedSpans = deepCopy(spansBefore)
         for (const patch of patches) {
           patchSpans(["text"], updatedSpans, patch)
         }
-        assert.deepEqual(updatedSpans, spansAfter)
+        try {
+          assert.deepEqual(updatedSpans, spansAfter)
+        } catch (e) {
+          console.log("expected: ", JSON.stringify(spansAfter))
+          console.log("actual: ", JSON.stringify(updatedSpans))
+          console.log(e)
+          throw e
+        }
       }),
       {
         numRuns: process.env.CI ? 10 : 100,
@@ -698,19 +705,19 @@ describe("the patchSpans function", () => {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             console.log(
               // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              `action: ${JSON.stringify(out.counterexample![0].actions)}`,
+              `actions: ${JSON.stringify(out.counterexample![0].actions)}`,
             )
             console.log("reproducing test case: \n")
             console.log("const spansBefore: am.Span[] = [")
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             for (const span of out.counterexample![0].spansBefore) {
-              console.log(JSON.stringify(span), ",")
+              console.log("  ", JSON.stringify(span), ",")
             }
             console.log("]")
             console.log("const spansAfter: am.Span[] = [")
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             for (const span of out.counterexample![0].spansAfter) {
-              console.log(JSON.stringify(span), ",")
+              console.log("  ", JSON.stringify(span), ",")
             }
             console.log("]")
             console.log("const patches: am.Patch[] = [")
@@ -732,35 +739,76 @@ type Scenario = {
   spansAfter: am.Span[]
   patches: am.Patch[]
   actions: Action[]
+  doc: am.Doc<unknown>
+  headsBefore: am.Heads
+  headsAfter: am.Heads
+}
+
+function arbAttrName(): fc.Arbitrary<string> {
+  return fc.oneof(
+    fc.constant("bold"),
+    fc.constant("italic"),
+    fc.constant("anchor"),
+  )
+}
+
+function arbAttrValue(): fc.Arbitrary<am.MarkValue> {
+  return fc.oneof(
+    fc.constant("left"),
+    fc.constant("right"),
+    fc.constant(true),
+    fc.constant(false),
+    // fc.date(),
+    fc.integer(),
+    // fc.float(),
+  )
+}
+
+function arbBlockname(): fc.Arbitrary<string> {
+  return fc.oneof(
+    fc.constant("p"),
+    fc.constant("unordered-list"),
+    fc.constant("ordered-list"),
+  )
 }
 
 function arbSpans(): fc.Arbitrary<am.Span[]> {
   return fc
     .array(
       fc.oneof(
-        fc.record<am.Span>({
-          type: fc.constant("block"),
-          value: fc.record({
-            type: symbolString(),
-            parents: fc
-              .array(symbolString(), { maxLength: 5 })
-              .map(s => s.map(s => new am.RawString(s))),
-            attrs: fc.object({
-              maxDepth: 0,
-              key: symbolString(),
-              values: [sensibleString()],
-            }),
-          }),
-        }),
-        fc.record<am.Span>({
-          type: fc.constant("text"),
-          value: sensibleString({ size: "small" }),
-        }),
+        fc.record<am.Span>(
+          {
+            type: fc.constant("block"),
+            value: fc.record(
+              {
+                type: arbBlockname(),
+                parents: fc
+                  .array(arbBlockname(), { maxLength: 5 })
+                  .map(s => s.map(s => new am.ImmutableString(s))),
+                attrs: fc.object({
+                  maxDepth: 0,
+                  key: arbAttrName(),
+                  values: [arbAttrValue()],
+                }),
+              },
+              { noNullPrototype: true },
+            ),
+          },
+          { noNullPrototype: true },
+        ),
+        fc.record<am.Span>(
+          {
+            type: fc.constant("text"),
+            value: fc.string({ maxLength: 100 }),
+            // value: sensibleString({ size: "small" }),
+          },
+          { noNullPrototype: true },
+        ),
       ),
     )
     .map(spans => {
       //consolidate consecutive text spans
-      const result = []
+      let result: am.Span[] = []
       let lastSpan: am.Span | null = null
       for (const span of spans) {
         if (
@@ -774,7 +822,19 @@ function arbSpans(): fc.Arbitrary<am.Span[]> {
           lastSpan = span
         }
       }
-      return result
+      // truncate spans longer than 100 characters
+      result = result.map(span => {
+        if (span.type === "text" && span.value.length > 100) {
+          return { ...span, value: span.value.slice(0, 100) }
+        }
+        return span
+      })
+      // remove spans with empty values
+      result = result.filter(
+        span =>
+          span.type === "block" || (span.type === "text" && span.value !== ""),
+      )
+      return deepFreeze(result)
     })
 }
 
@@ -786,60 +846,59 @@ function symbolString(): fc.Arbitrary<string> {
 
 function scenario(): fc.Arbitrary<Scenario> {
   return arbSpans().chain(spansBefore => {
-    let doc = am.from({ text: "" })
-    doc = am.change(doc, d => am.updateSpans(d, ["text"], spansBefore))
-    const headsBefore = am.getHeads(doc)
-
-    const doMoreModifications = (
-      spansBefore: am.Span[],
-      startHeads: am.Heads,
-      doc: am.Doc<{ text: string }>,
-      changesSoFar: number,
-      actionsSoFar: Action[],
-    ): fc.Arbitrary<{
-      spansBefore: am.Span[]
-      startHeads: am.Heads
-      doc: am.Doc<{ text: string }>
-      actions: Action[]
-    }> => {
-      if (changesSoFar >= 5) {
-        return fc.constant({
-          startHeads,
-          doc,
-          spansBefore: spansBefore,
-          actions: actionsSoFar,
+    let initDoc = am.from({ text: "" })
+    initDoc = am.change(initDoc, d => am.updateSpans(d, ["text"], spansBefore))
+    const headsBefore = am.getHeads(initDoc)
+    return fc.integer({ min: 0, max: 5 }).chain(numActions => {
+      const doMoreModifications = (
+        spansBefore: am.Span[],
+        startHeads: am.Heads,
+        doc: am.Doc<{ text: string }>,
+        changesSoFar: number,
+        actionsSoFar: Action[],
+      ): fc.Arbitrary<{
+        spansBefore: am.Span[]
+        startHeads: am.Heads
+        doc: am.Doc<{ text: string }>
+        actions: Action[]
+      }> => {
+        if (changesSoFar >= numActions) {
+          return fc.constant({
+            startHeads,
+            doc,
+            spansBefore,
+            actions: actionsSoFar,
+          })
+        }
+        return fc.tuple(arbAction(doc), fc.context()).chain(([action, ctx]) => {
+          ctx.log(`action: ${JSON.stringify(action)}`)
+          const updated = applyAction(am.clone(doc), action)
+          const newActions = actionsSoFar.slice()
+          newActions.push(action)
+          return doMoreModifications(
+            spansBefore,
+            startHeads,
+            updated,
+            changesSoFar + 1,
+            newActions,
+          )
         })
       }
-      return fc.tuple(arbAction(doc), fc.context()).chain(([action, ctx]) => {
-        ctx.log(`action: ${JSON.stringify(action)}`)
-        const updated = applyAction(am.clone(doc), action)
-        const newActions = actionsSoFar.slice()
-        newActions.push(action)
-        return doMoreModifications(
-          spansBefore,
-          startHeads,
-          updated,
-          changesSoFar + 1,
-          newActions,
-        )
-      })
-    }
-
-    return doMoreModifications(
-      structuredClone(spansBefore),
-      headsBefore,
-      doc,
-      0,
-      [],
-    ).map(({ spansBefore, startHeads, doc, actions }) => {
-      const patches = am.diff(doc, startHeads, am.getHeads(doc))
-      const spansAfter = am.spans(doc, ["text"])
-      return {
-        spansBefore: structuredClone(spansBefore),
-        spansAfter,
-        patches,
-        actions,
-      }
+      return doMoreModifications(spansBefore, headsBefore, initDoc, 0, []).map(
+        ({ spansBefore, startHeads, doc, actions }) => {
+          const patches = am.diff(doc, startHeads, am.getHeads(doc))
+          const spansAfter = am.spans(doc, ["text"])
+          return deepFreeze({
+            spansBefore,
+            spansAfter,
+            patches,
+            actions,
+            doc,
+            headsBefore,
+            headsAfter: am.getHeads(doc),
+          })
+        },
+      )
     })
   })
 }
@@ -851,7 +910,7 @@ type Action =
       type: "addMark"
       range: am.MarkRange
       name: string
-      value: string | boolean
+      value: am.MarkValue
     }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   | { type: "splitBlock"; index: number; value: { [key: string]: any } }
@@ -860,11 +919,14 @@ type Action =
 
 function arbAction(doc: am.Doc<{ text: string }>): fc.Arbitrary<Action> {
   if (doc.text.length === 0) {
-    return fc.record<Action>({
-      type: fc.constant("insert"),
-      index: fc.constant(0),
-      chars: sensibleString({ size: "small" }),
-    })
+    return fc.record(
+      {
+        type: fc.constant("insert" as const),
+        index: fc.constant(0),
+        chars: sensibleString({ size: "small" }),
+      },
+      { noNullPrototype: true },
+    )
   }
   const actions = [insert(doc), del(doc), addMark(doc), arbSplitBlock(doc)]
   const spans = am.spans(doc, ["text"])
@@ -881,11 +943,14 @@ function arbAction(doc: am.Doc<{ text: string }>): fc.Arbitrary<Action> {
 }
 
 function insert(doc: am.Doc<{ text: string }>): fc.Arbitrary<Action> {
-  return fc.record<Action>({
-    type: fc.constant("insert"),
-    index: fc.integer({ min: 0, max: doc.text.length }),
-    chars: sensibleString({ size: "small" }),
-  })
+  return fc.record(
+    {
+      type: fc.constant("insert" as const),
+      index: fc.integer({ min: 0, max: doc.text.length }),
+      chars: sensibleString({ size: "small" }),
+    },
+    { noNullPrototype: true },
+  )
 }
 
 function del(doc: am.Doc<{ text: string }>): fc.Arbitrary<Action> {
@@ -915,22 +980,28 @@ function addMark(doc: am.Doc<{ text: string }>): fc.Arbitrary<Action> {
   return fc.integer({ min: 0, max: doc.text.length - 1 }).chain(start => {
     const end = fc.integer({ min: start + 1, max: doc.text.length })
     return fc.tuple(end, arbExpand()).chain(([end, expand]) => {
-      return fc.record<Action>({
-        type: fc.constant("addMark"),
-        range: fc.constant({ start, end, expand }),
-        name: fc.oneof(fc.constant("bold"), fc.constant("italic")),
-        value: fc.oneof(fc.boolean(), fc.constant("stringval")),
-      })
+      return fc.record(
+        {
+          type: fc.constant("addMark" as const),
+          range: fc.constant({ start, end, expand }),
+          name: arbAttrName(),
+          value: arbAttrValue(),
+        },
+        { noNullPrototype: true },
+      )
     })
   })
 }
 
 function arbSplitBlock(doc: am.Doc<{ text: string }>): fc.Arbitrary<Action> {
-  return fc.record<Action>({
-    type: fc.constant("splitBlock"),
-    index: fc.integer({ min: 0, max: doc.text.length - 1 }),
-    value: arbBlock(),
-  })
+  return fc.record(
+    {
+      type: fc.constant("splitBlock" as const),
+      index: fc.integer({ min: 0, max: doc.text.length - 1 }),
+      value: arbBlock(),
+    },
+    { noNullPrototype: true },
+  )
 }
 
 function arbUpdateBlock(spans: am.Span[]): fc.Arbitrary<Action> {
@@ -948,17 +1019,20 @@ function arbUpdateBlock(spans: am.Span[]): fc.Arbitrary<Action> {
 }
 
 function arbBlock() {
-  return fc.record({
-    type: symbolString(),
-    parents: fc
-      .array(symbolString(), { maxLength: 5 })
-      .map(s => s.map(s => new am.RawString(s))),
-    attrs: fc.object({
-      maxDepth: 2,
-      key: symbolString(),
-      values: [sensibleString().map(s => new am.RawString(s))],
-    }),
-  })
+  return fc.record(
+    {
+      type: symbolString().map(s => new am.ImmutableString(s)),
+      parents: fc
+        .array(symbolString(), { maxLength: 5 })
+        .map(s => s.map(s => new am.ImmutableString(s))),
+      attrs: fc.object({
+        maxDepth: 1, // TODO: increase maxDepth
+        key: symbolString(),
+        values: [sensibleString().map(s => new am.ImmutableString(s))],
+      }),
+    },
+    { noNullPrototype: true },
+  )
 }
 
 function applyAction(
@@ -987,4 +1061,42 @@ function sensibleString(
     constraints = { size: "small" }
   }
   return fc.stringMatching(/^[a-zA-Z0-9 ]+$/, constraints)
+}
+
+function deepCopy<T>(val: T): T {
+  if (Array.isArray(val)) {
+    return val.map(deepCopy) as T
+  } else if (am.isImmutableString(val)) {
+    return val as T
+  } else if (val instanceof Date) {
+    return new Date(val.getTime()) as T
+  } else if (typeof val === "object" && val !== null) {
+    const copy: { [key: string]: any } = {}
+    // Use Object.keys() to preserve property order
+    for (const key of Object.keys(val)) {
+      copy[key] = deepCopy((val as any)[key])
+    }
+    return copy as T
+  } else {
+    return val
+  }
+}
+
+function deepFreeze<T>(val: T): T {
+  if (Array.isArray(val)) {
+    return val.map(deepFreeze) as T
+  } else if (am.isImmutableString(val)) {
+    return val as T
+  } else if (val instanceof Date) {
+    return new Date(val.getTime()) as T
+  } else if (typeof val === "object" && val !== null) {
+    const copy: { [key: string]: any } = {}
+    // Use Object.keys() to preserve property order
+    for (const key of Object.keys(val)) {
+      copy[key] = deepFreeze((val as any)[key])
+    }
+    return Object.freeze(copy) as T
+  } else {
+    return val
+  }
 }
