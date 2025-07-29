@@ -1,4 +1,4 @@
-import { next as A } from "@automerge/automerge/slim"
+import * as A from "@automerge/automerge/slim"
 import { Node, Schema } from "prosemirror-model"
 import { Plugin } from "prosemirror-state"
 import { DocHandle } from "./DocHandle.js"
@@ -74,13 +74,8 @@ export function init(
   options: { schemaAdapter: SchemaAdapter } | undefined = undefined,
 ): { schema: Schema; pmDoc: Node; plugin: Plugin } {
   const adapter = options?.schemaAdapter ?? basicSchemaAdapter
-  const doc = handle.docSync()
-  if (!doc) {
-    throw new Error(
-      "cannot initialize ProseMirror document when handle is not ready",
-    )
-  }
-  const spans = A.spans(doc, pathToTextField)
+  const doc = handle.doc()
+  const spans = A.spans(doc as A.Doc<unknown>, pathToTextField)
   const pmDoc = pmDocFromSpans(adapter, spans)
   const plugin = syncPlugin({ adapter, handle, path: pathToTextField })
   return { schema: adapter.schema, pmDoc, plugin }
