@@ -1,5 +1,5 @@
 import { Plugin, PluginKey, Selection } from "prosemirror-state"
-import { next as am } from "@automerge/automerge/slim"
+import * as am from "@automerge/automerge/slim"
 import pmToAm from "./pmToAm.js"
 import amToPm from "./amToPm.js"
 import { pmDocFromSpans } from "./traversal.js"
@@ -55,10 +55,9 @@ export const syncPlugin = <T>({
       transactions = transactions.filter(doc => doc.docChanged)
       if (transactions.length === 0) return undefined
 
-      //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const docBefore = handle.docSync()!
-      const headsBefore = am.getHeads(docBefore)
-      const spansBefore = am.spans(docBefore, path)
+      const docBefore = handle.doc()
+      const headsBefore = am.getHeads(docBefore as am.Doc<unknown>)
+      const spansBefore = am.spans(docBefore as am.Doc<unknown>, path)
 
       // Apply transactions to the automerge doc
       ignoreTr = true
@@ -71,16 +70,20 @@ export const syncPlugin = <T>({
       ignoreTr = false
 
       //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const docAfter = handle.docSync()!
-      const headsAfter = am.getHeads(docAfter)
-      const spansAfter = am.spans(docAfter, path)
+      const docAfter = handle.doc()
+      const headsAfter = am.getHeads(docAfter as am.Doc<unknown>)
+      const spansAfter = am.spans(docAfter as am.Doc<unknown>, path)
 
       // Ignore if nothing changed.
       if (isArrayEqual(headsBefore, headsAfter)) return undefined
 
       // Check if ProseMirror doc matches the AutoMerge doc
       // by comparing changesets between the two transactions.
-      const patches = am.diff(docAfter, headsBefore, headsAfter)
+      const patches = am.diff(
+        docAfter as am.Doc<unknown>,
+        headsBefore,
+        headsAfter,
+      )
       const tx = amToPm(adapter, spansBefore, patches, path, oldState.tr)
 
       let amChangeSet = ChangeSet.create(oldState.doc)
