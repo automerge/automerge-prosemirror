@@ -1,6 +1,6 @@
 {
   "name": "@automerge/prosemirror",
-  "version": "0.0.13",
+  "version": "0.1.0",
   "license": "MIT",
   "scripts": {
     "prettier": "prettier '**/*.{js,ts,tsx,json}' --check",
