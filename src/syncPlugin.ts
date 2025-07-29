@@ -55,6 +55,11 @@ export const syncPlugin = <T>({
       transactions = transactions.filter(doc => doc.docChanged)
       if (transactions.length === 0) return undefined
 
+      //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const docBefore = handle.docSync()!
+      const headsBefore = am.getHeads(docBefore)
+      const spansBefore = am.spans(docBefore, path)
+
       // Apply transactions to the automerge doc
       ignoreTr = true
       handle.change((doc: am.Doc<T>) => {
@@ -64,11 +69,6 @@ export const syncPlugin = <T>({
         }
       })
       ignoreTr = false
-
-      //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const docBefore = handle.docSync()!
-      const headsBefore = am.getHeads(docBefore)
-      const spansBefore = am.spans(docBefore, path)
 
       //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const docAfter = handle.docSync()!
