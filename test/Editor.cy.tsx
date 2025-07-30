@@ -93,7 +93,7 @@ describe("<Editor />", () => {
           {
             type: "block",
             value: {
-              type: new am.RawString("paragraph"),
+              type: new am.ImmutableString("paragraph"),
               parents: [],
               attrs: {},
               isEmbed: false,
@@ -103,7 +103,7 @@ describe("<Editor />", () => {
           {
             type: "block",
             value: {
-              type: new am.RawString("paragraph"),
+              type: new am.ImmutableString("paragraph"),
               parents: [],
               attrs: {},
               isEmbed: false,
@@ -112,7 +112,7 @@ describe("<Editor />", () => {
           {
             type: "block",
             value: {
-              type: new am.RawString("paragraph"),
+              type: new am.ImmutableString("paragraph"),
               parents: [],
               attrs: {},
               isEmbed: false,
