@@ -271,8 +271,8 @@ type AutomergeNodeSpec = {
 type BlockMappingSpec = string | { within: { [key: string]: string } }
 
 type BlockMarker = {
-  type: automerge.RawString
-  parents: automerge.RawString[]
+  type: automerge.ImmutableString
+  parents: automerge.ImmutableString[]
   attrs: { [key: string]: any }
   isEmbed?: boolean
 }

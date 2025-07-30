@@ -124,7 +124,7 @@ export function splitBlock(
       {
         action: "put",
         path: path.concat([index, "type"]),
-        value: new am.RawString(block.type),
+        value: new am.ImmutableString(block.type),
       },
       {
         action: "put",
@@ -150,7 +150,7 @@ export function splitBlock(
       patches.push({
         action: "insert",
         path: path.concat([index, "parents", i]),
-        values: [new am.RawString(parent)],
+        values: [new am.ImmutableString(parent)],
       })
     })
 
@@ -167,7 +167,7 @@ export function updateBlockType(
       {
         action: "put",
         path: path.concat([index, "type"]),
-        value: new am.RawString(newType),
+        value: new am.ImmutableString(newType),
       },
     ]
   }
@@ -191,8 +191,8 @@ export function assertSplitBlock(
   const parentPath = path.slice(0, -1)
 
   const expectedSpan: { [key: string]: automerge.MaterializeValue } = {
-    type: new am.RawString(expected.type),
-    parents: expected.parents.map(p => new am.RawString(p)),
+    type: new am.ImmutableString(expected.type),
+    parents: expected.parents.map(p => new am.ImmutableString(p)),
     attrs: expected.attrs,
   }
   if (expected.isEmbed != null) {

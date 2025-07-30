@@ -180,7 +180,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -188,11 +188,11 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("image"),
-            parents: [new am.RawString("paragraph")],
+            type: new am.ImmutableString("image"),
+            parents: [new am.ImmutableString("paragraph")],
             attrs: {
               alt: "Andromeda Galaxy",
-              src: new am.RawString(
+              src: new am.ImmutableString(
                 "https://archive.org/services/img/Hubble_Andromeda_Galaxy_",
               ),
               title: "Andromeda Galaxy",
@@ -229,7 +229,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("code-block"),
+            type: new am.ImmutableString("code-block"),
             attrs: {},
             parents: [],
           },
@@ -785,30 +785,54 @@ describe("the traversal API", () => {
     it("should return the active block on a block boundary", () => {
       assert.deepStrictEqual(blockAtIdx(spans, 5), {
         index: 5,
-        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
+        block: {
+          type: new am.ImmutableString("paragraph"),
+          parents: [],
+          attrs: {},
+        },
       })
     })
 
     it("should return the active block after a span boundary", () => {
       assert.deepStrictEqual(blockAtIdx(spans, 6), {
         index: 5,
-        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
+        block: {
+          type: new am.ImmutableString("paragraph"),
+          parents: [],
+          attrs: {},
+        },
       })
       assert.deepStrictEqual(blockAtIdx(spans, 7), {
         index: 5,
-        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
+        block: {
+          type: new am.ImmutableString("paragraph"),
+          parents: [],
+          attrs: {},
+        },
       })
       assert.deepStrictEqual(blockAtIdx(spans, 8), {
         index: 5,
-        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
+        block: {
+          type: new am.ImmutableString("paragraph"),
+          parents: [],
+          attrs: {},
+        },
       })
       assert.deepStrictEqual(blockAtIdx(spans, 9), {
         index: 5,
-        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
+        block: {
+          type: new am.ImmutableString("paragraph"),
+          parents: [],
+          attrs: {},
+        },
       })
       assert.deepStrictEqual(blockAtIdx(spans, 10), {
         index: 5,
-        block: { type: new am.RawString("paragraph"), parents: [], attrs: {} },
+        block: {
+          type: new am.ImmutableString("paragraph"),
+          parents: [],
+          attrs: {},
+        },
       })
     })
 
@@ -820,7 +844,7 @@ describe("the traversal API", () => {
       assert.deepStrictEqual(blockAtIdx(spans, 7), {
         index: 0,
         block: {
-          type: new am.RawString("ordered-list-item"),
+          type: new am.ImmutableString("ordered-list-item"),
           parents: [],
           attrs: {},
         },
@@ -843,8 +867,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("ordered-list-item"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
           },
         },
@@ -923,8 +947,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -958,7 +982,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -967,8 +991,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("ordered-list-item"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
           },
         },
@@ -1019,7 +1043,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -1028,8 +1052,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -1037,7 +1061,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -1097,7 +1121,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -1106,8 +1130,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -1115,7 +1139,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -1123,7 +1147,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -1197,7 +1221,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -1205,8 +1229,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -1214,8 +1238,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -1269,7 +1293,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unordered-list-item"),
+            type: new am.ImmutableString("unordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -1278,8 +1302,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
             isEmbed: false,
           },
@@ -1340,7 +1364,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unordered-list-item"),
+            type: new am.ImmutableString("unordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -1376,7 +1400,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("aside"),
+            type: new am.ImmutableString("aside"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -1407,7 +1431,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("heading"),
+            type: new am.ImmutableString("heading"),
             parents: [],
             attrs: { level: 1 },
             isEmbed: false,
@@ -1417,7 +1441,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("heading"),
+            type: new am.ImmutableString("heading"),
             parents: [],
             attrs: { level: 2 },
             isEmbed: false,
@@ -1461,7 +1485,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -1471,7 +1495,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -1480,8 +1504,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("ordered-list-item"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -1553,10 +1577,10 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("image"),
-            parents: [new am.RawString("paragraph")],
+            type: new am.ImmutableString("image"),
+            parents: [new am.ImmutableString("paragraph")],
             attrs: {
-              src: new am.RawString("image.png"),
+              src: new am.ImmutableString("image.png"),
               alt: "image alt",
               title: "image title",
             },
@@ -1591,7 +1615,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -1600,10 +1624,10 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("image"),
-            parents: [new am.RawString("paragraph")],
+            type: new am.ImmutableString("image"),
+            parents: [new am.ImmutableString("paragraph")],
             attrs: {
-              src: new am.RawString("image.png"),
+              src: new am.ImmutableString("image.png"),
               alt: "image alt",
               title: "image title",
             },
@@ -1650,10 +1674,10 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [
-              new am.RawString("blockquote"),
-              new am.RawString("unordered-list-item"),
+              new am.ImmutableString("blockquote"),
+              new am.ImmutableString("unordered-list-item"),
             ],
             attrs: {},
           },
@@ -1661,8 +1685,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("blockquote")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("blockquote")],
             attrs: {},
           },
         },
@@ -1709,7 +1733,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("code-block"),
+            type: new am.ImmutableString("code-block"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -1740,7 +1764,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("heading"),
+            type: new am.ImmutableString("heading"),
             parents: [],
             attrs: { level: 1 },
             isEmbed: false,
@@ -1750,8 +1774,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -1797,7 +1821,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -1807,8 +1831,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
             isEmbed: false,
           },
@@ -1817,8 +1841,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unordered-list-item"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("unordered-list-item"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
             isEmbed: false,
           },
@@ -2088,7 +2112,7 @@ describe("the traversal API", () => {
             type: "image",
             parents: [],
             attrs: {
-              src: new am.RawString("some-image.png"),
+              src: new am.ImmutableString("some-image.png"),
               alt: "some image",
               title: "some title",
             },
@@ -2256,10 +2280,10 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [
-              new am.RawString("blockquote"),
-              new am.RawString("unordered-list-item"),
+              new am.ImmutableString("blockquote"),
+              new am.ImmutableString("unordered-list-item"),
             ],
             attrs: {},
           },
@@ -2268,8 +2292,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("blockquote")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("blockquote")],
             attrs: {},
           },
         },
@@ -2277,8 +2301,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unordered-list-item"),
-            parents: [new am.RawString("blockquote")],
+            type: new am.ImmutableString("unordered-list-item"),
+            parents: [new am.ImmutableString("blockquote")],
             attrs: {},
           },
         },
@@ -2490,7 +2514,7 @@ describe("the traversal API", () => {
             type: "image",
             parents: [],
             attrs: {
-              src: new am.RawString("some-image.png"),
+              src: new am.ImmutableString("some-image.png"),
               alt: "some image",
               title: "some title",
             },
@@ -2536,7 +2560,7 @@ describe("the traversal API", () => {
             type: "image",
             parents: ["paragraph"],
             attrs: {
-              src: new am.RawString("some-image.png"),
+              src: new am.ImmutableString("some-image.png"),
               alt: "some image",
               title: "some title",
             },
@@ -2706,8 +2730,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("ordered-list-item"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
           },
         },
@@ -2737,7 +2761,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -2746,7 +2770,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -2775,7 +2799,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -2784,8 +2808,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -2793,7 +2817,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -2830,8 +2854,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -2839,7 +2863,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -2847,7 +2871,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -2886,7 +2910,7 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             parents: [],
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             attrs: {},
           },
         },
@@ -2894,8 +2918,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            parents: [new am.RawString("ordered-list-item")],
-            type: new am.RawString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
             attrs: {},
           },
         },
@@ -2904,15 +2928,15 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             parents: [],
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             attrs: {},
           },
         },
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("ordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("ordered-list-item")],
             attrs: {},
           },
         },
@@ -2945,7 +2969,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unordered-list-item"),
+            type: new am.ImmutableString("unordered-list-item"),
             parents: [],
             attrs: {},
           },
@@ -2954,8 +2978,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
           },
         },
@@ -2984,7 +3008,7 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             parents: [],
-            type: new am.RawString("unordered-list-item"),
+            type: new am.ImmutableString("unordered-list-item"),
             attrs: {},
           },
         },
@@ -2993,7 +3017,7 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             parents: [],
-            type: new am.RawString("ordered-list-item"),
+            type: new am.ImmutableString("ordered-list-item"),
             attrs: {},
           },
         },
@@ -3023,7 +3047,11 @@ describe("the traversal API", () => {
       const spans: am.Span[] = [
         {
           type: "block",
-          value: { type: new am.RawString("aside"), parents: [], attrs: {} },
+          value: {
+            type: new am.ImmutableString("aside"),
+            parents: [],
+            attrs: {},
+          },
         },
       ]
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
@@ -3044,7 +3072,7 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             parents: [],
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             attrs: {},
           },
         },
@@ -3053,13 +3081,17 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             parents: [],
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             attrs: {},
           },
         },
         {
           type: "block",
-          value: { parents: [], type: new am.RawString("aside"), attrs: {} },
+          value: {
+            parents: [],
+            type: new am.ImmutableString("aside"),
+            attrs: {},
+          },
         },
         { type: "text", value: "next line" },
       ]
@@ -3086,7 +3118,7 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             parents: [],
-            type: new am.RawString("heading"),
+            type: new am.ImmutableString("heading"),
             attrs: { level: 1 },
           },
         },
@@ -3095,7 +3127,7 @@ describe("the traversal API", () => {
           type: "block",
           value: {
             parents: [],
-            type: new am.RawString("heading"),
+            type: new am.ImmutableString("heading"),
             attrs: { level: 2 },
           },
         },
@@ -3122,7 +3154,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
           },
@@ -3130,11 +3162,11 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("image"),
-            parents: [new am.RawString("paragraph")],
+            type: new am.ImmutableString("image"),
+            parents: [new am.ImmutableString("paragraph")],
             attrs: {
               alt: "image alt",
-              src: new am.RawString("image.png"),
+              src: new am.ImmutableString("image.png"),
               title: "image title",
             },
             isEmbed: true,
@@ -3168,8 +3200,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("blockquote")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("blockquote")],
             attrs: {},
           },
         },
@@ -3177,8 +3209,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("blockquote")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("blockquote")],
             attrs: {},
           },
         },
@@ -3208,8 +3240,8 @@ describe("the traversal API", () => {
           value: {
             type: "paragraph",
             parents: [
-              new am.RawString("blockquote"),
-              new am.RawString("unordered-list-item"),
+              new am.ImmutableString("blockquote"),
+              new am.ImmutableString("unordered-list-item"),
             ],
             attrs: {},
           },
@@ -3218,8 +3250,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("blockquote")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("blockquote")],
             attrs: {},
           },
         },
@@ -3251,7 +3283,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -3261,8 +3293,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
             isEmbed: false,
           },
@@ -3271,8 +3303,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unordered-list-item"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("unordered-list-item"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
             isEmbed: false,
           },
@@ -3309,7 +3341,7 @@ describe("the traversal API", () => {
           {
             type: "block",
             value: {
-              type: new am.RawString("unknown"),
+              type: new am.ImmutableString("unknown"),
               parents: [],
               attrs: {},
             },
@@ -3343,8 +3375,8 @@ describe("the traversal API", () => {
           {
             type: "block",
             value: {
-              type: new am.RawString("unknown"),
-              parents: [new am.RawString("unknown")],
+              type: new am.ImmutableString("unknown"),
+              parents: [new am.ImmutableString("unknown")],
               attrs: {},
             },
           },
@@ -3391,8 +3423,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
             isEmbed: false,
           },
@@ -3401,7 +3433,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unordered-list-item"),
+            type: new am.ImmutableString("unordered-list-item"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -3433,7 +3465,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -3443,8 +3475,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("paragraph"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
             isEmbed: false,
           },
@@ -3453,8 +3485,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unordered-list-item"),
-            parents: [new am.RawString("unordered-list-item")],
+            type: new am.ImmutableString("unordered-list-item"),
+            parents: [new am.ImmutableString("unordered-list-item")],
             attrs: {},
             isEmbed: false,
           },
@@ -3480,8 +3512,8 @@ describe("the traversal API", () => {
       {
         type: "block",
         value: {
-          type: new am.RawString("paragraph"),
-          parents: [new am.RawString("unordered-list-item")],
+          type: new am.ImmutableString("paragraph"),
+          parents: [new am.ImmutableString("unordered-list-item")],
           attrs: {},
           isEmbed: false,
         },
@@ -3490,8 +3522,8 @@ describe("the traversal API", () => {
       {
         type: "block",
         value: {
-          type: new am.RawString("paragraph"),
-          parents: [new am.RawString("unordered-list-item")],
+          type: new am.ImmutableString("paragraph"),
+          parents: [new am.ImmutableString("unordered-list-item")],
           attrs: {},
           isEmbed: false,
         },
@@ -3505,7 +3537,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unknown"),
+            type: new am.ImmutableString("unknown"),
             parents: [],
             attrs: {},
             isEmbed: false,
@@ -3525,7 +3557,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unknown"),
+            type: new am.ImmutableString("unknown"),
             parents: [],
             attrs: {},
             isEmbed: true,
@@ -3545,8 +3577,8 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("unknown"),
-            parents: [new am.RawString("unknown")],
+            type: new am.ImmutableString("unknown"),
+            parents: [new am.ImmutableString("unknown")],
             attrs: {},
             isEmbed: false,
           },
@@ -3567,7 +3599,7 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("paragraph"),
+            type: new am.ImmutableString("paragraph"),
             parents: [],
             attrs: {
               foo: "bar",
@@ -3589,10 +3621,10 @@ describe("the traversal API", () => {
         {
           type: "block",
           value: {
-            type: new am.RawString("image"),
+            type: new am.ImmutableString("image"),
             parents: [],
             attrs: {
-              src: new am.RawString("image.png"),
+              src: new am.ImmutableString("image.png"),
               alt: null,
               title: null,
             },
