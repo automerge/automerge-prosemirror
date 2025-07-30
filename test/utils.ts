@@ -8,6 +8,7 @@ import { applyBlockPatch } from "../src/maintainSpans.js"
 import { next as am } from "@automerge/automerge"
 import { basicSchemaAdapter } from "../src/basicSchema.js"
 import { isArrayEqual, isPrefixOfArray } from "../src/utils.js"
+import { SchemaAdapter } from "../src/schema.js"
 
 export type BlockDef = {
   type: string
@@ -16,7 +17,14 @@ export type BlockDef = {
   isEmbed?: boolean
 }
 
-export function docFromBlocksNotation(notation: (string | BlockDef)[]): {
+export type TextSpanDef =
+  | string
+  | { text: string; marks?: { [key: string]: am.MarkValue } }
+
+export function docFromBlocksNotation(
+  notation: (TextSpanDef | BlockDef)[],
+  adapter: SchemaAdapter = basicSchemaAdapter,
+): {
   doc: automerge.Doc<{ text: string }>
   spans: automerge.Span[]
 } {
@@ -27,10 +35,28 @@ export function docFromBlocksNotation(notation: (string | BlockDef)[]): {
       if (typeof line === "string") {
         automerge.splice(doc, ["text"], index, 0, line)
         index += line.length
+      } else if ("text" in line) {
+        const text = line.text
+        automerge.splice(doc, ["text"], index, 0, text)
+        for (const [markName, markValue] of Object.entries(line.marks ?? {})) {
+          const expand = adapter.expandConfig(markName)
+          automerge.mark(
+            doc,
+            ["text"],
+            {
+              start: index,
+              end: index + text.length,
+              expand,
+            },
+            markName,
+            markValue,
+          )
+        }
+        index += text.length
       } else {
         const block = {
-          type: new am.RawString(line.type),
-          parents: line.parents.map(p => new am.RawString(p)),
+          type: new am.ImmutableString(line.type),
+          parents: line.parents.map(p => new am.ImmutableString(p)),
           attrs: line.attrs,
         }
         automerge.splitBlock(doc, ["text"], index, block)
@@ -42,14 +68,14 @@ export function docFromBlocksNotation(notation: (string | BlockDef)[]): {
 }
 
 export function makeDoc(
-  defs: (string | BlockDef)[],
+  defs: (TextSpanDef | BlockDef)[],
   adapter = basicSchemaAdapter,
 ): {
   spans: automerge.Span[]
   doc: automerge.Doc<unknown>
   editor: EditorState
 } {
-  const { spans, doc } = docFromBlocksNotation(defs)
+  const { spans, doc } = docFromBlocksNotation(defs, adapter)
   const pmDoc = pmDocFromSpans(adapter, spans)
   const editor = EditorState.create({ schema: adapter.schema, doc: pmDoc })
   return { spans, doc, editor }

@@ -32,7 +32,7 @@ export default function (
   }
 
   for (const step of steps) {
-    //console.log(step)
+    // console.log(JSON.stringify(step))
     const stepId = step.toJSON()["stepType"]
     if (stepId === "addMark") {
       unappliedMarks.push(step as AddMarkStep)
@@ -119,7 +119,7 @@ function replaceStep(
     throw new Error("Could not apply step to document")
   }
   const newSpans = pmNodeToSpans(adapter, applied)
-  automerge.updateSpans(doc, field, newSpans)
+  automerge.updateSpans(doc, field, newSpans, adapter.updateSpansConfig())
 }
 
 function replaceAroundStep(
@@ -135,7 +135,7 @@ function replaceAroundStep(
     throw new Error("Could not apply step to document")
   }
   const newSpans = pmNodeToSpans(adapter, applied)
-  automerge.updateSpans(doc, field, newSpans)
+  automerge.updateSpans(doc, field, newSpans, adapter.updateSpansConfig())
 }
 
 function applyAddMarkSteps(
@@ -254,10 +254,14 @@ function reconcileMarks(
       !currentMarkNames.has(markName) ||
       newMarks[markName] !== currentMarks[markName]
     ) {
+      const expand =
+        (marks.find(m => m.type.name === markName)?.type.spec.inclusive ?? true)
+          ? "both"
+          : "none"
       automerge.mark(
         doc,
         path,
-        { start: index, end: index + length, expand: "both" },
+        { start: index, end: index + length, expand },
         markName,
         newMarks[markName],
       )

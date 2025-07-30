@@ -11,6 +11,8 @@ import {
 import { next as am } from "@automerge/automerge/slim"
 import { BlockMarker } from "./types.js"
 
+type ExpandConfig = "both" | "none"
+
 export interface MappedSchemaSpec {
   nodes: { [key: string]: MappedNodeSpec }
   marks?: { [key: string]: MappedMarkSpec }
@@ -179,6 +181,28 @@ by setting the automerge.unknownBlock property to true`,
     this.unknownBlock = unknownBlock
     this.schema = schema
   }
+
+  expandConfig(markName: string): ExpandConfig {
+    const mark = this.markMappings.find(
+      m => m.prosemirrorMark.name === markName,
+    )
+    return (mark?.prosemirrorMark.spec.inclusive ?? true) ? "both" : "none"
+  }
+
+  updateSpansConfig(): am.UpdateSpansConfig {
+    const config: am.UpdateSpansConfig = {
+      defaultExpand: "both",
+      perMarkExpand: {},
+    }
+
+    const perMark: { [key: string]: ExpandConfig } = {}
+    for (const mark of this.markMappings) {
+      perMark[mark.automergeMarkName] =
+        (mark.prosemirrorMark.spec.inclusive ?? true) ? "both" : "none"
+    }
+    config.perMarkExpand = perMark
+    return config
+  }
 }
 
 function shallowClone(spec: MappedSchemaSpec): MappedSchemaSpec {
@@ -236,7 +260,7 @@ function addAmgNodeStateAttrs(nodes: { [key: string]: MappedNodeSpec }): {
 export function amMarksFromPmMarks(
   adapter: SchemaAdapter,
   marks: readonly Mark[],
-): am.MarkSet {
+): { [key: string]: am.MarkValue } {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: { [key: string]: any } = {}
   marks.forEach(mark => {
