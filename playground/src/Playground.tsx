@@ -12,27 +12,33 @@ import {
 } from "../../src"
 import { Mark, Node } from "prosemirror-model"
 import { BlockMarker } from "../../src/types"
+import * as Automerge from "@automerge/automerge"
+
+// @ts-expect-error this is for debug
+window.A = Automerge
 
 const { port1: leftToRight, port2: rightToLeft } = new MessageChannel()
 
 const leftAdapter = new PausableNetworkAdapter(leftToRight)
 const leftRepo = new Repo({
-  //network: [new MessageChannelNetworkAdapter(leftToRight)],
   network: [leftAdapter],
 })
 
 const rightAdapter = new PausableNetworkAdapter(rightToLeft)
 const rightRepo = new Repo({
-  //network: [new MessageChannelNetworkAdapter(rightToLeft)],
   network: [rightAdapter],
 })
 
 const leftHandle = leftRepo.create({ text: "" })
+// @ts-expect-error this is for debug
+window.left = leftHandle
 
 const rightHandle = await rightRepo.find<{ text: string }>(leftHandle.url)
 if (rightHandle == null) {
   throw new Error("unable to find right handle")
 }
+// @ts-expect-error this is for debug
+window.right = rightHandle
 
 type Props = {
   /** If building for demo mode then just render a single side-by-side panel,

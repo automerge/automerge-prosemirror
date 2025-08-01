@@ -105,14 +105,25 @@ export const syncPlugin = <T>({
       const diff = pmChangeSet.changedRange(amChangeSet)
       if (!diff || diff.from === diff.to) return undefined
 
-      console.warn(
-        "Warning: ProseMirror doc doesn't match AutoMerge spans.\n\n" +
-          "State will be automatically fixed with a tr. File an issue at https://github.com/automerge/automerge-repo.\n",
-        {
-          spansBefore,
-          steps: transactions.map(tr => tr.steps.map(s => s.toJSON())),
-        },
-      )
+      // At this point there is some difference between the document the ProseMirror transaction
+      // produced and the one resulting from the applying the automerge transaction. This usually
+      // is the result of ProseMirror inserting nodes which have {attrs: {isAmgBlock: false}} and
+      // then those attributes being updated to `isAmgBlock: true` by `updateSpans`. For example,
+      // consider this document:
+      //
+      // <p isAmgBlock=true>hello</p>
+      //
+      // If the user inserts a newline at the end of this content we will have
+      //
+      // <p isAmgBlock=true>hello</p><p isAmgBlock=false></p>
+      //
+      // But then when we add this to the automerge document we will create a new block marker
+      // at the end of the document and call `updateSpans`, which will result in a document
+      // which ultimately looks like this:
+      //
+      // <p isAmgBlock=true>hello</p><p isAmgBlock=true></p>
+      //
+      // We now need to fix up the ProseMirror document to match this
 
       // Replace the diff range in ProseMirror doc from the AutoMerge doc.
       const doc = pmDocFromSpans(adapter, spansAfter)
