@@ -1,7 +1,13 @@
 import { assert } from "chai"
 import { default as amToPm } from "../src/amToPm.js"
 import { EditorState } from "prosemirror-state"
-import { BlockDef, makeDoc, splitBlock, updateBlockType } from "./utils.js"
+import {
+  BlockDef,
+  makeDoc,
+  splitBlock,
+  updateBlockType,
+  assertPmDocsEqual,
+} from "./utils.js"
 import { next as am } from "@automerge/automerge"
 import { basicSchemaAdapter } from "../src/basicSchema.js"
 
@@ -46,15 +52,14 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: false }, [
-              schema.text("hello world"),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: false }, [
+            schema.text("hello world"),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
 
     it("should correctly insert characters at the end of a list item", () => {
@@ -76,22 +81,21 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("bullet_list", null, [
-              schema.node("list_item", null, [
-                schema.node("paragraph", null, []),
-                schema.node("ordered_list", null, [
-                  schema.node("list_item", { isAmgBlock: true }, [
-                    schema.node("paragraph", null, [schema.text("item 11")]),
-                  ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("bullet_list", null, [
+            schema.node("list_item", null, [
+              schema.node("paragraph", null, []),
+              schema.node("ordered_list", null, [
+                schema.node("list_item", { isAmgBlock: true }, [
+                  schema.node("paragraph", null, [schema.text("item 11")]),
                 ]),
               ]),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
 
     it("should add marks to inserted characters", () => {
@@ -107,17 +111,16 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: false }, [
-              schema.text("wo", []),
-              schema.text("o", [schema.mark("strong")]),
-              schema.text("rld", []),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: false }, [
+            schema.text("wo", []),
+            schema.text("o", [schema.mark("strong")]),
+            schema.text("rld", []),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
 
     it("should update the selection to be just after the character inserted when local", () => {
@@ -168,15 +171,12 @@ describe("the amToPm function", () => {
           },
         ],
       }).doc
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("heading", { isAmgBlock: true }, [
-              schema.text("a", []),
-            ]),
-          ]),
-        ),
-      )
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("heading", { isAmgBlock: true }, [schema.text("a", [])]),
+        ]),
+        actual: patched,
+      })
     })
   })
 
@@ -193,17 +193,16 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: false }, [
-              schema.text("w", []),
-              schema.text("or", [schema.mark("strong")]),
-              schema.text("ld", []),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: false }, [
+            schema.text("w", []),
+            schema.text("or", [schema.mark("strong")]),
+            schema.text("ld", []),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
   })
 
@@ -214,18 +213,17 @@ describe("the amToPm function", () => {
         patches: [splitBlock(6, { type: "paragraph", parents: [], attrs: {} })],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: false }, [
-              schema.text("hello "),
-            ]),
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("world"),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: false }, [
+            schema.text("hello "),
           ]),
-        ),
-      )
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("world"),
+          ]),
+        ]),
+        actual: patched,
+      })
     })
 
     it("should convert a top level inferred para to explicit if a splitblock arrives at the top level", () => {
@@ -234,15 +232,14 @@ describe("the amToPm function", () => {
         patches: [splitBlock(0, { type: "paragraph", parents: [], attrs: {} })],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("hello world"),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("hello world"),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
 
     it("should insert a second paragraph after converting the inferred top level para to explicit", () => {
@@ -254,16 +251,15 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, []),
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("hello world"),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, []),
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("hello world"),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
 
     it("should insert new list items at the top level", () => {
@@ -277,20 +273,19 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("ordered_list", null, [
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item 1")]),
-              ]),
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, []),
-              ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("ordered_list", null, [
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item 1")]),
+            ]),
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, []),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
 
     it("should insert new list items after existing list items", () => {
@@ -306,23 +301,22 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("item 1"),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("item 1"),
+          ]),
+          schema.node("ordered_list", null, [
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item 2")]),
             ]),
-            schema.node("ordered_list", null, [
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item 2")]),
-              ]),
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, []),
-              ]),
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, []),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
 
     it("should add a paragraph inside a list item", () => {
@@ -343,23 +337,22 @@ describe("the amToPm function", () => {
         ],
       })
 
-      assert.isTrue(
-        patched.doc.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("item 1"),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("item 1"),
+          ]),
+          schema.node("ordered_list", null, [
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item 2")]),
             ]),
-            schema.node("ordered_list", null, [
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item 2")]),
-              ]),
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", { isAmgBlock: true }, []),
-              ]),
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", { isAmgBlock: true }, []),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: patched.doc,
+      })
     })
 
     it("should split the text in a paragraph", () => {
@@ -368,18 +361,13 @@ describe("the amToPm function", () => {
         patches: [splitBlock(4, { type: "paragraph", parents: [], attrs: {} })],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("ite"),
-            ]),
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("m 1"),
-            ]),
-          ]),
-        ),
-      )
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [schema.text("ite")]),
+          schema.node("paragraph", { isAmgBlock: true }, [schema.text("m 1")]),
+        ]),
+        actual: patched,
+      })
     })
 
     it("should correctly handle a splitblock which is separated by a text insert", () => {
@@ -426,20 +414,19 @@ describe("the amToPm function", () => {
       // pm: 0              1 2 3 4 5 6 7 8          9          10 11 12 13 14  15 16 17 18 19          20          21 22          23           24           25
 
       //console.log(JSON.stringify(printTree(patched.doc), null, 2))
-      assert.isTrue(
-        patched.doc.eq(
-          schema.node("doc", null, [
-            schema.node("heading", { isAmgBlock: true }, [
-              schema.text("Heading"),
-            ]),
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("some text"),
-            ]),
-            schema.node("paragraph", { isAmgBlock: true }, [schema.text("b")]),
-            schema.node("paragraph", { isAmgBlock: true }, [schema.text("a")]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("heading", { isAmgBlock: true }, [
+            schema.text("Heading"),
           ]),
-        ),
-      )
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("some text"),
+          ]),
+          schema.node("paragraph", { isAmgBlock: true }, [schema.text("b")]),
+          schema.node("paragraph", { isAmgBlock: true }, [schema.text("a")]),
+        ]),
+        actual: patched.doc,
+      })
     })
   })
 
@@ -455,15 +442,14 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: false }, [
-              schema.text("hello worl"),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: false }, [
+            schema.text("hello worl"),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
   })
 
@@ -484,15 +470,14 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("hello world"),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("hello world"),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
 
     it("should handle deletion of a range, followed by a deleted block, followed by a deletion", () => {
@@ -523,18 +508,17 @@ describe("the amToPm function", () => {
         ],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("line two"),
-            ]),
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("line three"),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("line two"),
           ]),
-        ),
-      )
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("line three"),
+          ]),
+        ]),
+        actual: patched,
+      })
     })
   })
 
@@ -548,15 +532,14 @@ describe("the amToPm function", () => {
         patches: [updateBlockType(0, "paragraph")],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("item one"),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("item one"),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
 
     it("should convert the last item in a multi item list into a paragraph", () => {
@@ -573,20 +556,19 @@ describe("the amToPm function", () => {
       //
       //    <doc><ol><li><p> i t e m ' ' o  n  e  </p></li><li><p> i  t  e  m ' ' t  w  o </p></li></ol></doc>
       //pm:0         1   2  3 4 5 6 7   8  9  10 11  12   13  14 15 16 17 18 19 20 21 22 23  24   25   26   27     28
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("ordered_list", null, [
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item one")]),
-              ]),
-            ]),
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("item two"),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("ordered_list", null, [
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item one")]),
             ]),
           ]),
-        ),
-      )
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("item two"),
+          ]),
+        ]),
+        actual: patched,
+      })
     })
 
     it("should convert a sole paragraph into a list item", () => {
@@ -595,17 +577,16 @@ describe("the amToPm function", () => {
         patches: [updateBlockType(0, "ordered-list-item")],
       }).doc
 
-      assert.isTrue(
-        patched.eq(
-          schema.node("doc", null, [
-            schema.node("ordered_list", null, [
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item one")]),
-              ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("ordered_list", null, [
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item one")]),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: patched,
+      })
     })
   })
 })

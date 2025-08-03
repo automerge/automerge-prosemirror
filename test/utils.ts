@@ -9,6 +9,7 @@ import { next as am } from "@automerge/automerge"
 import { basicSchemaAdapter } from "../src/basicSchema.js"
 import { isArrayEqual, isPrefixOfArray } from "../src/utils.js"
 import { SchemaAdapter } from "../src/schema.js"
+import * as diff from "diff"
 
 export type BlockDef = {
   type: string
@@ -216,4 +217,60 @@ function interpretPatch(
     applyBlockPatch(path, patch, block)
   }
   return block
+}
+
+export function assertPmDocsEqual({
+  expected,
+  actual,
+}: {
+  expected: Node
+  actual: Node
+}) {
+  if (!expected.eq(actual)) {
+    const expectedJson = JSON.stringify(printTree(expected), null, 2)
+    const actualJson = JSON.stringify(printTree(actual), null, 2)
+
+    const expectedLines = expectedJson.split("\n")
+    const actualLines = actualJson.split("\n")
+    const maxWidth = Math.max(
+      ...expectedLines.map(line => line.length),
+      ...actualLines.map(line => line.length),
+    )
+
+    // Display side by side if both are narrow enough (max 60 chars wide)
+    if (maxWidth <= 60) {
+      const diffResult = diff.diffLines(expectedJson, actualJson)
+      const leftWidth = Math.max(...expectedLines.map(line => line.length))
+
+      let sideBySide = "documents did not match:\n\n"
+      sideBySide += `${"EXPECTED".padEnd(leftWidth)} | ACTUAL\n`
+      sideBySide += `${"-".repeat(leftWidth)}-+-${"-".repeat(60)}\n`
+
+      for (const part of diffResult) {
+        const lines = part.value.split("\n")
+        // Remove the last element if it's empty (happens when text ends with \n)
+        if (lines.length > 0 && lines[lines.length - 1] === "") {
+          lines.pop()
+        }
+
+        for (const line of lines) {
+          if (part.added) {
+            sideBySide += `${"".padEnd(leftWidth)} | + ${line}\n`
+          } else if (part.removed) {
+            sideBySide += `${("- " + line).padEnd(leftWidth)} | \n`
+          } else {
+            sideBySide += `${line.padEnd(leftWidth)} | ${line}\n`
+          }
+        }
+      }
+
+      throw new AssertionError({ message: sideBySide })
+    } else {
+      const message = `documents did not match,
+  expected ${expectedJson}
+  actual ${actualJson}
+  `
+      throw new AssertionError({ message })
+    }
+  }
 }

@@ -12,7 +12,7 @@ import {
   eventsWithIndexChanges,
 } from "../src/traversal.js"
 import { next as am } from "@automerge/automerge"
-import { docFromBlocksNotation, makeDoc } from "./utils.js"
+import { docFromBlocksNotation, makeDoc, assertPmDocsEqual } from "./utils.js"
 import { AssertionError } from "assert"
 import { basicSchemaAdapter } from "../src/basicSchema.js"
 
@@ -2738,22 +2738,21 @@ describe("the traversal API", () => {
         { type: "text", value: "item 1" },
       ]
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("bullet_list", null, [
-              schema.node("list_item", null, [
-                schema.node("paragraph", null, []),
-                schema.node("ordered_list", null, [
-                  schema.node("list_item", { isAmgBlock: true }, [
-                    schema.node("paragraph", null, [schema.text("item 1")]),
-                  ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("bullet_list", null, [
+            schema.node("list_item", null, [
+              schema.node("paragraph", null, []),
+              schema.node("ordered_list", null, [
+                schema.node("list_item", { isAmgBlock: true }, [
+                  schema.node("paragraph", null, [schema.text("item 1")]),
                 ]),
               ]),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     it("should return a document with a single list in it for multiple list item spans", () => {
@@ -2778,20 +2777,19 @@ describe("the traversal API", () => {
         { type: "text", value: "item 2" },
       ]
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("ordered_list", null, [
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item 1")]),
-              ]),
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item 2")]),
-              ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("ordered_list", null, [
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item 1")]),
+            ]),
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item 2")]),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     it("should work with a list item in the middle of two paragraphs", () => {
@@ -2880,28 +2878,27 @@ describe("the traversal API", () => {
 
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
 
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("item 1"),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("item 1"),
+          ]),
+          schema.node("ordered_list", null, [
+            schema.node("list_item", { isAmgBlock: false }, [
+              schema.node("paragraph", { isAmgBlock: true }, [
+                schema.text("item 2"),
+              ]),
             ]),
-            schema.node("ordered_list", null, [
-              schema.node("list_item", null, [
-                schema.node("paragraph", { isAmgBlock: true }, [
-                  schema.text("item 2"),
-                ]),
-              ]),
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, []),
-              ]),
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, []),
-              ]),
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", { isAmgBlock: false }, []),
+            ]),
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", { isAmgBlock: false }, []),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     it("should work with trailing nested paragraphs", () => {
@@ -2943,25 +2940,24 @@ describe("the traversal API", () => {
       ]
 
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("item 1"),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("item 1"),
+          ]),
+          schema.node("ordered_list", null, [
+            schema.node("list_item", null, [
+              schema.node("paragraph", { isAmgBlock: true }, [
+                schema.text("item 2"),
+              ]),
             ]),
-            schema.node("ordered_list", null, [
-              schema.node("list_item", null, [
-                schema.node("paragraph", { isAmgBlock: true }, [
-                  schema.text("item 2"),
-                ]),
-              ]),
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", { isAmgBlock: true }, []),
-              ]),
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", { isAmgBlock: true }, []),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     it("a nested list with trailing empty paragraph", () => {
@@ -2986,20 +2982,19 @@ describe("the traversal API", () => {
         { type: "text", value: "item 2" },
       ]
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("bullet_list", null, [
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item 1")]),
-                schema.node("paragraph", { isAmgBlock: true }, [
-                  schema.text("item 2"),
-                ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("bullet_list", null, [
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item 1")]),
+              schema.node("paragraph", { isAmgBlock: true }, [
+                schema.text("item 2"),
               ]),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     it("consecutive ordered and unordered list items", () => {
@@ -3025,22 +3020,21 @@ describe("the traversal API", () => {
       ]
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
 
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("bullet_list", null, [
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item 1")]),
-              ]),
-            ]),
-            schema.node("ordered_list", null, [
-              schema.node("list_item", { isAmgBlock: true }, [
-                schema.node("paragraph", null, [schema.text("item 2")]),
-              ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("bullet_list", null, [
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item 1")]),
             ]),
           ]),
-        ),
-      )
+          schema.node("ordered_list", null, [
+            schema.node("list_item", { isAmgBlock: true }, [
+              schema.node("paragraph", null, [schema.text("item 2")]),
+            ]),
+          ]),
+        ]),
+        actual: doc,
+      })
     })
 
     it("constructs asides", () => {
@@ -3055,15 +3049,14 @@ describe("the traversal API", () => {
         },
       ]
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("aside", { isAmgBlock: true }, [
-              schema.node("paragraph", null, []),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("aside", { isAmgBlock: true }, [
+            schema.node("paragraph", null, []),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     it("constructs asides with content", () => {
@@ -3097,19 +3090,18 @@ describe("the traversal API", () => {
       ]
 
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("hello world"),
-            ]),
-            schema.node("paragraph", { isAmgBlock: true }, []),
-            schema.node("aside", { isAmgBlock: true }, [
-              schema.node("paragraph", null, [schema.text("next line")]),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("hello world"),
           ]),
-        ),
-      )
+          schema.node("paragraph", { isAmgBlock: true }, []),
+          schema.node("aside", { isAmgBlock: true }, [
+            schema.node("paragraph", null, [schema.text("next line")]),
+          ]),
+        ]),
+        actual: doc,
+      })
     })
 
     it("constructs headers with the correct level", () => {
@@ -3135,18 +3127,17 @@ describe("the traversal API", () => {
       ]
 
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("heading", { isAmgBlock: true, level: 1 }, [
-              schema.text("hello"),
-            ]),
-            schema.node("heading", { isAmgBlock: true, level: 2 }, [
-              schema.text("world"),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("heading", { isAmgBlock: true, level: 1 }, [
+            schema.text("hello"),
           ]),
-        ),
-      )
+          schema.node("heading", { isAmgBlock: true, level: 2 }, [
+            schema.text("world"),
+          ]),
+        ]),
+        actual: doc,
+      })
     })
 
     it("should construct image blocks", () => {
@@ -3174,25 +3165,23 @@ describe("the traversal API", () => {
         },
       ]
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.node(
-                "image",
-                {
-                  isAmgBlock: true,
-                  src: "image.png",
-                  alt: "image alt",
-                  title: "image title",
-                  isEmbed: true,
-                },
-                [],
-              ),
-            ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.node(
+              "image",
+              {
+                isAmgBlock: true,
+                src: "image.png",
+                alt: "image alt",
+                title: "image title",
+              },
+              [],
+            ),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     it("should construct blockquotes", () => {
@@ -3217,20 +3206,19 @@ describe("the traversal API", () => {
         { type: "text", value: "world" },
       ]
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("blockquote", null, [
-              schema.node("paragraph", { isAmgBlock: true }, [
-                schema.text("hello"),
-              ]),
-              schema.node("paragraph", { isAmgBlock: true }, [
-                schema.text("world"),
-              ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("blockquote", null, [
+            schema.node("paragraph", { isAmgBlock: true }, [
+              schema.text("hello"),
+            ]),
+            schema.node("paragraph", { isAmgBlock: true }, [
+              schema.text("world"),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     it("should construct a list followed by a paragraph in a blockquote", () => {
@@ -3258,24 +3246,23 @@ describe("the traversal API", () => {
         { type: "text", value: "more quote" },
       ]
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("blockquote", null, [
-              schema.node("bullet_list", null, [
-                schema.node("list_item", null, [
-                  schema.node("paragraph", { isAmgBlock: true }, [
-                    schema.text("some quote"),
-                  ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("blockquote", null, [
+            schema.node("bullet_list", null, [
+              schema.node("list_item", null, [
+                schema.node("paragraph", { isAmgBlock: true }, [
+                  schema.text("some quote"),
                 ]),
               ]),
-              schema.node("paragraph", { isAmgBlock: true }, [
-                schema.text("more quote"),
-              ]),
+            ]),
+            schema.node("paragraph", { isAmgBlock: true }, [
+              schema.text("more quote"),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     it("should construct a nested list following a paragraph", () => {
@@ -3312,27 +3299,26 @@ describe("the traversal API", () => {
       ]
 
       const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-      assert.isTrue(
-        doc.eq(
-          schema.node("doc", null, [
-            schema.node("paragraph", { isAmgBlock: true }, [
-              schema.text("hello world"),
-            ]),
-            schema.node("bullet_list", null, [
-              schema.node("list_item", null, [
-                schema.node("paragraph", { isAmgBlock: true }, [
-                  schema.text("item one"),
-                ]),
-                schema.node("bullet_list", null, [
-                  schema.node("list_item", { isAmgBlock: true }, [
-                    schema.node("paragraph", null, []),
-                  ]),
+      assertPmDocsEqual({
+        expected: schema.node("doc", null, [
+          schema.node("paragraph", { isAmgBlock: true }, [
+            schema.text("hello world"),
+          ]),
+          schema.node("bullet_list", null, [
+            schema.node("list_item", null, [
+              schema.node("paragraph", { isAmgBlock: true }, [
+                schema.text("item one"),
+              ]),
+              schema.node("bullet_list", null, [
+                schema.node("list_item", { isAmgBlock: true }, [
+                  schema.node("paragraph", { isAmgBlock: false }, []),
                 ]),
               ]),
             ]),
           ]),
-        ),
-      )
+        ]),
+        actual: doc,
+      })
     })
 
     describe("when handling unknown blocks", () => {
@@ -3349,25 +3335,24 @@ describe("the traversal API", () => {
           { type: "text", value: "hello" },
         ]
         const doc = pmDocFromSpans(basicSchemaAdapter, spans)
-        assert.isTrue(
-          doc.eq(
-            schema.node("doc", null, [
-              schema.node(
-                "unknownBlock",
-                {
-                  isAmgBlock: true,
-                  unknownBlock: {
-                    type: "unknown",
-                    parents: [],
-                    attrs: {},
-                    isEmbed: false,
-                  },
+        assertPmDocsEqual({
+          expected: schema.node("doc", null, [
+            schema.node(
+              "unknownBlock",
+              {
+                isAmgBlock: true,
+                unknownBlock: {
+                  attrs: {},
+                  parents: [],
+                  type: "unknown",
+                  isEmbed: false,
                 },
-                [schema.node("paragraph", null, [schema.text("hello")])],
-              ),
-            ]),
-          ),
-        )
+              },
+              [schema.node("paragraph", null, [schema.text("hello")])],
+            ),
+          ]),
+          actual: doc,
+        })
       })
 
       it("should render nested blocks using the unknown block type", () => {
@@ -3400,7 +3385,7 @@ describe("the traversal API", () => {
             ),
           ]),
         ])
-        assert.isTrue(doc.eq(expected))
+        assertPmDocsEqual({ expected, actual: doc })
       })
     })
   })
