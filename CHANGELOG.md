@@ -1,3 +1,8 @@
+
+## Pre-release (0.2.0-alpha.0) - 2025-08-06
+
+* Allow mapping ProseMirror inline nodes to automerge blocks
+
 ## 0.1.0
 
 This release updates to automerge 3.1.1 and automerge-repo 2.1.0. This plugin doesn't actually depend directly on automerge-repo, but the `DocHandle` interface is written to match the `DocHandle` interface from automerge-repo and automerge-repo 2.1.0 has deprecated the `DocHandle.docSync` method and instead has a `doc` method which never returns `undefined`. This is a breaking change because the old `docSync` method could return `undefined` if the document was not yet loaded.
