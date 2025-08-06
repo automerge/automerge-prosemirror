@@ -373,7 +373,7 @@ function blockForNode(
       isUnknown: false,
       block: {
         type: blockMapping.blockName,
-        parents: findParents(adapter, nodePath),
+        parents: findParents(adapter, nodePath, node),
         attrs,
         isEmbed: blockMapping.isEmbed || false,
       },
@@ -383,7 +383,7 @@ function blockForNode(
       isUnknown: false,
       block: {
         type: blockMapping.blockName,
-        parents: findParents(adapter, nodePath),
+        parents: findParents(adapter, nodePath, node),
         attrs,
         isEmbed: true,
       },
@@ -412,7 +412,7 @@ function blockForNode(
     }
 
     let emitBlock = false
-    if (node.isTextblock) {
+    if (node.isTextblock || node.isInline) {
       const parent = nodePath[nodePath.length - 1]
       if (
         parent == null ||
@@ -439,7 +439,7 @@ function blockForNode(
         isUnknown: blockMapping.content === adapter.unknownBlock,
         block: {
           type: blockMapping.blockName,
-          parents: findParents(adapter, nodePath),
+          parents: findParents(adapter, nodePath, node),
           attrs,
           isEmbed: blockMapping.isEmbed || false,
         },
@@ -554,13 +554,18 @@ function blockMappingForNode(
   return bestMapping
 }
 
-function findParents(adapter: SchemaAdapter, parentNodes: Node[]): string[] {
+function findParents(
+  adapter: SchemaAdapter,
+  parentNodes: Node[],
+  childNode: Node,
+): string[] {
   const parents: string[] = []
-  for (const [index, node] of parentNodes.entries()) {
+  for (const [index, parentNode] of parentNodes.entries()) {
     if (
       index === parentNodes.length - 1 &&
-      node.isTextblock &&
-      !node.attrs.isAmgBlock
+      parentNode.isTextblock &&
+      !parentNode.attrs.isAmgBlock &&
+      childNode.isText
     ) {
       // If the last node is a render-only text block then we don't need to emit it, the
       // schema will take care of inserting it around the content for us
@@ -568,7 +573,7 @@ function findParents(adapter: SchemaAdapter, parentNodes: Node[]): string[] {
     }
     const mapping = blockMappingForNode(
       adapter,
-      node,
+      parentNode,
       parentNodes.slice(0, index),
     )
     if (mapping == null) {
