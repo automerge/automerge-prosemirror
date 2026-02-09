@@ -41,6 +41,15 @@ describe("when handling inline nodes", () => {
           return ["math-inline", 0]
         },
       },
+      math_inline_embed: {
+        automerge: {
+          block: "math-inline-embed",
+          isEmbed: true,
+        },
+        content: "text*",
+        group: "inline",
+        inline: true,
+      },
       unknownBlock: {
         automerge: {
           unknownBlock: true,
@@ -101,6 +110,19 @@ describe("when handling inline nodes", () => {
         ]),
         actual: pmDoc,
       })
+    })
+
+    it("should place text inside inline embed nodes when isEmbed is true", () => {
+      const original = schema.node("doc", null, [
+        schema.node("paragraph", { isAmgBlock: false }, [
+          schema.node("math_inline_embed", { isAmgBlock: true }, [
+            schema.text("x = y"),
+          ]),
+        ]),
+      ])
+      const spans = pmNodeToSpans(adapter, original)
+      const roundTripped = pmDocFromSpans(adapter, spans)
+      assertPmDocsEqual({ expected: original, actual: roundTripped })
     })
   })
 
