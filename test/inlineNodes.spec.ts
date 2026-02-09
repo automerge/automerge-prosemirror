@@ -4,7 +4,7 @@ import { SchemaAdapter } from "../src/schema.js"
 import * as am from "@automerge/automerge"
 import { assertPmDocsEqual } from "./utils.js"
 
-describe.only("when handling inline nodes", () => {
+describe("when handling inline nodes", () => {
   const adapter = new SchemaAdapter({
     nodes: {
       doc: {
