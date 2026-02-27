@@ -7,6 +7,9 @@
   ],
   "extends": "./tsconfig/tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node", "cypress"]
+    "types": [
+      "node",
+      "cypress"
+    ]
   }
 }
