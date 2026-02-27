@@ -645,6 +645,31 @@ class TraverseState {
         block.type.val,
         block.isEmbed,
       )
+
+      // For block-level embeds, we need to close any open inline containers
+      if (content.isBlock) {
+        // Close any open inline/textblock containers that can't contain blocks
+        let closeCount = 0
+        for (let i = this.stack.length - 1; i >= 0; i--) {
+          const frame = this.stack[i]
+          // Check if this node can contain block content by testing its content match
+          const canContainBlock = frame.node.contentMatch.matchType(content)
+          if (!canContainBlock) {
+            closeCount++
+          } else {
+            break
+          }
+        }
+
+        if (closeCount > 0) {
+          const toClose = this.stack.splice(this.stack.length - closeCount)
+          for (const { node, role, lastMatch } of toClose.toReversed()) {
+            yield* this.finishStackFrame({ node, role, lastMatch })
+            yield { type: "closeTag", tag: node.name, role }
+          }
+        }
+      }
+
       const wrapping = this.currentMatch.findWrapping(content)
       if (wrapping) {
         for (let i = 0; i < wrapping.length; i++) {

@@ -17,6 +17,60 @@ import { AssertionError } from "assert"
 import { basicSchemaAdapter } from "../src/basicSchema.js"
 
 describe("the traversal API", () => {
+  describe("horizontal rule embed handling", () => {
+    it("should handle hr blocks without throwing 'Match cannot be null' error", () => {
+      // Create a simple document with an hr block
+      const spans: am.Span[] = [
+        {
+          type: "block",
+          value: {
+            type: new am.ImmutableString("__ext__horizontal-rule"),
+            parents: [],
+            attrs: {},
+            isEmbed: true
+          }
+        }
+      ]
+      
+      // This should not throw an error
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
+      
+      // Verify the document structure
+      assert.equal(doc.type.name, "doc")
+      assert.equal(doc.childCount, 1)
+      assert.equal(doc.child(0).type.name, "horizontal_rule")
+    })
+    
+    it("should properly close paragraphs when inserting hr blocks", () => {
+      // Create a document with text followed by an hr
+      const spans: am.Span[] = [
+        {
+          type: "text",
+          value: "Some text before hr"
+        },
+        {
+          type: "block", 
+          value: {
+            type: new am.ImmutableString("__ext__horizontal-rule"),
+            parents: [],
+            attrs: {},
+            isEmbed: true
+          }
+        }
+      ]
+      
+      // This should not throw 'Invalid content for node paragraph: <horizontal_rule>'
+      const doc = pmDocFromSpans(basicSchemaAdapter, spans)
+      
+      // Verify the document structure
+      assert.equal(doc.type.name, "doc")
+      assert.equal(doc.childCount, 2)
+      assert.equal(doc.child(0).type.name, "paragraph")
+      assert.equal(doc.child(0).textContent, "Some text before hr")
+      assert.equal(doc.child(1).type.name, "horizontal_rule")
+    })
+  })
+
   describe("the amSpliceIdxToPmIdx function", () => {
     it("should return the last prosemirror text index before the given automerge index", () => {
       const { spans } = docFromBlocksNotation([

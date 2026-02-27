@@ -74,6 +74,10 @@ const basicSchema: MappedSchemaSpec = {
 
     /// A horizontal rule (`<hr>`).
     horizontal_rule: {
+      automerge: {
+        block: "__ext__horizontal-rule",
+        isEmbed: true,
+      },
       group: "block",
       parseDOM: [{ tag: "hr" }],
       toDOM() {
