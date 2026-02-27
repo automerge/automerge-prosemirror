@@ -533,7 +533,7 @@ function blockMappingForNode(
   }
 
   const possibleMappings = adapter.nodeMappings.filter(
-    m => m.content === node.type,
+    m => m.content.name === node.type.name,
   )
   if (possibleMappings.length === 0) {
     return null

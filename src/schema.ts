@@ -265,7 +265,7 @@ export function amMarksFromPmMarks(
   const result: { [key: string]: any } = {}
   marks.forEach(mark => {
     const markMapping = adapter.markMappings.find(
-      m => m.prosemirrorMark === mark.type,
+      m => m.prosemirrorMark.name === mark.type.name,
     )
     if (markMapping != null) {
       result[markMapping.automergeMarkName] =
