@@ -373,7 +373,7 @@ function blockForNode(
       isUnknown: false,
       block: {
         type: blockMapping.blockName,
-        parents: findParents(adapter, nodePath, node),
+        parents: findParents(adapter, nodePath, node, blockMapping.isEmbed || false),
         attrs,
         isEmbed: blockMapping.isEmbed || false,
       },
@@ -383,7 +383,7 @@ function blockForNode(
       isUnknown: false,
       block: {
         type: blockMapping.blockName,
-        parents: findParents(adapter, nodePath, node),
+        parents: findParents(adapter, nodePath, node, true),
         attrs,
         isEmbed: true,
       },
@@ -558,6 +558,7 @@ function findParents(
   adapter: SchemaAdapter,
   parentNodes: Node[],
   childNode: Node,
+  childIsEmbed: boolean = false,
 ): string[] {
   const parents: string[] = []
   for (const [index, parentNode] of parentNodes.entries()) {
@@ -565,7 +566,7 @@ function findParents(
       index === parentNodes.length - 1 &&
       parentNode.isTextblock &&
       !parentNode.attrs.isAmgBlock &&
-      childNode.isText
+      (childNode.isText || childIsEmbed)
     ) {
       // If the last node is a render-only text block then we don't need to emit it, the
       // schema will take care of inserting it around the content for us
@@ -645,6 +646,23 @@ class TraverseState {
         block.type.val,
         block.isEmbed,
       )
+      // Check if this inline embed can contain text - if so, push to stack
+      // so that subsequent text becomes children instead of siblings
+      const canContainText =
+        content.isInline &&
+        content.contentMatch.matchType(this.adapter.schema.nodes.text) != null
+      if (canContainText) {
+        // Use findWrapping to get necessary wrappers (e.g., paragraph)
+        const wrapping = this.currentMatch.findWrapping(content)
+        if (wrapping) {
+          for (let i = 0; i < wrapping.length; i++) {
+            yield this.pushNode(wrapping[i], null, "render-only")
+          }
+        }
+        yield blockEvent(this.adapter, block)
+        yield this.pushNode(content, null, "explicit")
+        return
+      }
       const wrapping = this.currentMatch.findWrapping(content)
       if (wrapping) {
         for (let i = 0; i < wrapping.length; i++) {
