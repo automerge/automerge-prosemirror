@@ -134,11 +134,17 @@ export class SchemaAdapter {
               throw new Error(`${nodeSpec.name} references an unknown outer node
   ${outerName} in its within block mapping`)
             }
-            nodeMappings.push({
+            const nodeMapping: NodeMapping = {
               blockName,
               outer: schema.nodes[outerName],
               content: schema.nodes[nodeName],
-            })
+            }
+        
+            if (adaptSpec.attrParsers != null) {
+              nodeMapping.attrParsers = adaptSpec.attrParsers
+            }
+        
+            nodeMappings.push(nodeMapping)
           }
         }
       }
